@@ -6,15 +6,23 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "format": "prettier --write \"src/**/*.{ts,tsx,vue,css}\""
   },
   "dependencies": {
-    "vue": "^3.5.41"
+    "@vicons/ionicons5": "^0.13.0",
+    "@vueuse/core": "^11.3.0",
+    "axios": "^1.7.7",
+    "naive-ui": "^2.40.1",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.41",
+    "vue-router": "^4.4.5"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/tsconfig": "^0.9.1",
+    "prettier": "^3.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
     "vue-tsc": "^3.3.11"

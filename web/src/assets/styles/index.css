@@ -1,0 +1,64 @@
+/* MuseFlow 全局样式 —— 极简、干净、有呼吸感 */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --mf-bg: #f7f8fa;
+  --mf-surface: #ffffff;
+  --mf-surface-2: #fbfcfd;
+  --mf-border: #eef0f3;
+  --mf-border-strong: #e3e6ea;
+  --mf-text: #1f2329;
+  --mf-text-2: #4e5969;
+  --mf-text-3: #8a9099;
+  --mf-hover: #f0f3f7;
+  --mf-active-bg: #eaf0ff;
+  --mf-active-text: #3b5bdb;
+  --mf-accent: #3b5bdb;
+  --mf-accent-hover: #4c6ef5;
+  --mf-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.05);
+}
+
+html.dark {
+  --mf-bg: #15161a;
+  --mf-surface: #1d1e24;
+  --mf-surface-2: #191a20;
+  --mf-border: #2a2b33;
+  --mf-border-strong: #34353f;
+  --mf-text: #e9eaef;
+  --mf-text-2: #b3b6c0;
+  --mf-text-3: #82858f;
+  --mf-hover: #26272f;
+  --mf-active-bg: #232a45;
+  --mf-active-text: #93a3ff;
+  --mf-accent: #6e7bff;
+  --mf-accent-hover: #8590ff;
+  --mf-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--mf-text);
+  background-color: var(--mf-bg);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
