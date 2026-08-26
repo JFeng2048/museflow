@@ -1,0 +1,73 @@
+/**
+ * 跨页面通用文案。
+ * 这一模块里的 key 在 i18n/locales/{zh,en}/index.ts 中会被 spread 到 locale 根，
+ * 因此 t('nav.novels')、t('common.cancel')、t('app.slogan') 都能直接命中。
+ */
+export default {
+  nav: {
+    novels: 'Novels',
+    inspiration: 'Inspiration',
+    publish: 'Publish',
+    tasks: 'Tasks',
+    statistics: 'Stats',
+    settings: 'Settings',
+  },
+  sidebar: {
+    dashboard: 'My Projects',
+    material: 'Materials',
+    lorebook: 'Lorebook',
+    task: 'Tasks',
+    publish: 'Publishing',
+  },
+  userMenu: {
+    profile: 'Profile',
+    model: 'Model Settings',
+    credits: 'My Credits',
+    logout: 'Log Out',
+  },
+  app: {
+    name: 'MuseFlow',
+    slogan: 'Your private study — write slowly, write well.',
+    save: 'Saved',
+  },
+  status: {
+    writing: 'Writing',
+    saved: 'Auto-saved',
+    online: 'Connected',
+  },
+  common: {
+    save: 'Save',
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    delete: 'Delete',
+    edit: 'Edit',
+    confirmDelete: 'Delete this?',
+    create: 'Create',
+    back: 'Back',
+    loading: 'Loading…',
+    empty: 'Nothing here yet',
+    retry: 'Retry',
+    add: 'Add',
+    close: 'Close',
+    enable: 'Enable',
+    disable: 'Disable',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    yes: 'Yes',
+    no: 'No',
+    more: 'More',
+    all: 'All',
+    others: 'Others',
+    unset: 'Not set',
+    optional: 'Optional',
+    required: 'Required',
+    submit: 'Submit',
+    next: 'Next',
+    prev: 'Previous',
+    finish: 'Finish',
+    search: 'Search projects, materials, lore…',
+    writer: 'Writer',
+    initial: 'W',
+    ageUnit: 'yrs',
+  },
+}

@@ -1,219 +1,162 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
+import { ref, computed, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NIcon, NTag, NSpace, NInput, NEmpty, NCard, useMessage } from 'naive-ui'
-import { ArrowBackOutline, SparklesOutline, SaveOutline } from '@vicons/ionicons5'
-import { storeToRefs } from 'pinia'
+import { useMessage } from 'naive-ui'
+import { NIcon } from 'naive-ui'
+import { useI18n } from 'vue-i18n'
+import {
+  BookOutline,
+  CheckmarkDoneOutline,
+  CreateOutline,
+  FlashOutline,
+  PencilOutline,
+  SearchOutline,
+  BulbOutline,
+} from '@vicons/ionicons5'
 import { useNovelStore } from '@/stores/novel'
-import { useTaskStore } from '@/stores/task'
-import ChapterTree from '@/components/novel/ChapterTree.vue'
-import NovelStatusTag from '@/components/novel/NovelStatusTag.vue'
-import { formatWords, formatDateTime } from '@/utils/format'
-import type { Chapter } from '@/types'
 
+import NovelStatusTag from './components/NovelStatusTag.vue'
+
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const message = useMessage()
 const novelStore = useNovelStore()
-const taskStore = useTaskStore()
-const { novels } = storeToRefs(novelStore)
 
-const novel = computed(() => novelStore.findById(route.params.id as string))
-const activeChapter = ref<Chapter | null>(null)
+const novel = computed(() => novelStore.getNovel(route.params.id as string))
+const canEdit = computed(() => true)
 
-// 编辑器内容按章节 id 暂存在本地（原型，不落库）
-const drafts = ref<Record<string, string>>({})
+const content = ref(
+  '窗外的雨丝斜斜地打在玻璃上，咖啡馆里只有老式留声机在哼着走调的歌。\n\n他抬起头，"你确定要激活吗？"对面的声音很轻，却像石子落进湖心。\n\n他深吸一口气，按下了"是"。',
+)
+const selectionToolbar = ref(false)
+const inlineInspiration = ref(true)
+const currentChapter = ref('第一章 · 觉醒')
+const savedAt = ref(t('novel.savedNow'))
 
-const currentContent = computed({
-  get: () => (activeChapter.value ? drafts.value[activeChapter.value.id] ?? '' : ''),
-  set: (v: string) => {
-    if (activeChapter.value) drafts.value[activeChapter.value.id] = v
-  },
-})
+const chapters = [
+  { title: '第一章 · 觉醒', done: true },
+  { title: '第二章 · 旧信', done: false },
+  { title: '第三章 · 雨夜', done: false },
+  { title: '第四章 · 抉择', done: false },
+  { title: '第五章 · 归处', done: false },
+]
 
-const currentWords = computed(() => (currentContent.value ? currentContent.value.length : 0))
+const wordCount = computed(() => content.value.replace(/\s/g, '').length)
 
-const chapterStatusMap: Record<Chapter['status'], string> = {
-  draft: '草稿',
-  written: '已写',
-  polished: '已润色',
+function onSelect() {
+  const sel = (window.getSelection()?.toString() || '').trim()
+  selectionToolbar.value = sel.length > 0
 }
-function chapterStatusLabel(s: Chapter['status']) {
-  return chapterStatusMap[s]
+function aiAction(kind: 'continue' | 'rewrite' | 'expand') {
+  selectionToolbar.value = false
+  const map = { continue: 'novel.aiContinue', rewrite: 'novel.aiRewrite', expand: 'novel.aiExpand' }
+  message.success(t(map[kind]))
 }
-
-function selectChapter(ch: Chapter) {
-  activeChapter.value = ch
+function useInspiration() {
+  inlineInspiration.value = false
+  message.info(t('novel.inspirationSaved'))
 }
-
-function saveDraft() {
-  message.success('草稿已保存（本地原型）')
+function save() {
+  savedAt.value = t('novel.savedNow')
+  message.success(t('novel.savedToast'))
 }
-
-async function aiContinue() {
-  if (!novel.value || !activeChapter.value) return
-  await taskStore.createTask({
-    novelId: novel.value.id,
-    novelTitle: novel.value.title,
-    type: 'continue',
-    prompt: `续写《${novel.value.title}》的「${activeChapter.value.title}」，保持当前文风与节奏。`,
-  })
-  message.success('已提交续写任务，可在「生成任务」查看进度')
+function publish() {
+  message.success(t('novel.publishedToast'))
+  router.push({ name: 'publish' })
 }
-
-async function ensureLoaded() {
-  if (!novels.value.length) await novelStore.loadNovels()
-  const first = novel.value?.chapters?.[0]
-  if (first) selectChapter(first)
-}
-
-onMounted(ensureLoaded)
-watch(() => route.params.id, ensureLoaded)
 </script>
 
 <template>
-  <div v-if="novel" class="detail">
-    <header class="detail__top">
-      <div class="detail__title-row">
-        <n-button quaternary circle @click="router.back()">
-          <n-icon :component="ArrowBackOutline" />
-        </n-button>
-        <h1 class="detail__title">{{ novel.title }}</h1>
+  <div v-if="novel" class="editor-shell">
+    <!-- 顶部条 -->
+    <header class="editor-bar">
+      <button class="editor-back" @click="router.push('/novels')">← {{ t('novel.backToLibrary') }}</button>
+      <div class="editor-meta">
+        <span class="editor-title">{{ novel.title }}</span>
         <NovelStatusTag :status="novel.status" />
+        <span class="editor-sep">·</span>
+        <span>{{ wordCount }} {{ t('novel.wordsUnit') }}</span>
       </div>
-      <p class="detail__desc">{{ novel.description }}</p>
-      <div class="detail__meta">
-        <span>{{ formatWords(novel.wordCount) }}</span>
-        <span>· {{ novel.chapterCount }} 章</span>
-        <span>· 更新于 {{ formatDateTime(novel.updatedAt) }}</span>
-        <n-space :size="6" style="margin-left: 8px">
-          <n-tag v-for="t in novel.tags" :key="t" size="tiny" :bordered="false">{{ t }}</n-tag>
-        </n-space>
+      <div class="editor-actions">
+        <button class="editor-ghost" @click="save">{{ t('novel.save') }}</button>
+        <button class="editor-primary" @click="publish">{{ t('novel.publish') }}</button>
       </div>
     </header>
 
-    <div class="detail__body">
-      <n-card :bordered="false" class="detail__tree" title="章节">
-        <ChapterTree
-          v-if="novel.chapters.length"
-          :chapters="novel.chapters"
-          :active-id="activeChapter?.id"
-          @select="selectChapter"
-        />
-        <n-empty v-else description="还没有章节" size="small" />
-      </n-card>
-
-      <n-card :bordered="false" class="detail__editor">
-        <template v-if="activeChapter">
-          <div class="editor__head">
-            <div>
-              <h2 class="editor__title">{{ activeChapter.title }}</h2>
-              <n-space :size="8" align="center">
-                <n-tag size="small" :bordered="false">{{ chapterStatusLabel(activeChapter.status) }}</n-tag>
-                <span class="editor__words"
-                  >{{ formatWords(activeChapter.words) }}（正文 {{ currentWords }} 字）</span
-                >
-              </n-space>
-            </div>
-            <n-space>
-              <n-button secondary @click="saveDraft">
-                <template #icon><n-icon :component="SaveOutline" /></template>
-                保存草稿
-              </n-button>
-              <n-button type="primary" @click="aiContinue">
-                <template #icon><n-icon :component="SparklesOutline" /></template>
-                AI 续写
-              </n-button>
-            </n-space>
-          </div>
-          <n-input
-            v-model:value="currentContent"
-            type="textarea"
-            placeholder="在这里书写这一章的内容，灵感来时尽情落笔…"
-            class="editor__area"
-            :autosize="{ minRows: 18, maxRows: 32 }"
+    <div class="editor-work">
+      <!-- 目录 -->
+      <aside class="editor-toc">
+        <p class="editor-toc-title flex items-center gap-2">
+          <n-icon :component="BookOutline" class="text-[15px]" /> {{ t('novel.toc') }}
+        </p>
+        <button
+          v-for="c in chapters"
+          :key="c.title"
+          class="editor-chap"
+          :class="{ on: c.title === currentChapter }"
+          @click="currentChapter = c.title"
+        >
+          <n-icon
+            :component="c.done ? CheckmarkDoneOutline : CreateOutline"
+            class="text-[15px]"
+            :class="c.done ? 'text-emerald-600' : 'text-ink-muted'"
           />
-        </template>
-        <n-empty v-else description="从左侧选择一章开始写作" />
-      </n-card>
+          {{ c.title }}
+        </button>
+        <button class="editor-chap new">＋ {{ t('novel.newChapter') }}</button>
+      </aside>
+
+      <!-- 写作区 -->
+      <main class="editor-page mf-scroll" @mouseup="onSelect">
+        <h1 class="editor-chapter-title">{{ currentChapter }}</h1>
+
+        <div class="editor-paper">
+          <textarea
+            v-model="content"
+            :readonly="!canEdit"
+            class="editor-write"
+            :placeholder="t('novel.chapterPlaceholder')"
+            @input="savedAt = t('novel.editing')"
+          />
+
+          <!-- 选中文字时的浮动 AI 工具条 -->
+          <transition name="pop">
+            <div v-if="selectionToolbar" class="float-ai">
+              <button @click="aiAction('continue')"><n-icon :component="FlashOutline" class="text-[14px]" /> {{ t('novel.aiContinueLabel') }}</button>
+              <button @click="aiAction('rewrite')"><n-icon :component="PencilOutline" class="text-[14px]" /> {{ t('novel.aiRewriteLabel') }}</button>
+              <button @click="aiAction('expand')"><n-icon :component="SearchOutline" class="text-[14px]" /> {{ t('novel.aiExpandLabel') }}</button>
+            </div>
+          </transition>
+
+          <!-- 行内灵感卡 -->
+          <transition name="pop">
+            <div v-if="inlineInspiration" class="editor-insp-card">
+              <n-icon :component="BulbOutline" class="editor-i-ico" />
+              <div class="editor-i-body">
+                <p class="editor-i-title">{{ t('novel.inspFrom') }}：{{ t('novel.inspToday') }}</p>
+                <p class="editor-i-desc">{{ t('novel.inspScene') }}：{{ t('novel.inspSceneDesc') }}</p>
+              </div>
+              <div class="editor-i-actions">
+                <button class="editor-use" @click="useInspiration">{{ t('novel.editorUse') }}</button>
+                <button class="editor-skip" @click="inlineInspiration = false">{{ t('novel.editorChange') }}</button>
+              </div>
+            </div>
+          </transition>
+        </div>
+      </main>
     </div>
+
+    <!-- 底部状态 -->
+    <footer class="editor-status">
+      <span class="editor-dot" :class="{ live: savedAt === t('novel.savedNow') }" />
+      {{ t('novel.statusBar', { chapter: currentChapter, words: wordCount, tokens: '1.2k' }) }}
+    </footer>
   </div>
-  <n-empty v-else description="找不到该项目，它可能已被删除" style="margin-top: 80px" />
+
+  <div v-else class="editor-missing">
+    <p>{{ t('novel.missing') }}</p>
+    <button @click="router.push('/novels')">{{ t('novel.missingBack') }}</button>
+  </div>
 </template>
 
-<style scoped>
-.detail {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.detail__top {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.detail__title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.detail__title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--mf-text);
-}
-.detail__desc {
-  color: var(--mf-text-3);
-  margin: 6px 0 0;
-}
-.detail__meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--mf-text-3);
-  font-size: 13px;
-  flex-wrap: wrap;
-}
-.detail__body {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-.detail__tree {
-  width: 300px;
-  flex: none;
-}
-.detail__editor {
-  flex: 1;
-  min-width: 0;
-}
-.editor__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.editor__title {
-  margin: 0 0 6px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--mf-text);
-}
-.editor__words {
-  color: var(--mf-text-3);
-  font-size: 12px;
-}
-.editor__area {
-  font-family: inherit;
-}
-@media (max-width: 900px) {
-  .detail__body {
-    flex-direction: column;
-  }
-  .detail__tree {
-    width: 100%;
-  }
-}
-</style>

@@ -1,64 +1,252 @@
-/* MuseFlow 全局样式 —— 极简、干净、有呼吸感 */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* ===================================================================
+   MuseFlow 样式入口（统一收纳于 src/assets）
+   - Tailwind 三层指令
+   - 主题色板以 CSS 变量定义，按 [data-theme] 切换（6 套主题）
+   - 基础排版与全局实用类
+   设计语言：深蓝灰 + 琥珀金 + 暖白，安静、专注、温暖的私人书房。
+   =================================================================== */
 
-html,
-body,
-#app {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
+/* ----------------------- 设计令牌（默认 = 暖白书房） ----------------------- */
 :root {
-  --mf-bg: #f7f8fa;
-  --mf-surface: #ffffff;
-  --mf-surface-2: #fbfcfd;
-  --mf-border: #eef0f3;
-  --mf-border-strong: #e3e6ea;
-  --mf-text: #1f2329;
-  --mf-text-2: #4e5969;
-  --mf-text-3: #8a9099;
-  --mf-hover: #f0f3f7;
-  --mf-active-bg: #eaf0ff;
-  --mf-active-text: #3b5bdb;
-  --mf-accent: #3b5bdb;
-  --mf-accent-hover: #4c6ef5;
-  --mf-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.05);
-}
+  --c-ink: #1a2332;
+  --c-ink-soft: #2a3344;
+  --c-ink-muted: #5a647a;
+  --c-amber: #d4a05a;
+  --c-amber-deep: #b9853f;
+  --c-amber-soft: #f3e4cc;
+  --c-warm: #f8f5f0;
+  --c-warm-2: #f1ece3;
+  --c-paper: #fffdf9;
+  --c-line: #e6ded2;
+  --c-line-soft: #efe9df;
+  --c-success: #5b8b6a;
+  --c-warn: #c08a3e;
+  --c-danger: #c25c5c;
+  --c-info: #5b7b9b;
 
-html.dark {
-  --mf-bg: #15161a;
-  --mf-surface: #1d1e24;
-  --mf-surface-2: #191a20;
-  --mf-border: #2a2b33;
-  --mf-border-strong: #34353f;
-  --mf-text: #e9eaef;
-  --mf-text-2: #b3b6c0;
-  --mf-text-3: #82858f;
-  --mf-hover: #26272f;
-  --mf-active-bg: #232a45;
-  --mf-active-text: #93a3ff;
-  --mf-accent: #6e7bff;
-  --mf-accent-hover: #8590ff;
-  --mf-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.35);
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei',
+  --font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', Georgia, serif;
+  --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system,
     'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--mf-text);
-  background-color: var(--mf-bg);
-  -webkit-font-smoothing: antialiased;
-  transition: background-color 0.2s ease, color 0.2s ease;
+
+  --radius-s: 8px;
+  --radius-m: 12px;
+  --radius-l: 18px;
+  --shadow-sm: 0 2px 10px rgba(26, 35, 50, 0.06);
+  --shadow-m: 0 8px 28px rgba(26, 35, 50, 0.1);
+  --shadow-l: 0 18px 50px rgba(26, 35, 50, 0.16);
+  --gap: 16px;
+  --gap-l: 24px;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* ----------------------------- 六套主题 ----------------------------- */
+/* 护眼：淡绿纸感 */
+[data-theme='eye-care'] {
+  --c-ink: #2f3a30;
+  --c-ink-soft: #3d4a3e;
+  --c-ink-muted: #6b7768;
+  --c-amber: #7faa5a;
+  --c-amber-deep: #6b9248;
+  --c-amber-soft: #e3ebd9;
+  --c-warm: #eef3e6;
+  --c-warm-2: #e4ebda;
+  --c-paper: #f7faf2;
+  --c-line: #d6e0cc;
+  --c-line-soft: #e6ecde;
+  --c-success: #5b8b6a;
+  --c-warn: #b08a3e;
+  --c-danger: #c25c5c;
+  --c-info: #5b7b9b;
+  --shadow-sm: 0 2px 10px rgba(47, 58, 48, 0.06);
+  --shadow-m: 0 8px 28px rgba(47, 58, 48, 0.1);
+  --shadow-l: 0 18px 50px rgba(47, 58, 48, 0.14);
+}
+
+/* 专注：中性灰，弱化强调 */
+[data-theme='focus'] {
+  --c-ink: #20242b;
+  --c-ink-soft: #2c313a;
+  --c-ink-muted: #6b7280;
+  --c-amber: #8a9099;
+  --c-amber-deep: #6b7280;
+  --c-amber-soft: #e8eaed;
+  --c-warm: #f4f5f7;
+  --c-warm-2: #eceef1;
+  --c-paper: #ffffff;
+  --c-line: #e2e5e9;
+  --c-line-soft: #eef0f2;
+  --c-success: #5b8b6a;
+  --c-warn: #b08944;
+  --c-danger: #c25c5c;
+  --c-info: #5b7b9b;
+  --shadow-sm: 0 2px 10px rgba(32, 36, 43, 0.06);
+  --shadow-m: 0 8px 28px rgba(32, 36, 43, 0.1);
+  --shadow-l: 0 18px 50px rgba(32, 36, 43, 0.14);
+}
+
+/* 复古：羊皮纸 + 皮革棕 */
+[data-theme='retro'] {
+  --c-ink: #3a2c1e;
+  --c-ink-soft: #4d3a28;
+  --c-ink-muted: #7a6249;
+  --c-amber: #b0722f;
+  --c-amber-deep: #946227;
+  --c-amber-soft: #ecdcc4;
+  --c-warm: #f3e9d6;
+  --c-warm-2: #e9dcc3;
+  --c-paper: #fbf4e6;
+  --c-line: #d8c4a3;
+  --c-line-soft: #e7d8bf;
+  --c-success: #5b8b6a;
+  --c-warn: #b08a3e;
+  --c-danger: #b5504a;
+  --c-info: #5b7b9b;
+  --shadow-sm: 0 2px 10px rgba(58, 44, 30, 0.08);
+  --shadow-m: 0 8px 28px rgba(58, 44, 30, 0.12);
+  --shadow-l: 0 18px 50px rgba(58, 44, 30, 0.18);
+}
+
+/* 暗夜：深蓝灰底 */
+[data-theme='dark'] {
+  --c-ink: #e9ebf0;
+  --c-ink-soft: #c2c7d2;
+  --c-ink-muted: #8a90a0;
+  --c-amber: #d4a05a;
+  --c-amber-deep: #e0b06e;
+  --c-amber-soft: #3a3326;
+  --c-warm: #1a2332;
+  --c-warm-2: #222c3d;
+  --c-paper: #232e40;
+  --c-line: #34415a;
+  --c-line-soft: #2a3449;
+  --c-success: #6f9f80;
+  --c-warn: #d09a4e;
+  --c-danger: #d27272;
+  --c-info: #7f9cc0;
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+  --shadow-m: 0 8px 28px rgba(0, 0, 0, 0.4);
+  --shadow-l: 0 18px 50px rgba(0, 0, 0, 0.5);
+}
+
+/* 高级：近黑底 + 金 */
+[data-theme='premium'] {
+  --c-ink: #ece6da;
+  --c-ink-soft: #cfc6b6;
+  --c-ink-muted: #9a917f;
+  --c-amber: #d9b066;
+  --c-amber-deep: #e8c27d;
+  --c-amber-soft: #3a3320;
+  --c-warm: #141210;
+  --c-warm-2: #1f1b16;
+  --c-paper: #211d18;
+  --c-line: #3a342a;
+  --c-line-soft: #2c281f;
+  --c-success: #7f9f86;
+  --c-warn: #d6a85a;
+  --c-danger: #d27a72;
+  --c-info: #8fa6c4;
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-m: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --shadow-l: 0 18px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* ------------------------------- 基础层 ------------------------------- */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #app {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--c-ink);
+    background: var(--c-warm);
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    color: var(--c-ink);
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+
+  a {
+    color: var(--c-amber-deep);
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  :where(button, a, input, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--c-amber);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--c-line);
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--c-ink-muted);
+  }
+}
+
+/* ------------------------------ 实用类 ------------------------------ */
+@layer components {
+  .font-serif {
+    font-family: var(--font-serif);
+  }
+  .font-sans {
+    font-family: var(--font-sans);
+  }
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--c-amber-deep);
+    font-weight: 600;
+  }
+  .card {
+    background: var(--c-paper);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-m);
+    box-shadow: var(--shadow-sm);
+  }
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-line) transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
 }

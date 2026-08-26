@@ -1,92 +1,112 @@
 ﻿<script setup lang="ts">
-import { reactive } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
-import { useUserStore } from '@/stores/user'
+import { useI18n } from 'vue-i18n'
+import { NIcon } from 'naive-ui'
+import {
+  CreateOutline,
+  IdCardOutline,
+  MailOutline,
+  LockClosedOutline,
+} from '@vicons/ionicons5'
+import { useUserStore } from '@/stores/system/user'
+import { register as registerApi } from '@/api/system/auth'
 
+const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const userStore = useUserStore()
 
-const form = reactive({ username: '', email: '', password: '', confirmPassword: '' })
+const name = ref('')
+const email = ref('')
+const password = ref('')
+const confirm = ref('')
+const loading = ref(false)
+
+const valid = computed(
+  () => !!email.value && password.value.length >= 6 && password.value === confirm.value,
+)
 
 async function onSubmit() {
-  if (form.password !== form.confirmPassword) {
-    message.warning('两次输入的密码不一致')
+  if (!valid.value) {
+    message.warning(password.value !== confirm.value ? t('auth.pwMismatch') : t('auth.pwTooShort'))
     return
   }
+  loading.value = true
   try {
-    await userStore.register(form)
-    message.success('注册成功')
-    router.push('/dashboard')
+    const result = await registerApi({
+      name: name.value || email.value.split('@')[0],
+      email: email.value,
+      password: password.value,
+      confirmPassword: confirm.value,
+    })
+    userStore.setAuth(result.token, result.user)
+    message.success(t('auth.registerSuccess'))
+    router.replace('/novels')
   } catch {
-    message.error('注册失败，请重试')
+    message.error(t('auth.registerFailed'))
+  } finally {
+    loading.value = false
   }
 }
 </script>
 
 <template>
-  <n-form class="auth-form" :model="form" @submit.prevent="onSubmit">
-    <h2>创建账号</h2>
-    <p class="sub">加入 MuseFlow，开启 AI 创作</p>
-    <n-alert :show-icon="false" type="default" class="mock-hint">
-      演示环境 · 注册信息仅保存在本地浏览器，可直接用演示账号登录
-    </n-alert>
-    <n-form-item label="用户名">
-      <n-input v-model:value="form.username" placeholder="给自己起个名字" />
-    </n-form-item>
-    <n-form-item label="邮箱">
-      <n-input v-model:value="form.email" placeholder="you@example.com" />
-    </n-form-item>
-    <n-form-item label="密码">
-      <n-input
-        v-model:value="form.password"
-        type="password"
-        show-password-on="click"
-        placeholder="至少 6 位"
-      />
-    </n-form-item>
-    <n-form-item label="确认密码">
-      <n-input
-        v-model:value="form.confirmPassword"
-        type="password"
-        show-password-on="click"
-        placeholder="再次输入密码"
-      />
-    </n-form-item>
-    <n-button type="primary" block attr-type="submit" :loading="userStore.loading">
-      注册
-    </n-button>
-    <p class="switch">
-      已有账号？
-      <router-link to="/auth/login">返回登录</router-link>
-    </p>
-  </n-form>
-</template>
+  <div class="auth-page">
+    <aside class="auth-brand">
+      <div class="auth-brand-inner">
+        <div class="auth-logo">
+          <n-icon :component="CreateOutline" class="text-[26px]" />
+          <span>MuseFlow</span>
+        </div>
+        <h1 class="auth-slogan">{{ t('auth.registerSlogan') }}</h1>
+        <p class="auth-pitch">{{ t('auth.registerPitch') }}</p>
+        <ol class="auth-steps">
+          <li><b>①</b> {{ t('auth.step1') }}</li>
+          <li><b>②</b> {{ t('auth.step2') }}</li>
+          <li><b>③</b> {{ t('auth.step3') }}</li>
+        </ol>
+        <p class="auth-whisper">{{ t('auth.registerWhisper') }}</p>
+      </div>
+    </aside>
 
-<style scoped>
-.auth-form {
-  width: 320px;
-}
-.auth-form h2 {
-  margin: 0 0 4px;
-  font-size: 22px;
-}
-.sub {
-  color: #8a9099;
-  font-size: 13px;
-  margin: 0 0 18px;
-}
-.mock-hint {
-  margin: 0 0 16px;
-  font-size: 13px;
-  color: var(--mf-text-2);
-  line-height: 1.6;
-}
-.switch {
-  text-align: center;
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 14px;
-}
-</style>
+    <main class="auth-form-side">
+      <div class="auth-form-card">
+        <h2>{{ t('auth.registerTitle') }}</h2>
+        <p class="auth-sub">{{ t('auth.registerSub') }}</p>
+
+        <form @submit.prevent="onSubmit">
+          <label class="auth-field">
+            <span class="auth-lbl"><n-icon :component="IdCardOutline" class="text-[14px]" /> {{ t('auth.nickname') }}</span>
+            <input v-model="name" type="text" :placeholder="t('auth.nicknamePlaceholder')" />
+          </label>
+          <label class="auth-field">
+            <span class="auth-lbl"><n-icon :component="MailOutline" class="text-[14px]" /> {{ t('auth.email') }}</span>
+            <input v-model="email" type="email" :placeholder="t('auth.emailPlaceholder')" autocomplete="email" />
+          </label>
+          <div class="auth-row">
+            <label class="auth-field">
+              <span class="auth-lbl"><n-icon :component="LockClosedOutline" class="text-[14px]" /> {{ t('auth.password') }}</span>
+              <input v-model="password" type="password" :placeholder="t('auth.passwordPlaceholder')" autocomplete="new-password" />
+            </label>
+            <label class="auth-field">
+              <span class="auth-lbl"><n-icon :component="LockClosedOutline" class="text-[14px]" /> {{ t('auth.confirmPassword') }}</span>
+              <input v-model="confirm" type="password" :placeholder="t('auth.confirmPlaceholder')" autocomplete="new-password" />
+            </label>
+          </div>
+
+          <button class="auth-primary" :disabled="loading || !valid" type="submit">
+            {{ loading ? t('auth.registering') : t('auth.registerBtn') }}
+          </button>
+        </form>
+
+        <p class="auth-switch">
+          {{ t('auth.hasAccount') }}
+          <RouterLink to="/login">{{ t('auth.toLogin') }}</RouterLink>
+        </p>
+      </div>
+      <p class="auth-foot">{{ t('auth.agree') }}</p>
+    </main>
+  </div>
+</template>

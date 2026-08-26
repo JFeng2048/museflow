@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import { useUserStore } from '@/stores/user'
+import { useUserStore } from '@/stores/system/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -13,16 +13,19 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     component: () => import('@/layouts/DefaultLayout.vue'),
-    redirect: '/dashboard',
+    redirect: '/novels',
     meta: { requiresAuth: true },
     children: [
-      { path: 'dashboard', name: 'dashboard', component: () => import('@/views/dashboard/Dashboard.vue') },
-      { path: 'novels', name: 'novel-list', component: () => import('@/views/novel/NovelList.vue') },
+      { path: 'dashboard', name: 'dashboard', component: () => import('@/views/dashboard/index.vue') },
+      { path: 'novels', name: 'novels', component: () => import('@/views/novel/index.vue') },
       { path: 'novels/:id', name: 'novel-detail', component: () => import('@/views/novel/NovelDetail.vue') },
-      { path: 'materials', name: 'material', component: () => import('@/views/material/MaterialList.vue') },
-      { path: 'lorebook', name: 'lorebook', component: () => import('@/views/lorebook/LorebookPanel.vue') },
-      { path: 'tasks', name: 'task', component: () => import('@/views/task/TaskQueue.vue') },
-      { path: 'publish', name: 'publish', component: () => import('@/views/publish/PublishSetting.vue') },
+      { path: 'inspiration', name: 'inspiration', component: () => import('@/views/inspiration/index.vue') },
+      { path: 'lorebook', name: 'lorebook', component: () => import('@/views/lorebook/index.vue') },
+      { path: 'materials', name: 'material', component: () => import('@/views/material/index.vue') },
+      { path: 'publish', name: 'publish', component: () => import('@/views/publish/index.vue') },
+      { path: 'task', name: 'tasks', component: () => import('@/views/task/index.vue') },
+      { path: 'statistics', name: 'statistics', component: () => import('@/views/statistics/index.vue') },
+      { path: 'settings', name: 'settings', component: () => import('@/views/settings/index.vue') },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },

@@ -1,29 +1,37 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { NConfigProvider, NMessageProvider, NDialogProvider, darkTheme } from 'naive-ui'
-import { useTheme } from '@/composables/useTheme'
+import { NConfigProvider, NMessageProvider, NDialogProvider } from 'naive-ui'
+import { useUiStore } from '@/stores/ui'
 
-const { isDark } = useTheme()
+const ui = useUiStore()
 
-const theme = computed(() => (isDark.value ? darkTheme : null))
-
-// 轻/暗共用一套主题微调，主色取自品牌靛蓝。
-const themeOverrides = {
-  common: {
-    primaryColor: '#3b5bdb',
-    primaryColorHover: '#4c6ef5',
-    primaryColorPressed: '#364fc7',
-    primaryColorSuppl: '#4c6ef5',
-    borderRadius: '8px',
-    fontSize: '14px',
-  },
-  Card: { borderRadius: '12px' },
-  Tag: { borderRadius: '999px' },
+// 跟随当前主题的 Naive UI 覆盖：直接读取 :root 上由 CSS 定义的语义变量，
+// 保证 Naive UI 与 Tailwind 主题完全一致（单一色源）。
+function cssVar(name: string, fallback = '#000000'): string {
+  if (typeof window === 'undefined') return fallback
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return v || fallback
 }
+
+const themeOverrides = computed(() => ({
+  common: {
+    primaryColor: cssVar('--c-amber-deep', '#b9853f'),
+    primaryColorHover: cssVar('--c-amber', '#d4a05a'),
+    primaryColorPressed: cssVar('--c-amber-deep', '#b9853f'),
+    primaryColorSuppl: cssVar('--c-amber', '#d4a05a'),
+    borderRadius: '10px',
+    fontSize: '14px',
+    bodyColor: cssVar('--c-warm', '#f8f5f0'),
+    cardColor: cssVar('--c-paper', '#fffdf9'),
+    textColorBase: cssVar('--c-ink', '#1a2332'),
+  },
+  Card: { borderRadius: '14px' },
+  Tag: { borderRadius: '999px' },
+}))
 </script>
 
 <template>
-  <n-config-provider :theme="theme" :theme-overrides="themeOverrides">
+  <n-config-provider :theme-overrides="themeOverrides">
     <n-message-provider :max="3">
       <n-dialog-provider>
         <router-view />
