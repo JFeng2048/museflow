@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package user;
+
+// Go 包路径：生成的代码位于 proto/user 目录下，包名为 userpb
+option go_package = "github.com/museflow/proto/user;userpb";
+
+// UserService 用户服务，负责注册、登录、令牌刷新、登出与用户信息查询。
+//
+// 认证采用双令牌模式：
+//   - access token：短期（默认 1h），无状态 JWT，由网关中间件本地验签 + 黑名单校验
+//   - refresh token：长期（默认 30d），JWT + Redis 白名单，由网关写入 HttpOnly Cookie
+service UserService {
+  // Register 用户注册（email + password）
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+
+  // Login 用户登录，签发 access + refresh 双令牌
+  rpc Login(LoginRequest) returns (LoginResponse);
+
+  // Refresh 使用 refresh token 换取新的 access token（refresh 不轮换）
+  rpc Refresh(RefreshRequest) returns (RefreshResponse);
+
+  // Logout 登出：删除 refresh 白名单 + 将 access token 加入黑名单
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+
+  // GetProfile 获取用户信息
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+
+  // ValidateToken 校验 access token（供网关鉴权中间件使用，含黑名单检查）
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+// UserInfo 对外暴露的用户信息，使用 uuid 作为对外标识，不暴露自增 id。
+message UserInfo {
+  string uuid = 1;                 // 用户全局唯一标识
+  string email = 2;                // 邮箱（登录账号）
+  string phone = 3;                // 手机号，可为空
+  string nickname = 4;             // 昵称
+  string avatar_url = 5;           // 头像 URL
+  string bio = 6;                  // 个人简介
+  int32 status = 7;                // 状态: 1=正常, 2=冻结, 3=已注销, 4=待审核
+  bool email_verified = 8;         // 邮箱是否已验证
+  bool phone_verified = 9;         // 手机号是否已验证
+  bool mfa_enabled = 10;           // 是否开启 MFA
+  int64 last_login_at = 11;        // 最后登录时间（Unix 秒，0 表示从未登录）
+  int64 created_at = 12;           // 注册时间（Unix 秒）
+}
+
+// DeviceContext 设备上下文，用于生成设备指纹防止令牌跨设备盗用。
+message DeviceContext {
+  string device_id = 1;            // 设备 ID（客户端 Cookie 携带，缺失时由服务端生成）
+  string user_agent = 2;           // User-Agent
+  string ip = 3;                   // 客户端 IP
+  string device_name = 4;          // 设备名称，用于设备列表展示
+}
+
+message RegisterRequest {
+  string email = 1;                // 邮箱，必填
+  string password = 2;             // 明文密码，必填（服务端 bcrypt 加密）
+  string nickname = 3;             // 昵称，为空时由邮箱前缀生成
+}
+
+message RegisterResponse {
+  UserInfo user = 1;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  DeviceContext device = 3;
+}
+
+message LoginResponse {
+  string access_token = 1;         // access token，网关放响应 body
+  string refresh_token = 2;        // refresh token，网关写入 HttpOnly Cookie
+  string device_id = 3;            // 设备 ID，网关写入普通 Cookie
+  int64 expires_in = 4;            // access token 有效期（秒）
+  int64 refresh_expires_in = 5;    // refresh token 有效期（秒）
+  UserInfo user = 6;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;        // 来自 Cookie
+  DeviceContext device = 2;        // 用于设备指纹比对
+}
+
+message RefreshResponse {
+  string access_token = 1;
+  int64 expires_in = 2;
+}
+
+message LogoutRequest {
+  string access_token = 1;         // 来自 Authorization 头，加入黑名单
+  string refresh_token = 2;        // 来自 Cookie，删除白名单
+}
+
+message LogoutResponse {
+  bool success = 1;
+}
+
+message GetProfileRequest {
+  string uuid = 1;                 // 用户 uuid，由网关从 access token 解析后传入
+}
+
+message GetProfileResponse {
+  UserInfo user = 1;
+}
+
+message ValidateTokenRequest {
+  string access_token = 1;
+}
+
+message ValidateTokenResponse {
+  bool valid = 1;
+  string uuid = 2;                 // 校验通过时返回用户 uuid
+}
