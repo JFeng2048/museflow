@@ -25,6 +25,7 @@ export default {
     model: '模型配置',
     credits: '我的积分',
     logout: '退出登录',
+    logoutConfirm: '确定要退出当前账号吗？',
   },
   app: {
     name: 'MuseFlow',

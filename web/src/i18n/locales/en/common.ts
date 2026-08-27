@@ -24,6 +24,7 @@ export default {
     model: 'Model Settings',
     credits: 'My Credits',
     logout: 'Log Out',
+    logoutConfirm: 'Are you sure you want to log out?',
   },
   app: {
     name: 'MuseFlow',

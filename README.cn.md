@@ -35,6 +35,12 @@
 
 ---
 
+## 🖼️ 预览截图
+
+![MuseFlow 预览](docs/images/review-cn.png)
+
+---
+
 ## 🧱 架构概览
 
 仓库为 **Monorepo**，所有代码同处一个 Git 仓库。微服务之间通过 **gRPC** 通信，对外统一由 **API Gateway** 暴露 HTTP 接口。

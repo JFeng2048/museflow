@@ -35,6 +35,12 @@
 
 ---
 
+## 🖼️ Screenshots
+
+![MuseFlow preview](docs/images/review.png)
+
+---
+
 ## 🧱 Architecture
 
 The repository is a **Monorepo** — all code lives in a single Git repository. Microservices communicate via **gRPC**, and the **API Gateway** exposes unified HTTP endpoints to the outside world.
