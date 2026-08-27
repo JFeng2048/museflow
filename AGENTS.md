@@ -45,13 +45,26 @@ Go: standard `gofmt`/`go vet`; exported PascalCase, files `snake_case.go`. Error
 
 Frontend: Vue 3 `<script setup>` SFCs, strict TS (`@vue/tsconfig`), 2-space indent.
 
+### Encoded Conventions (团队编码习惯)
+
+These conventions are mandatory for contributions to this repo:
+
+1. **提交信息中英双语**：Commit 主题行（subject）采用 Conventional Commits 规范（`type(scope): 中文主题 / English subject`），类型如 `feat`/`fix`/`refactor`/`docs`/`chore`/`build`/`test`；正文（body）可选，用中文说明「为什么改」。示例：
+   ```
+   feat(user-service): 拆分 auth/token/dto 子包 / split auth/token/dto subpackages
+   ```
+   复杂改动按功能原子分拆为多个提交，而非一次性大提交。
+2. **配置分层与环境变量**：所有配置统一走 `envloader`，禁止直接使用 `os.Getenv`。共享键无前缀（`JWT_SECRET`、`REDIS_*`、`DB_*`），通过 `envloader.New("REDIS",...)` + `GetCommon` 读取；服务专属键使用前缀（`USER_`、`GATEWAY_`、`LOG_`），通过 `Get` 读取。分层优先级：系统环境变量 > 服务 `.env` > 仓库根 `.env` > 默认值。
+3. **注释与文案用中文**：代码注释、文档（如 `*.md`）、日志文案以中文为主；变量名/函数名等标识符仍用英文，保持 `gofmt`/`go vet` 规范。
+4. **无循环依赖分层**：`service` 内部按 `auth`/`token`/`dto` 子包拆分，依赖单向、禁止循环：`auth` → `token` + `dto`；`token`/`dto` 不反向依赖 `auth` 或任何内部包。跨层调用同样保持单向（handler → service → repository）。
+
 ## Testing Guidelines
 
 Backend: `*_test.go` with the standard `testing` package, placed beside the code in its package (e.g. `internal/service/auth/auth_service_test.go` uses in-memory `repository.UserRepository`/`TokenStore` fakes). `auth` package has the primary coverage; keep tests isolated via fakes. Frontend: Vitest `*.spec.ts` beside source. Always run `go test ./...` and `go vet ./...` for the changed module before committing.
 
 ## Commit & Pull Request Guidelines
 
-Commit messages are short, imperative, Chinese-language summaries (e.g. `说明文档初始化`), ideally under 50 characters with a "why" body when needed.
+Commit messages follow Conventional Commits with bilingual subject lines (see 编码习惯 above): `type(scope): 中文主题 / English subject`. Subject lines stay concise (ideally under 50 chars per language); add a Chinese "why" body when the change is non-obvious. Split large changes into focused atomic commits per feature/module.
 
 PRs should link the related issue, describe the change and motivation, and include screenshots for UI changes. The README references a `CONTRIBUTING.md` that does not yet exist; until then, follow these guidelines and keep PRs focused.
 
