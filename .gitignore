@@ -21,12 +21,27 @@ profile.cov
 # vendor/
 
 # Go workspace file
+# go.work 由仓库提供以统一本地多模块开发，仅忽略其校验和文件
 go.work
 go.work.sum
 
-# env file
-.env
+# 构建产物
+bin/
 
-Editor/IDE
+# Air 热重载临时目录
+tmp/
+
+# env 文件：.env 含本地密钥，忽略不提交；.env.example 作为模板提交
+.env
+.env.local
+.env.*.local
+
+# 例外：提交示例文件
+!.env.example
+!services/**/.env.example
+
+# Editor/IDE
 .idea/
 .vscode/
+*.log
+deploy/redis/data

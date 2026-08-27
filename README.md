@@ -2,7 +2,7 @@
 
 > AI-Powered Novel Generation Platform · Full-Cycle Creative Tool from Inspiration to Publishing
 
-[![Go Version](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat&logo=go)](https://golang.org)
 [![Vue 3](https://img.shields.io/badge/Vue-3.4+-4FC08D?style=flat&logo=vue.js)](https://vuejs.org)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28+-326CE5?style=flat&logo=kubernetes)](https://kubernetes.io)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
