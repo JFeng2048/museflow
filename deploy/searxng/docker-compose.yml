@@ -1,0 +1,17 @@
+services:
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: unless-stopped
+    ports:
+      - "8888:8080"    # 将服务器的8888端口映射到容器的8080端口，可根据需要修改左侧端口
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml:ro
+      - ./data:/var/cache/searxng
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888   # 如果部署在服务器上且有域名，请替换为你的域名
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,23 @@
+services:
+  crawl4ai-service:
+    image: museflow/crawl4ai-service:0.1.0
+    container_name: crawl4ai-service
+    restart: unless-stopped
+    ports:
+      - "11235:11235"
+    environment:
+      API_KEY: crawl4ai-service-api-key
+    shm_size: "2gb"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -H 'Authorization: Bearer ${API_KEY:-}' http://localhost:11235/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - jobinsight-net
+
+networks:
+  jobinsight-net:
+    name: jobinsight-net
+    driver: bridge
