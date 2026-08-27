@@ -1,0 +1,28 @@
+# Air 热重载配置 —— user-service
+# 用法：在 services/user-service 目录执行 `air`
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # 构建并运行入口
+  cmd = "go run ./cmd/server"
+  # 仅构建（air 用此命令做增量编译校验）
+  bin = "./tmp/user-service"
+  # 监听以下文件变化触发重载
+  include_ext = ["go", "mod", "sum"]
+  # 排除目录
+  exclude_dir = ["tmp", "docs", "bin", "test"]
+  # 排除文件
+  exclude_file = []
+  # 排除正则
+  exclude_regex = ["_test\\.go"]
+  # 依赖变更（go.mod / proto）时也重建
+  include_dir = ["internal", "cmd", "../../proto"]
+  delay = 1000
+  stop_on_error = false
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true
