@@ -1,0 +1,296 @@
+basePath: /api/v1
+definitions:
+  internal_handler.ErrorResponse:
+    properties:
+      code:
+        example: 400
+        type: integer
+      message:
+        example: 参数校验失败
+        type: string
+    type: object
+  internal_handler.LoginData:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      expires_in:
+        example: 3600
+        type: integer
+      token_type:
+        example: Bearer
+        type: string
+      user:
+        $ref: '#/definitions/internal_handler.UserInfo'
+    type: object
+  internal_handler.LoginRequest:
+    properties:
+      device_name:
+        description: DeviceName 设备名称，用于设备列表展示，可选
+        example: Chrome on Windows
+        maxLength: 100
+        type: string
+      email:
+        example: author@museflow.ai
+        type: string
+      password:
+        example: P@ssw0rd123
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_handler.RefreshData:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      expires_in:
+        example: 3600
+        type: integer
+      token_type:
+        example: Bearer
+        type: string
+    type: object
+  internal_handler.RegisterRequest:
+    properties:
+      email:
+        example: author@museflow.ai
+        type: string
+      nickname:
+        example: 墨流作者
+        maxLength: 100
+        type: string
+      password:
+        example: P@ssw0rd123
+        maxLength: 72
+        minLength: 8
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_handler.Response:
+    properties:
+      code:
+        example: 0
+        type: integer
+      data: {}
+      message:
+        example: success
+        type: string
+    type: object
+  internal_handler.UserInfo:
+    properties:
+      avatar_url:
+        type: string
+      bio:
+        type: string
+      created_at:
+        example: 1756270000
+        type: integer
+      email:
+        example: author@museflow.ai
+        type: string
+      email_verified:
+        example: false
+        type: boolean
+      last_login_at:
+        example: 1756280000
+        type: integer
+      mfa_enabled:
+        example: false
+        type: boolean
+      nickname:
+        example: 墨流作者
+        type: string
+      phone:
+        example: "13800138000"
+        type: string
+      phone_verified:
+        example: false
+        type: boolean
+      status:
+        example: 1
+        type: integer
+      uuid:
+        example: 3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b
+        type: string
+    type: object
+host: localhost:5001
+info:
+  contact:
+    name: MuseFlow Team
+  description: |-
+    MuseFlow AI 小说生成平台的 API 网关，统一对外暴露 HTTP 接口并转发到后端 gRPC 微服务。
+
+    认证采用双令牌机制：
+    - access token：短期（默认 1 小时），通过响应 body 返回，请求时放入 Authorization 头
+    - refresh token：长期（默认 30 天），存于 HttpOnly Cookie，用于换取新的 access token
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: MuseFlow API Gateway
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 邮箱密码登录，成功后返回 access token（body）并将 refresh token 写入 HttpOnly Cookie
+      parameters:
+      - description: 登录信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_handler.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_handler.LoginData'
+              type: object
+        "400":
+          description: 参数校验失败
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "401":
+          description: 邮箱或密码错误
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: 服务内部错误
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      summary: 用户登录
+      tags:
+      - 认证
+  /auth/logout:
+    post:
+      description: 删除 Redis 中的 refresh token 白名单、将当前 access token 加入黑名单，并清除 Cookie
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登出成功
+          schema:
+            $ref: '#/definitions/internal_handler.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 用户登出
+      tags:
+      - 认证
+  /auth/refresh:
+    post:
+      description: 从 Cookie 读取 refresh token 换取新的 access token，refresh token 本身不轮换
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刷新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_handler.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_handler.RefreshData'
+              type: object
+        "401":
+          description: 刷新令牌无效或已过期
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "403":
+          description: 设备校验失败
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      summary: 刷新访问令牌
+      tags:
+      - 认证
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: 使用邮箱和密码注册新用户，密码以 bcrypt 加密存储
+      parameters:
+      - description: 注册信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 注册成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_handler.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_handler.UserInfo'
+              type: object
+        "400":
+          description: 参数校验失败
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "409":
+          description: 邮箱已被注册
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "500":
+          description: 服务内部错误
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      summary: 用户注册
+      tags:
+      - 认证
+  /user/profile:
+    get:
+      description: 根据 access token 中的用户标识返回当前登录用户的详细信息
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/internal_handler.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/internal_handler.UserInfo'
+              type: object
+        "401":
+          description: 未认证或令牌已失效
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/internal_handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户信息
+      tags:
+      - 用户
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 请填入 "Bearer {access_token}"
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
