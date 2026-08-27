@@ -2,6 +2,10 @@
 
 > AI 驱动的智能化小说生成平台 · 从灵感到发布的全链路创作工具
 
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.cn.md">中文</a>
+</p>
+
 [![Go Version](https://img.shields.io/badge/Go-1.26-00ADD8?style=flat&logo=go)](https://golang.org)
 [![Vue 3](https://img.shields.io/badge/Vue-3.4+-4FC08D?style=flat&logo=vue.js)](https://vuejs.org)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28+-326CE5?style=flat&logo=kubernetes)](https://kubernetes.io)
@@ -119,7 +123,7 @@ MuseFlow/
 ├── .env.example                 # 全局配置模板（已提交，复制为 .env 后填写）
 ├── go.work                      # Go Workspace（本地多模块开发）
 ├── Makefile                     # 根目录构建脚本（含 Air 热重载、proto 生成等）
-├── README.md / READMD.cn.md
+├── README.md / README.cn.md
 └── LICENSE
 ```
 
