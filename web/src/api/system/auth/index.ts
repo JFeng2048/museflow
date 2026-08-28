@@ -4,19 +4,50 @@ import type { LoginPayload, RegisterPayload, User, SocialBinding, BindingProvide
 import type { Novel } from '@/types/novel'
 import type { AuthResult } from './type'
 
+const MOCK_PASSWORD = 'museflow@museflow.com'
+
 const MOCK_USER: User = {
   id: 'u-1',
   name: '林知秋',
-  email: 'demo@museflow.app',
+  email: 'demo@museflow.com',
   bio: '在星海与长安之间反复横跳的写作者',
   createdAt: new Date(Date.now() - 86400000 * 90).toISOString(),
+  role: 'writer',
 }
 
+/** 演示账号：一个普通写作者、一个管理员。密码统一为 museflow@museflow.com。 */
+const MOCK_ACCOUNTS: (User & { password: string })[] = [
+  {
+    id: 'u-1',
+    name: '林知秋',
+    email: 'demo@museflow.com',
+    bio: '在星海与长安之间反复横跳的写作者',
+    createdAt: new Date(Date.now() - 86400000 * 90).toISOString(),
+    role: 'writer',
+    password: MOCK_PASSWORD,
+  },
+  {
+    id: 'u-admin',
+    name: '管理员',
+    email: 'admin@museflow.com',
+    bio: '平台运营与管理',
+    createdAt: new Date(Date.now() - 86400000 * 365).toISOString(),
+    role: 'admin',
+    password: MOCK_PASSWORD,
+  },
+]
+
 export function login(payload: LoginPayload): Promise<AuthResult> {
-  return request.post<AuthResult>('/auth/login', payload).catch(() => ({
-    token: 'mock-token-demo',
-    user: { ...MOCK_USER, email: payload.username },
-  }))
+  return request.post<AuthResult>('/auth/login', payload).catch(() => {
+    const found = MOCK_ACCOUNTS.find(
+      (a) => a.email === payload.username && a.password === payload.password,
+    )
+    if (!found) {
+      return Promise.reject(new Error('账号或密码错误'))
+    }
+    const { password: _pw, ...user } = found
+    return { token: `mock-token-${user.id}`, user }
+  })
 }
 
 export function register(payload: RegisterPayload): Promise<AuthResult> {

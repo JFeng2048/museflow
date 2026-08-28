@@ -11,18 +11,24 @@ import {
   FlashOutline,
   MailOutline,
   LockClosedOutline,
+  PersonOutline,
+  ShieldCheckmarkOutline,
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/system/user'
 import { login as loginApi } from '@/api/system/auth'
+import IdentityPicker from '@/components/common/IdentityPicker.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const userStore = useUserStore()
 
-const email = ref('zhiqiu@museflow.app')
-const password = ref('demo1234')
+const email = ref('demo@museflow.com')
+const password = ref('museflow@museflow.com')
 const loading = ref(false)
+
+// 管理员登录后，先选择进入哪个视图。
+const showIdentity = ref(false)
 
 async function onSubmit() {
   if (!email.value || !password.value) {
@@ -34,12 +40,34 @@ async function onSubmit() {
     const result = await loginApi({ username: email.value, password: password.value })
     userStore.setAuth(result.token, result.user)
     message.success(t('auth.loginSuccess'))
-    router.replace('/novels')
+    if (result.user.role === 'admin') {
+      // 管理员：弹出身份选择，再决定落地页。
+      showIdentity.value = true
+    } else {
+      userStore.enterUser()
+      router.replace('/novels')
+    }
   } catch {
     message.error(t('auth.loginFailed'))
   } finally {
     loading.value = false
   }
+}
+
+function chooseIdentity(view: 'user' | 'admin') {
+  showIdentity.value = false
+  if (view === 'admin') {
+    userStore.enterAdmin()
+    router.replace('/admin')
+  } else {
+    userStore.enterUser()
+    router.replace('/novels')
+  }
+}
+
+function fillDemo(role: 'writer' | 'admin') {
+  email.value = role === 'admin' ? 'admin@museflow.com' : 'demo@museflow.com'
+  password.value = 'museflow@museflow.com'
 }
 </script>
 
@@ -82,20 +110,33 @@ async function onSubmit() {
           <button class="auth-primary" :disabled="loading" type="submit">
             {{ loading ? t('auth.loggingIn') : t('auth.loginBtn') }}
           </button>
-        </form>
+          </form>
 
-        <p class="auth-switch">
-          {{ t('auth.noAccount') }}
-          <RouterLink to="/register">{{ t('auth.toRegister') }}</RouterLink>
-        </p>
+          <div class="auth-demo">
+            <span class="auth-demo-lbl">{{ t('auth.demoAccounts') }}</span>
+            <button class="auth-demo-chip" type="button" @click="fillDemo('writer')">
+              <n-icon :component="PersonOutline" /> {{ t('auth.demoWriter') }}
+            </button>
+            <button class="auth-demo-chip" type="button" @click="fillDemo('admin')">
+              <n-icon :component="ShieldCheckmarkOutline" /> {{ t('auth.demoAdmin') }}
+            </button>
+          </div>
 
-        <div class="auth-social">
-          <span>{{ t('auth.social') }}</span>
-          <button class="auth-ghost" type="button">{{ t('auth.socialWechat') }}</button>
-          <button class="auth-ghost" type="button">{{ t('auth.socialGithub') }}</button>
-        </div>
-      </div>
-      <p class="auth-foot">{{ t('auth.agree') }}</p>
-    </main>
-  </div>
-</template>
+          <p class="auth-switch">
+            {{ t('auth.noAccount') }}
+            <RouterLink to="/register">{{ t('auth.toRegister') }}</RouterLink>
+          </p>
+
+          <div class="auth-social">
+            <span>{{ t('auth.social') }}</span>
+            <button class="auth-ghost" type="button">{{ t('auth.socialWechat') }}</button>
+            <button class="auth-ghost" type="button">{{ t('auth.socialGithub') }}</button>
+          </div>
+          </div>
+          <p class="auth-foot">{{ t('auth.agree') }}</p>
+          </main>
+
+          <!-- 管理员身份选择 -->
+          <IdentityPicker v-model:show="showIdentity" @choose="chooseIdentity" />
+    </div>
+  </template>

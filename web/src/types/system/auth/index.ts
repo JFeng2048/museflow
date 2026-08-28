@@ -1,3 +1,9 @@
+/** 用户角色：写作者（普通用户）与管理员共用同一前端，按角色控制入口。 */
+export type UserRole = 'writer' | 'admin'
+
+/** 已激活的视图：写作者工作台（user）或管理后台（admin）。 */
+export type ViewMode = 'user' | 'admin'
+
 export interface SocialBinding {
   /** 第三方昵称 / openid 显示名 */
   nickname: string
@@ -23,6 +29,8 @@ export interface User {
   bio?: string
   createdAt: string
   bindings?: UserBindings
+  /** 角色；缺省按写作者处理（兼容未显式标注的旧 mock 用户）。 */
+  role?: UserRole
 }
 
 export interface LoginPayload {

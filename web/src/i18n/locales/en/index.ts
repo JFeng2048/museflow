@@ -13,6 +13,8 @@ import material from './material'
 import lore from './lore'
 import dashboard from './dashboard'
 import stats from './stats'
+import admin from './admin'
+import identity from './identity'
 
 /**
  * 命名空间聚合：t('dashboard.eyebrow') → en.dashboard.eyebrow。
@@ -37,4 +39,6 @@ export default {
   lore,
   dashboard,
   stats,
+  admin,
+  identity,
 }

@@ -28,7 +28,21 @@ const routes: RouteRecordRaw[] = [
       { path: 'settings', name: 'settings', component: () => import('@/views/settings/index.vue') },
     ],
   },
-  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
+  {
+    path: '/admin',
+    component: () => import('@/layouts/AdminLayout.vue'),
+    redirect: '/admin/dashboard',
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue') },
+      { path: 'users', name: 'admin-users', component: () => import('@/views/admin/Users.vue') },
+      { path: 'models', name: 'admin-models', component: () => import('@/views/admin/Models.vue') },
+      { path: 'announcements', name: 'admin-announcements', component: () => import('@/views/admin/Announcements.vue') },
+      { path: 'logs', name: 'admin-logs', component: () => import('@/views/admin/Logs.vue') },
+      { path: 'services', name: 'admin-services', component: () => import('@/views/admin/Services.vue') },
+    ],
+  },
+  { path: '/:pathMatch(.*)*', redirect: '/novels' },
 ]
 
 const router = createRouter({
@@ -41,8 +55,13 @@ router.beforeEach((to) => {
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
+  // 管理后台仅管理员可访问。
+  if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    return { name: 'novels' }
+  }
   if (to.name === 'login' && userStore.isLoggedIn) {
-    return { name: 'dashboard' }
+    // 已登录用户访问登录页：按当前视图跳回对应工作台。
+    return userStore.currentView === 'admin' ? { name: 'admin-dashboard' } : { name: 'novels' }
   }
 })
 
