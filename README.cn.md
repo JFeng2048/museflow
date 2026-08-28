@@ -121,7 +121,7 @@ MuseFlow/
 ├── database/
 │   └── user_svc.sql             # 用户库 DDL（schema 命名空间 user_svc + 序列/触发器）
 ├── deploy/                      # 部署相关（K8s / Redis 配置等）
-├── crawl4ai-service/            # 数据采集服务（Python）
+├── services/crawl4ai-service/    # 数据采集服务（Python，HTTP + gRPC 双接口）
 ├── docs/                        # 设计文档（含双令牌认证系统设计文档）
 ├── web/                         # 前端（Vue 3 + TypeScript + Vite）
 ├── scripts/                     # 代码生成等脚本

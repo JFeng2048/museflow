@@ -122,7 +122,7 @@ MuseFlow/
 ├── database/
 │   └── user_svc.sql             # User DB DDL (schema namespace user_svc + sequences/triggers)
 ├── deploy/                      # Deployment assets (K8s / Redis config, etc.)
-├── crawl4ai-service/            # Data-crawling service (Python)
+├── services/crawl4ai-service/    # Data-crawling service (Python, HTTP + gRPC dual interface)
 ├── docs/                        # Design docs (incl. dual-token auth design)
 ├── web/                         # Frontend (Vue 3 + TypeScript + Vite)
 ├── scripts/                     # Codegen & helper scripts
