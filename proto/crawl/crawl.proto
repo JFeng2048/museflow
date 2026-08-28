@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package crawl;
+
+// Go 包路径：生成的代码位于 proto/crawl 目录下，包名为 crawlpb
+option go_package = "github.com/museflow/proto/crawl;crawlpb";
+
+// CrawlService 智能网页抓取与结构化抽取服务（gRPC 版）。
+//
+// 语义对齐原 FastAPI 版本的 /crawl、/extract、/health 三个接口，
+// 底层依旧使用 Python 的 Crawl4AI 库（浏览器渲染 + Markdown 清洗 + LLM 抽取），
+// 仅把传输层从 HTTP/JSON 换成 gRPC。
+service CrawlService {
+  // Health 存活探针，对应原 /health。
+  rpc Health(HealthRequest) returns (HealthResponse);
+  // Crawl 抓取单个 URL 并返回清洗后的 Markdown（不调用 LLM），对应原 /crawl。
+  rpc Crawl(CrawlRequest) returns (CrawlResponse);
+  // Extract 抓取单个 URL 并基于 LLM 抽取结构化数据，对应原 /extract。
+  rpc Extract(ExtractRequest) returns (ExtractResponse);
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  bool healthy = 1;
+  string service = 2;
+  string version = 3;
+  float uptime_seconds = 4;
+  bool auth_enabled = 5;
+}
+
+// CrawlerOptions 单次抓取的可选行为，对应原 CrawlerOptions。
+message CrawlerOptions {
+  int32 timeout = 1;                       // 单 URL 超时（秒，5-600）
+  string user_agent = 2;                   // 覆盖默认 UA
+  bool bypass_cache = 3;                   // 跳过缓存结果
+  bool remove_overlay_elements = 4;        // 移除弹窗/遮罩元素
+  bool simulate_user = 5;                  // 模拟人类操作行为
+  bool magic = 6;                          // 启用 Crawl4AI 魔法模式（反爬）
+  string locale = 7;                       // 浏览器语言区域，如 zh-CN
+}
+
+// LLMConfig OpenAI 兼容的 LLM 配置，凭证由调用方按请求传入。
+message LLMConfig {
+  string api_key = 1;                      // OpenAI 兼容 API Key
+  string base_url = 2;                     // OpenAI 兼容 base URL
+  string model = 3;                        // 模型名
+  float temperature = 4;                   // 采样温度（0.0-2.0）
+  int32 max_tokens = 5;                    // 最大输出 token
+  int32 request_timeout = 6;               // LLM 请求超时（秒）
+}
+
+// ExtractSchemaField 抽取 schema 中单个字段定义（items 以 JSON 字符串透传）。
+message ExtractSchemaField {
+  string name = 1;
+  string description = 2;
+  string type = 3;                         // string/number/integer/boolean/array/object
+  bool required = 4;
+  string items_json = 5;                   // type=array 时的元素 schema（JSON 字符串）
+}
+
+message CrawlRequest {
+  string url = 1;                          // 目标 URL（必填）
+  CrawlerOptions options = 2;              // 抓取选项
+  string wait_for = 3;                     // 爬取前需等待出现的 CSS 选择器
+}
+
+message CrawlResponse {
+  bool success = 1;
+  string url = 2;
+  string markdown = 3;                     // 清洗后的 Markdown
+  int32 status_code = 4;                   // HTTP 状态码（可能为 0）
+  string error_code = 5;                   // 失败时的错误码
+  string error_message = 6;                // 失败时的错误信息
+  bool error_retryable = 7;                // 是否可重试
+  int32 elapsed_ms = 8;                    // 服务端处理耗时
+}
+
+message ExtractRequest {
+  string url = 1;                          // 目标 URL（必填）
+  string instruction = 2;                  // 提取规则的自然语言描述（必填）
+  repeated ExtractSchemaField schema_fields = 3; // 可选 JSON Schema 字段
+  LLMConfig llm = 4;                       // LLM 配置（必填）
+  CrawlerOptions options = 5;              // 抓取选项
+  int32 extraction_timeout = 6;            // 单次 LLM 调用超时（秒）
+}
+
+message ExtractResponse {
+  bool success = 1;
+  string url = 2;
+  string markdown = 3;                     // 喂给 LLM 的 Markdown 原文
+  string data_json = 4;                    // 抽取出的结构化数据（JSON 字符串）
+  string error_code = 5;
+  string error_message = 6;
+  bool error_retryable = 7;
+  int32 elapsed_ms = 8;
+  string model = 9;                        // 实际使用的模型名
+}

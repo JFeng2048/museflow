@@ -21,6 +21,7 @@ command -v protoc-gen-go-grpc >/dev/null 2>&1 || { echo "错误：未找到 prot
 protoc \
   --go_out=. --go_opt=paths=source_relative \
   --go-grpc_out=. --go-grpc_opt=paths=source_relative \
-  proto/user/*.proto
+  proto/user/*.proto \
+  proto/crawl/*.proto
 
-echo "gRPC 代码生成完成：proto/user/*.pb.go"
+echo "gRPC 代码生成完成：proto/user/*.pb.go, proto/crawl/*.pb.go"
