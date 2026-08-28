@@ -41,6 +41,14 @@
 
 ---
 
+## 🔗 Prototype Preview
+
+The frontend prototype preview entry of MuseFlow. The API Gateway and backend
+microservices (user-service, crawl4ai-service, etc.) are not yet wired in and will
+be exposed as they become available:
+
+> http://museflow.jfeng.asia/
+
 ## 🧱 Architecture
 
 The repository is a **Monorepo** — all code lives in a single Git repository. Microservices communicate via **gRPC**, and the **API Gateway** exposes unified HTTP endpoints to the outside world.

@@ -41,6 +41,12 @@
 
 ---
 
+## 🔗 原型预览地址
+
+当前可访问的线上原型预览入口（MuseFlow 前端）。后端 API 网关与 user-service、crawl4ai-service 等微服务尚未接入，后续随服务就绪陆续开放：
+
+> http://museflow.jfeng.asia/
+
 ## 🧱 架构概览
 
 仓库为 **Monorepo**，所有代码同处一个 Git 仓库。微服务之间通过 **gRPC** 通信，对外统一由 **API Gateway** 暴露 HTTP 接口。
