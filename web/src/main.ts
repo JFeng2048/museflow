@@ -8,6 +8,7 @@ import { useUiStore } from '@/stores/ui'
 import { useUserStore } from '@/stores/system/user'
 import '@/assets/styles/index.css'
 import '@/assets/styles/components.css'
+import '@/assets/styles/components/index.css'
 
 const app = createApp(App)
 const pinia = createPinia()

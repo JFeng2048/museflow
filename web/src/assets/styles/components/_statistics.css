@@ -1,0 +1,153 @@
+/* 从 src/views/statistics/index.vue 抽离出的样式。 */
+
+.stats-page {
+  padding: 32px 40px 48px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+.stats-eyebrow {
+  margin: 0;
+  font-size: 13px;
+  color: var(--brand, #5b8def);
+  letter-spacing: 0.04em;
+}
+.stats-title {
+  margin: 4px 0 2px;
+  font-size: 27px;
+  font-weight: 650;
+  color: var(--ink, #2a2620);
+}
+.stats-sub {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-muted, #8b8478);
+}
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px;
+  border-radius: 16px;
+  background: var(--paper, #fff);
+  border: 1px solid var(--line, #ece7df);
+  box-shadow: 0 1px 2px rgba(40, 34, 24, 0.04);
+}
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  font-size: 21px;
+}
+.stat-value {
+  font-size: 24px;
+  font-weight: 640;
+  color: var(--ink, #2a2620);
+}
+.stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 16px;
+  margin-top: 18px;
+}
+@media (max-width: 880px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+}
+.stats-panel :deep(.n-card-header) {
+  padding-bottom: 10px;
+}
+.panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 620;
+  color: var(--ink, #2a2620);
+}
+.panel-icon {
+  font-size: 17px;
+  color: var(--brand, #5b8def);
+}
+.dist {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 6px 2px;
+}
+.dist-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--ink, #2a2620);
+}
+.dist-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.dist-pct {
+  margin-left: auto;
+  color: var(--ink-muted, #8b8478);
+  font-variant-numeric: tabular-nums;
+}
+.dist-bar {
+  margin-top: 6px;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--warm-2, #f4efe7);
+  overflow: hidden;
+}
+.dist-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+.week {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 200px;
+  padding: 10px 4px 0;
+}
+.week-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+.week-bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.week-bar {
+  position: relative;
+  width: 60%;
+  min-height: 4px;
+  border-radius: 8px 8px 4px 4px;
+  background: linear-gradient(180deg, var(--brand, #5b8def), color-mix(in srgb, var(--brand, #5b8def) 55%, #fff));
+  transition: height 0.5s ease;
+  display: flex;
+  justify-content: center;
+}
+.week-val {
+  position: absolute;
+  top: -18px;
+  font-size: 11px;
+  color: var(--ink-muted, #8b8478);
+  white-space: nowrap;
+}
+.week-label {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--ink-muted, #8b8478);
+}

@@ -1,0 +1,9 @@
+/* 所有从 Vue 组件 <style scoped> 抽离出的样式，按域拆分。 */
+
+@import './_user-avatar.css';
+@import './_admin-layout.css';
+@import './_task.css';
+@import './_publish.css';
+@import './_novel.css';
+@import './_statistics.css';
+@import './_admin.css';

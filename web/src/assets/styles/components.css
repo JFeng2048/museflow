@@ -2102,3 +2102,142 @@
     linear-gradient(45deg, transparent 45%, #2f6f5e 45%, #2f6f5e 55%, transparent 55%),
     linear-gradient(-45deg, transparent 45%, #2f6f5e 45%, #2f6f5e 55%, transparent 55%);
 }
+
+/* 登录页演示账号 */
+.auth-demo {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.auth-demo-lbl {
+  font-size: 12px;
+  color: var(--c-ink-muted);
+}
+.auth-demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  background: var(--c-paper);
+  color: var(--c-ink-soft);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.auth-demo-chip:hover {
+  border-color: var(--c-amber);
+  color: var(--c-amber-deep);
+  background: var(--c-amber-soft);
+}
+
+/* 管理员身份选择弹窗 */
+.identity-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(26, 35, 50, 0.45);
+  backdrop-filter: blur(3px);
+  padding: 20px;
+}
+.identity-card {
+  width: 420px;
+  max-width: 100%;
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: var(--shadow-m);
+  animation: identity-pop 0.2s ease;
+}
+@keyframes identity-pop {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.identity-card h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--c-ink);
+}
+.identity-sub {
+  margin: 6px 0 20px;
+  font-size: 13px;
+  color: var(--c-ink-muted);
+}
+.identity-opt {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--c-line);
+  border-radius: 14px;
+  background: var(--c-warm);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s ease, transform 0.1s ease, background 0.2s ease;
+}
+.identity-opt:last-child {
+  margin-bottom: 0;
+}
+.identity-opt:hover {
+  border-color: var(--c-amber);
+  background: var(--c-amber-soft);
+  transform: translateY(-2px);
+}
+.identity-ico {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: #fff;
+}
+.identity-ico.user {
+  background: var(--c-amber-deep, #b9853f);
+}
+.identity-ico.admin {
+  background: #2f6fb3;
+}
+.identity-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.identity-text strong {
+  font-size: 15px;
+  color: var(--c-ink);
+}
+.identity-text small {
+  font-size: 12px;
+  color: var(--c-ink-muted);
+}
+
+/* 视图切换按钮（用户布局 / 管理布局共用） */
+.switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--c-line);
+  border-radius: 10px;
+  background: var(--c-paper);
+  color: var(--c-ink-soft);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.switch-btn:hover {
+  border-color: var(--c-amber);
+  color: var(--c-amber-deep);
+  background: var(--c-amber-soft);
+}

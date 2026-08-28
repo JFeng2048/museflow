@@ -39,25 +39,3 @@ const fontPx = computed(() => `${Math.round((props.size || 34) * 0.42)}px`)
     <span v-else>{{ name.slice(0, 1) }}</span>
   </div>
 </template>
-
-<style scoped>
-.user-avatar {
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  font-weight: 600;
-  flex: none;
-  overflow: hidden;
-  user-select: none;
-}
-.user-avatar.is-image {
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
-}
-.user-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-</style>
