@@ -1,85 +1,86 @@
 # crawl4ai-service
 
-一个独立的 FastAPI 微服务，封装 [Crawl4AI](https://docs.crawl4ai.com/) 的智能网页提取能力。
-主后端（`backed/`）通过 HTTP 调用本服务完成需要的网页抓取 / 结构化提取任务。
+一个独立的**爬虫微服务**，封装 [Crawl4AI](https://docs.crawl4ai.com/) 的智能网页提取能力。
+**同一份爬取 / 提取核心逻辑（`src/crawler.py` + `src/extractor.py`，依赖 Crawl4AI 浏览器渲染），
+提供两套对外接口，依赖按版本分组成两组，可分别打包运行：**
+
+| 版本 | 传输      | 端口（默认） | 适用场景                                   | 入口 / 定义                    | 依赖组              |
+| ---- | --------- | ------------ | ------------------------------------------ | ------------------------------ | ------------------- |
+| **HTTP** | FastAPI / REST + JSON | `5003` | 浏览器调试、Swagger（`/docs`）、外部系统快速对接 | `src/api.py`（`python -m src.api`） | `[http]`            |
+| **gRPC** | gRPC      | `5003`       | Go 网关 / 内部高性能调用                    | `src/grpc_server.py`（`python -m src.grpc_server`） | `[grpc]`            |
+
+> HTTP 与 gRPC **共用同一个端口** `PORT`（默认 `5003`）。两种传输协议不能在该端口同时监听，因此部署时按依赖组只启用其中一个版本（装 `http` 组跑 HTTP，装 `grpc` 组跑 gRPC）。
+
+> 两个版本**完全等价**：HTTP 路由和 gRPC 方法都转发到同一个 `CrawlerService` 单例，
+> 行为一致、鉴权一致、返回结构一致。**区别在于打包时装的依赖组**——
+> 你可以只装 HTTP 组跑 HTTP，或只装 gRPC 组跑 gRPC，减小镜像 / 部署体积：
+>
+> ```bash
+> uv sync --extra http   # 只装 HTTP 版本依赖
+> uv sync --extra grpc   # 只装 gRPC 版本依赖
+> uv sync --extra http --extra grpc   # 两个都装，统一入口同时跑
+> ```
 
 > **本服务只做"爬取 + 提取"两件事。**
-> - LLM 凭证（`api_key` / `base_url` / `model`）由调用方在每次 `/extract` 请求的 `llm` 字段中显式传入，**不在环境变量 / `.env` 中保存**；`/extract` 始终走 LLM，没有 `use_llm` 开关。
-> - 通过 `Authorization: Bearer <API_KEY>` 头做认证，`API_KEY` 环境变量控制开关；Swagger UI 顶部有 **Authorize** 按钮，填一次作用于全部接口。
+> - LLM 凭证（`api_key` / `base_url` / `model`）由调用方在每次 `Extract` 请求中显式传入，**不在环境变量 / `.env` 中保存**；`Extract` 始终走 LLM，没有 `use_llm` 开关。
+> - gRPC 共享契约见仓库根 `proto/crawl/crawl.proto`，对应方法：`Health` / `Crawl` / `Extract`。
+> - 网关或调用方通过 `Authorization`（HTTP 头 / gRPC metadata）传递 Bearer Token，`API_KEY` 环境变量控制开关。
 
 ## 特性一览
 
-- **3 个 HTTP 接口**：`/health` 健康探针、`/crawl` 单 URL 爬取（Markdown）、`/extract` LLM 智能结构化提取。
-- **统一响应包装**：所有响应都是 `{ code, msg, data }` 形状（与主后端 `backed/schemas/response.py` 一致）。
-- **LLM 凭证按请求传入**：`llm.api_key` / `base_url` / `model` 等放进 `POST /extract` 请求体，跨租户 / 跨模型互不污染。
+- **两套接口、依赖分组**：HTTP（FastAPI，带 Swagger UI）与 gRPC 拆分为 `[http]` / `[grpc]` 两个 optional 依赖组，可分别打包运行，互不拖累。
+- **共用核心逻辑**：无论跑哪个版本，都复用同一个 `CrawlerService` 单例（`src/service.py`），行为一致。
+- **3 个能力**：`Health` 健康探针、`Crawl` 单 URL 爬取（Markdown）、`Extract` LLM 智能结构化提取（HTTP 与 gRPC 各暴露一套对应方法）。
+- **共享 Proto 契约**：`proto/crawl/crawl.proto` 同时供 Go 网关 / Python 服务生成桩代码，跨语言一致。
+- **LLM 凭证按请求传入**：`llm.api_key` / `base_url` / `model` 等放进 `Extract` 请求，跨租户 / 跨模型互不污染。
 - **OpenAI 兼容 LLM**：任意 OpenAI 协议服务（DeepSeek、Together、Qwen、火山方舟、自建网关……）都可以直接对接。
 - **单 URL 提取 + 重试**：`tenacity` 指数退避，自动重试瞬时网络错误。
-- **Bearer Token 认证**：`Authorization: Bearer <API_KEY>` 头，`API_KEY` 环境变量控制（留空关闭，仅供本地开发）；Swagger UI 顶部 **Authorize** 按钮一次性填好。
 - **配置驱动**：`pydantic-settings` 加载 `.env`，所有运行参数可热改。
 - **uv 管理依赖**：锁文件 `uv.lock` 入库，CI/部署可复现。
-- **Docker 一键部署**：`astral/uv:python3.13-bookworm-slim` 多阶段构建，`docker compose up` 即起；Chromium 在 builder 阶段预装并拷贝进 runtime 镜像，**宿主机不需要 Chrome**。
+- **Docker 一键部署**：`astral/uv:python3.13-bookworm-slim` 多阶段构建，通过 `VERSION` 构建参数选择打包 `http` / `grpc` / `both`；Chromium 在 builder 阶段预装并拷贝进 runtime 镜像，**宿主机不需要 Chrome**。
 
 ## 目录结构
 
 ```
-crawl4ai-service/
-├── main.py              # FastAPI 入口（lifespan + 挂载 APIRouter + 异常处理 + 日志初始化）
-├── test_api.py          # API + 认证 + 响应包装 + LLM 兼容性的测试
-├── pyproject.toml       # 项目元数据与依赖
+services/crawl4ai-service/
+├── main.py              # 统一启动入口：同时拉起 HTTP + gRPC（按 ENABLE_* 开关）
+├── test_api.py          # HTTP 接口测试
+├── pyproject.toml       # 项目元数据与依赖（基础依赖 + [http] / [grpc] 两组 optional）
 ├── uv.lock              # uv 锁文件（应入库）
 ├── README.md
-├── .env.example         # 环境变量样例（不含 LLM 凭证）
+├── .env.example         # 环境变量样例（不含 LLM 凭证；含 PORT）
+├── scripts/
+│   ├── gen_proto.sh     # 用 grpcio-tools 生成 src/crawl_pb2.py、src/crawl_pb2_grpc.py（gRPC 版需要）
+│   ├── run-http.sh      # 仅启动 HTTP 版本（需先 uv sync --extra http）
+│   └── run-grpc.sh      # 仅启动 gRPC 版本（需先 uv sync --extra grpc）
 │
 ├── src/                 # 业务模块（采用 src layout）
-│   ├── config.py        # 配置管理（pydantic-settings；含 API_KEY / LOG_* / BROWSER_*）
-│   ├── schema.py        # Pydantic schema + APIResponse[T] 包装 + LLMConfig
-│   ├── crawler.py       # 服务层：单 URL 异步爬取 + 重试 + 浏览器配置
+│   ├── config.py        # 配置管理（pydantic-settings；含 API_KEY / BROWSER_* / 双接口开关）
+│   ├── schema.py        # Pydantic schema + CrawlerOptions / ExtractSchema / LLMConfig
+│   ├── crawler.py       # 服务层：单 URL 爬取 + 重试 + 浏览器配置
 │   ├── extractor.py     # 服务层：LLM 智能提取策略（基于 Crawl4AI LLMExtractionStrategy）
-│   └── api.py           # APIRouter：3 个接口 + verify_api_key 依赖 + 异常处理
+│   ├── service.py       # 进程级 CrawlerService 单例 + 启动时间（HTTP/gRPC 共用）
+│   ├── api.py           # HTTP（FastAPI）版本接口：build_app() 工厂 + 路由
+│   └── grpc_server.py   # gRPC 版本接口：CrawlService 实现
 │
 └── docker/              # 部署相关文件
     ├── Dockerfile       # 多阶段构建（builder + runtime，共用 astral/uv base）
-    └── docker-compose.yml  # 极简 compose：固定端口 + 内联环境变量
+    └── docker-compose.yml  # HTTP / gRPC 共用端口（由 VERSION 决定实际起哪个版本）
 ```
 
 > 业务模块放在 `src/` 下是为了避免本地测试时把项目根目录误当包导入。
 > 导入时统一使用 `from src.xxx import ...` 前缀。
 
-## 接口
+## 接口能力对照
 
-| 方法 | 路径       | 摘要                              | 鉴权      |
-| ---- | ---------- | --------------------------------- | --------- |
-| GET  | `/health`  | 健康检查（返回 `auth_enabled`）   | ✅ / ❌   |
-| POST | `/crawl`   | 爬取单 URL → Markdown             | ✅ / ❌   |
-| POST | `/extract` | 从单 URL 用 LLM 智能提取结构化数据 | ✅ / ❌   |
+| 能力     | HTTP（FastAPI）        | gRPC（proto/crawl）     | 鉴权      |
+| -------- | ---------------------- | ----------------------- | --------- |
+| 健康检查 | `GET /health`          | `Health`                | ✅ / ❌   |
+| 爬取     | `POST /crawl`          | `Crawl`                 | ✅ / ❌   |
+| 提取     | `POST /extract`        | `Extract`               | ✅ / ❌   |
 
 > 当 `.env` 中设置了 `API_KEY` 时，鉴权 = ✅；未设置则鉴权关闭（仅供本地开发）。
 > 详见 [认证](#认证bearer-token)。
-
-OpenAPI 文档自动生成于 `/docs` 与 `/redoc`（`/docs` 顶部有 **Authorize** 按钮）。
-
-## 响应格式
-
-所有接口（包括错误）都返回统一的 `APIResponse` 包装：
-
-```json
-{
-  "code": 200,
-  "msg": "成功",
-  "data": { ... }
-}
-```
-
-`code` 含义：
-
-| 取值 | 含义                                          |
-| ---- | --------------------------------------------- |
-| 200  | 成功                                          |
-| 400  | 请求参数错误（extract 构造失败等）            |
-| 401  | 缺少 / 错误的 `Authorization: Bearer <token>` |
-| 422  | 请求体不合法（Pydantic 校验失败）             |
-| 500  | 服务器内部错误                                |
-| 503  | 爬虫未初始化（lifespan 失败）                 |
 
 ## 快速开始（本地 uv 运行）
 
@@ -121,15 +122,32 @@ uv run playwright install --with-deps chromium
 > 说明当前 Playwright 版本尚未为该 Linux 发行版发布预编译 Chromium。
 > 解决办法见 [故障排查](#3-playwright-不支持当前-linux-发行版)。
 
-### 5. 启动服务
+### 5. 安装依赖并选择版本运行
+
+依赖按版本分两组（见 `pyproject.toml` 的 `[project.optional-dependencies]`）。
+先装对应组，再启动：
 
 ```bash
-uv run main.py
+# （A）只跑 HTTP 版本
+uv sync --extra http
+uv run -m src.api            # 或 bash scripts/run-http.sh
+
+# （B）只跑 gRPC 版本（需先生成桩代码）
+bash scripts/gen_proto.sh
+uv sync --extra grpc
+uv run -m src.grpc_server     # 或 bash scripts/run-grpc.sh
+
+# （C）两个版本都装，统一入口启动（注意：共用端口，只会起其中一个版本）
+uv sync --extra http --extra grpc
+uv run -m main
 ```
 
-打开 `http://localhost:11235/docs` 即可看到 OpenAPI 文档并直接试调。
-`main.py` 的 `__main__` 块内部调用 `uvicorn.run("main:app", host=settings.host, port=settings.port)`，
-`host` / `port` 由 `HOST` / `PORT` 环境变量覆盖（默认 `0.0.0.0:11235`）。
+统一入口 `main.py` 会**根据已安装依赖自动判断**启动哪个版本
+（见 `http_available()` / `grpc_available()`）：只装了 http 组就起 HTTP，
+只装了 grpc 组就起 gRPC，**两个都装时因端口冲突优先起 gRPC**（HTTP 跳过）。
+无需环境变量开关。
+
+端口：HTTP 与 gRPC 共用 `PORT`（默认 `5003`）。
 
 ### 6. 运行测试
 
@@ -141,24 +159,27 @@ uv run pytest
 
 > 镜像基座：`astral/uv:python3.13-bookworm-slim`（多阶段共用）
 > 浏览器：Chromium 在 builder 阶段预装到 `/ms-playwright`，runtime 阶段直接复用，**宿主机不需要 Chrome**。
-> 启动命令：`uv run main.py`（由 Dockerfile 内的 `CMD` 指定）
+> 启动命令：`python -m main`（由 Dockerfile 内的 `CMD` 指定），同时拉起 HTTP + gRPC。
 
 ### 一行启动
 
 ```bash
-cd crawl4ai-service
+cd services/crawl4ai-service
 docker compose -f docker/docker-compose.yml up -d
 
-# 看健康
-sleep 30 && curl -fsS http://localhost:11235/health | python3 -m json.tool
+# 容器内 gRPC 健康检查（grpcui / grpcurl 等工具）：
+# grpcurl -plaintext -H "authorization: Bearer ${API_KEY:-}" localhost:5003 crawl.CrawlService/Health
+
+# 容器内 HTTP 健康检查（Swagger UI 在 http://localhost:5003/docs）：
+# curl -H "Authorization: Bearer ${API_KEY:-}" http://localhost:5003/health
 ```
 
 `docker-compose.yml` 的极简结构：
 
-- `ports: "11235:11235"`（端口固定，不再走 env var 间接映射）
-- `environment:` 内联注入（**不再用 env_file**）；shell 里 `export` 即可
+- `ports: "5003:5003"`：HTTP / gRPC 共用端口（按 `VERSION` 构建参数决定实际装哪组依赖）
+- `environment:` 内联注入（**不再用 env_file**）；`PORT` 配置监听端口；shell 里 `export` 即可
 - `shm_size: 2gb`（Chromium / Playwright 在容器里需要大块 `/dev/shm`，否则多 tab / 大页面会 OOM）
-- `healthcheck` 携带 `Authorization: Bearer ${API_KEY:-}`（`/health` 走鉴权，healthcheck 也得带头）
+- 构建阶段按 `VERSION` 决定：`grpc` / `both` 会执行 `bash scripts/gen_proto.sh` 生成 gRPC 桩代码；`http` 仅放占位文件
 
 ### 自定义 API Key
 
@@ -238,7 +259,7 @@ WARNING  API_KEY 未配置，认证已禁用（仅供本地开发）
 
 ```bash
 curl -H "Authorization: Bearer crawl4ai-service-api-key" \
-  http://localhost:11235/health
+  http://localhost:5003/health
 ```
 
 ```json
@@ -260,7 +281,7 @@ curl -H "Authorization: Bearer crawl4ai-service-api-key" \
 **最小 body**（只传 `url`）：
 
 ```bash
-curl -X POST http://localhost:11235/crawl \
+curl -X POST http://localhost:5003/crawl \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer crawl4ai-service-api-key" \
   -d '{
@@ -271,7 +292,7 @@ curl -X POST http://localhost:11235/crawl \
 **完整 body**（带 `wait_for` 和 `options`）：
 
 ```bash
-curl -X POST http://localhost:11235/crawl \
+curl -X POST http://localhost:5003/crawl \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer crawl4ai-service-api-key" \
   -d '{
@@ -313,7 +334,7 @@ curl -X POST http://localhost:11235/crawl \
 **最小 body**：
 
 ```bash
-curl -X POST http://localhost:11235/extract \
+curl -X POST http://localhost:5003/extract \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer crawl4ai-service-api-key" \
   -d '{
@@ -330,7 +351,7 @@ curl -X POST http://localhost:11235/extract \
 **完整 body**（带 `schema_fields` 约束 LLM 输出结构）：
 
 ```bash
-curl -X POST http://localhost:11235/extract \
+curl -X POST http://localhost:5003/extract \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer crawl4ai-service-api-key" \
   -d '{
@@ -408,7 +429,8 @@ curl -X POST http://localhost:11235/extract \
 
 | 变量                       | 默认值              | 说明                                          |
 | -------------------------- | ------------------- | --------------------------------------------- |
-| `HOST` / `PORT`            | `0.0.0.0` / `11235` | 监听地址 / 端口                               |
+| `HOST`                     | `0.0.0.0`           | 监听地址                                       |
+| `PORT`                     | `5003`              | HTTP / gRPC 共用监听端口                      |
 | `API_KEY`                  | 空                  | 留空禁用认证；设置后启用                       |
 | `SERVICE_NAME`             | `crawl4ai-service`  | 服务标识，写入 `/health` 响应                 |
 | `SERVICE_VERSION`          | `0.1.0`             | 版本号，写入 `/health` 响应                   |
@@ -565,25 +587,25 @@ docker exec -it crawl4ai-service tail -f /app/logs/service.log
 
 ## 与主后端的集成
 
-`backed/schemas/response.py` 已经定义了同款 `APIResponse` 包装，所以主后端拿到本服务
-返回后**不需要重新解包**：
+调用方（Go 网关 / 主后端）使用 `proto/crawl` 生成的客户端桩，通过 gRPC 调用本服务：
 
 ```python
-# 主后端伪代码
-resp = await client.post(
-    "http://crawl4ai-service:11235/extract",
-    json={
-        "url": job_url,
-        "instruction": "提取岗位名称、薪资、地点",
-        "llm": llm_config_for_request,   # ← 按请求注入
-    },
-    headers={"Authorization": f"Bearer {CRAWL4AI_API_KEY}"},
-)
-payload = resp.json()
-if payload["code"] == 200:
-    job_info = payload["data"]["data"]   # ← 注意嵌套 data.data
+# 主后端（Python）伪代码
+import grpc
+import crawl_pb2, crawl_pb2_grpc
+
+channel = grpc.insecure_channel("crawl4ai-service:5003")
+stub = crawl_pb2_grpc.CrawlServiceStub(channel)
+resp = stub.Extract(crawl_pb2.ExtractRequest(
+    url=job_url,
+    instruction="提取岗位名称、薪资、地点",
+    llm=crawl_pb2.LLMConfig(api_key=..., base_url=..., model=...),  # ← 按请求注入
+))
+if resp.success:
+    job_info = json.loads(resp.data_json)
 else:
-    raise BusinessError(payload["msg"])
+    raise BusinessError(resp.error_message)
 ```
 
-容器间走 `jobinsight-net` bridge 网络，主后端可以用服务名 `crawl4ai-service:11235` 直接访问。
+Go 网关侧可直接复用 `github.com/museflow/proto/crawl` 的 `crawlpb.NewCrawlServiceClient`。
+容器间走 `museflow-net` bridge 网络，主后端可以用服务名 `crawl4ai-service:5003` 直接访问。

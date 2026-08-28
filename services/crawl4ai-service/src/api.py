@@ -1,4 +1,8 @@
-"""crawl4ai-service 的 HTTP API 路由注册。
+"""crawl4ai-service 的 HTTP（FastAPI）接口路由注册。
+
+这是同一服务的 **两个版本接口之一**（另一个是 ``src/grpc_server.py`` 提供的
+gRPC 接口），二者通过 :func:`src.service.get_crawler_service` 共用同一个
+:class:`~src.crawler.CrawlerService` 实例，行为完全一致。
 
 使用 :class:`fastapi.APIRouter` 集中管理 3 个对外接口 + 1 个全局异常处理器，
 并通过 router 级 :func:`verify_api_key` 依赖统一加 Bearer 认证。
@@ -36,11 +40,9 @@ from src.schema import (
     HealthData,
     ok,
 )
+from src.service import get_crawler_service, uptime_seconds
 
 logger = logging.getLogger("crawl4ai-service")
-
-# 进程级启动时间，/health 据此计算 uptime。
-_STARTUP_TIME = time.time()
 
 # Swagger UI 顶部的 "Authorize" 按钮靠它生成。
 # ``bearerFormat="API Key"`` 让 Swagger 弹窗标题提示 "Value: API Key"。
@@ -87,15 +89,13 @@ router = APIRouter(
 )
 
 
-def _get_crawler(request: Request) -> CrawlerService:
-    """从 FastAPI 应用状态中获取 :class:`CrawlerService` 单例。"""
-    service: CrawlerService | None = getattr(request.app.state, "crawler_service", None)
-    if service is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="爬虫尚未初始化",
-        )
-    return service
+def _get_crawler(request: Request | None = None) -> CrawlerService:
+    """获取进程级 :class:`CrawlerService` 单例。
+
+    单例由 :func:`src.service.get_crawler_service` 统一管理，HTTP 与 gRPC
+    两个版本接口共用同一实例（同一套浏览器池与爬取 / 提取逻辑）。
+    """
+    return get_crawler_service()
 
 
 # ============================================================
@@ -155,7 +155,7 @@ async def health() -> APIResponse[HealthData]:
             status="ok",
             service=settings.service_name,
             version=settings.service_version,
-            uptime_seconds=time.time() - _STARTUP_TIME,
+            uptime_seconds=uptime_seconds(),
             auth_enabled=bool(settings.api_key),
         )
     )
@@ -396,3 +396,37 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={"code": code, "msg": msg, "data": None},
             headers=exc.headers,
         )
+
+
+def build_app() -> FastAPI:
+    """构造 FastAPI 应用实例。
+
+    统一入口 ``main.py`` 通过它启动 HTTP 版本；``src.service.get_crawler_service``
+    会在首次请求 / 启动时惰性创建共享的 :class:`CrawlerService` 单例，无需再向
+    ``app.state`` 注入。
+    """
+    app = FastAPI(
+        title="crawl4ai-service",
+        description="Crawl4AI 网页抓取与 LLM 提取服务（HTTP 版接口）",
+        version=get_settings().service_version,
+    )
+    _register_routes(app)
+    return app
+
+
+def _register_routes(app: FastAPI) -> None:
+    """把 router 与异常处理器挂载到 app 上。"""
+    app.include_router(router)
+    register_exception_handlers(app)
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    settings = get_settings()
+    uvicorn.run(
+        build_app(),
+        host=settings.host,
+        port=settings.port,
+        log_level=settings.log_level.lower(),
+    )

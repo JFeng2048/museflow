@@ -1,0 +1,33 @@
+services:
+  crawl4ai-service:
+    image: museflow/crawl4ai-service:0.1.0
+    container_name: crawl4ai-service
+    restart: unless-stopped
+    build:
+      # 构建上下文使用仓库根，以便 docker COPY 取用 proto/crawl 契约
+      context: ../..
+      dockerfile: services/crawl4ai-service/docker/Dockerfile
+      # VERSION 决定打包哪个版本依赖组：http / grpc / both（默认 both）。
+      # 例如只跑 gRPC 镜像：docker compose build --build-arg VERSION=grpc
+      args:
+        VERSION: "both"
+    ports:
+      - "5003:5003"   # HTTP / gRPC 共用端口（由 VERSION 决定实际起哪个版本）
+    environment:
+      PORT: "5003"
+      API_KEY: crawl4ai-service-api-key
+    shm_size: "2gb"
+    healthcheck:
+      # gRPC Health 探针（plaintext，仅存活检查，不校验 token）
+      test: ["CMD-SHELL", "python -c \"import grpc,sys; import crawl_pb2,crawl_pb2_grpc; c=grpc.insecure_channel('localhost:5003'); r=crawl_pb2_grpc.CrawlServiceStub(c).Health(crawl_pb2.HealthRequest()); sys.exit(0 if r.healthy else 1)\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    networks:
+      - museflow-net
+
+networks:
+  museflow-net:
+    name: museflow-net
+    driver: bridge

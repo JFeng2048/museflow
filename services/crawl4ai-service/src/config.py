@@ -26,7 +26,15 @@ class Settings(BaseSettings):
     service_name: str = Field(default="crawl4ai-service")
     service_version: str = Field(default="0.1.0")
     host: str = Field(default="0.0.0.0")
-    port: int = Field(default=11235)
+    port: int = Field(default=5003, alias="PORT")  # HTTP / gRPC 共用端口
+
+    # ---- 双版本接口（HTTP / gRPC）监听端口 ----
+    # 同一个服务的两套接口：FastAPI（HTTP/JSON，带 Swagger）与 gRPC
+    # （proto/crawl 契约），二者共用同一份爬取 / 提取核心逻辑，且共用同一个
+    # 监听端口 ``PORT``。跑哪个版本取决于打包时装的依赖组
+    # （--extra http / --extra grpc），见 :func:`http_available` / :func:`grpc_available`。
+    # 注：HTTP 与 gRPC 是不同传输协议，不能在同一端口上同时监听；
+    # 因此「统一端口」意味着部署时按依赖组只启用其中一个版本（或先后绑定会冲突）。
 
     # ---- 爬虫行为 ----
     default_max_concurrent: int = Field(default=5, ge=1, le=50)
@@ -70,3 +78,30 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """返回缓存的配置单例。"""
     return Settings()
+
+
+def http_available() -> bool:
+    """HTTP（FastAPI）版本接口是否可用：取决于打包时是否装了 ``http`` 依赖组。
+
+    通过探测 ``fastapi`` / ``uvicorn`` 是否可导入判断，避免在纯 gRPC 镜像里
+    因缺少 fastapi 而启动失败。
+    """
+    try:
+        import fastapi  # noqa: F401
+        import uvicorn  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def grpc_available() -> bool:
+    """gRPC 版本接口是否可用：取决于打包时是否装了 ``grpc`` 依赖组。
+
+    通过探测 ``grpc`` / ``grpcio`` 是否可导入判断，避免在纯 HTTP 镜像里
+    因缺少 grpc 而启动失败。
+    """
+    try:
+        import grpc  # noqa: F401
+        return True
+    except ImportError:
+        return False
