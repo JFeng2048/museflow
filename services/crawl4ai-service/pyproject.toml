@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Standalone crawler microservice wrapping Crawl4AI intelligent extraction"
 authors = [{ name = "JobInsight" }]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<3.14"
 # 两个版本接口（HTTP / gRPC）共用同一份爬取 / 提取核心逻辑
 # （src/crawler.py + src/extractor.py，依赖 Crawl4AI 浏览器渲染）。
 # 基础依赖是两份接口都需要的；HTTP / gRPC 各自的依赖通过
