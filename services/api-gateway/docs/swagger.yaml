@@ -275,6 +275,23 @@ definitions:
       user:
         $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo'
     type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.LoginWithCodeRequest:
+    properties:
+      code:
+        example: "824913"
+        type: string
+      device_name:
+        description: DeviceName 设备名称，用于设备列表展示，可选
+        example: Chrome on Windows
+        maxLength: 100
+        type: string
+      email:
+        example: author@museflow.ai
+        type: string
+    required:
+    - code
+    - email
+    type: object
   github_com_museflow_api-gateway_internal_dto_auth_dto.MFASetupData:
     properties:
       otpauth_url:
@@ -315,6 +332,10 @@ definitions:
     type: object
   github_com_museflow_api-gateway_internal_dto_auth_dto.RegisterRequest:
     properties:
+      code:
+        description: Code 注册邮箱验证码，调 /auth/email/send-code（scene=register）获取
+        example: "824913"
+        type: string
       email:
         example: author@museflow.ai
         type: string
@@ -328,6 +349,7 @@ definitions:
         minLength: 8
         type: string
     required:
+    - code
     - email
     - password
     type: object
@@ -355,6 +377,34 @@ definitions:
         example: author@museflow.ai
         type: string
     required:
+    - email
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest:
+    properties:
+      email:
+        example: author@museflow.ai
+        type: string
+      scene:
+        enum:
+        - register
+        - verify
+        - login
+        example: register
+        type: string
+    required:
+    - email
+    - scene
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyEmailRequest:
+    properties:
+      code:
+        example: "824913"
+        type: string
+      email:
+        example: author@museflow.ai
+        type: string
+    required:
+    - code
     - email
     type: object
   github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFALoginRequest:
@@ -930,6 +980,62 @@ paths:
       summary: 修改用户状态
       tags:
       - 管理后台
+  /auth/email/send-code:
+    post:
+      consumes:
+      - application/json
+      description: 按场景发送邮箱验证码：register（注册校验）/ verify（补验证邮箱）/ login（验证码登录）；避免账号枚举，邮箱不存在时也返回成功
+      parameters:
+      - description: 邮箱与场景
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 发送成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 参数校验失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "429":
+          description: 发送过于频繁
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 发送邮箱验证码
+      tags:
+      - 认证
+  /auth/email/verify:
+    post:
+      consumes:
+      - application/json
+      description: 校验 verify 场景的邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
+      parameters:
+      - description: 邮箱与验证码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 验证成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 验证码错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 校验邮箱验证码
+      tags:
+      - 认证
   /auth/login:
     post:
       consumes:
@@ -967,6 +1073,41 @@ paths:
           schema:
             $ref: '#/definitions/errcode.Response'
       summary: 用户登录
+      tags:
+      - 认证
+  /auth/login/code:
+    post:
+      consumes:
+      - application/json
+      description: 使用邮箱验证码免密登录，成功后签发双令牌；开启 2FA 时返回 mfa_ticket 需走 /auth/mfa/verify-login
+      parameters:
+      - description: 邮箱、验证码与设备名
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginWithCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登录成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData'
+              type: object
+        "400":
+          description: 验证码错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "500":
+          description: 服务内部错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 邮箱验证码登录
       tags:
       - 认证
   /auth/logout:

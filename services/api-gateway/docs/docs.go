@@ -681,6 +681,92 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/email/send-code": {
+            "post": {
+                "description": "按场景发送邮箱验证码：register（注册校验）/ verify（补验证邮箱）/ login（验证码登录）；避免账号枚举，邮箱不存在时也返回成功",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "发送邮箱验证码",
+                "parameters": [
+                    {
+                        "description": "邮箱与场景",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "发送成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数校验失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "发送过于频繁",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/email/verify": {
+            "post": {
+                "description": "校验 verify 场景的邮箱验证码并标记邮箱已验证（兼容历史未验证账号）",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "校验邮箱验证码",
+                "parameters": [
+                    {
+                        "description": "邮箱与验证码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "验证成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "验证码错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "邮箱密码登录，成功后返回 access token（body）并将 refresh token 写入 HttpOnly Cookie",
@@ -732,6 +818,64 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "邮箱或密码错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "500": {
+                        "description": "服务内部错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login/code": {
+            "post": {
+                "description": "使用邮箱验证码免密登录，成功后签发双令牌；开启 2FA 时返回 mfa_ticket 需走 /auth/mfa/verify-login",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "邮箱验证码登录",
+                "parameters": [
+                    {
+                        "description": "邮箱、验证码与设备名",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginWithCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "登录成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "验证码错误",
                         "schema": {
                             "$ref": "#/definitions/errcode.Response"
                         }
@@ -2065,6 +2209,29 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.LoginWithCodeRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "email"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "824913"
+                },
+                "device_name": {
+                    "description": "DeviceName 设备名称，用于设备列表展示，可选",
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Chrome on Windows"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "author@museflow.ai"
+                }
+            }
+        },
         "github_com_museflow_api-gateway_internal_dto_auth_dto.MFASetupData": {
             "type": "object",
             "properties": {
@@ -2123,10 +2290,16 @@ const docTemplate = `{
         "github_com_museflow_api-gateway_internal_dto_auth_dto.RegisterRequest": {
             "type": "object",
             "required": [
+                "code",
                 "email",
                 "password"
             ],
             "properties": {
+                "code": {
+                    "description": "Code 注册邮箱验证码，调 /auth/email/send-code（scene=register）获取",
+                    "type": "string",
+                    "example": "824913"
+                },
                 "email": {
                     "type": "string",
                     "example": "author@museflow.ai"
@@ -2174,6 +2347,45 @@ const docTemplate = `{
                 "email"
             ],
             "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "author@museflow.ai"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "scene"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "author@museflow.ai"
+                },
+                "scene": {
+                    "type": "string",
+                    "enum": [
+                        "register",
+                        "verify",
+                        "login"
+                    ],
+                    "example": "register"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyEmailRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "email"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "824913"
+                },
                 "email": {
                     "type": "string",
                     "example": "author@museflow.ai"

@@ -19,6 +19,10 @@ func registerAuthRoutes(r *gin.RouterGroup, h *Handlers, auth gin.HandlerFunc) {
 		// 密码重置（邮箱验证码），无需认证
 		group.POST("/password/reset-code", h.Auth.SendResetCode)
 		group.POST("/password/reset", h.Auth.ResetPassword)
+		// 邮箱验证码（注册校验 / 补验证 / 免密登录），无需认证
+		group.POST("/email/send-code", h.Auth.SendVerifyCode)
+		group.POST("/email/verify", h.Auth.VerifyEmail)
+		group.POST("/login/code", h.Auth.LoginWithCode)
 		// 需要 access token
 		group.POST("/logout", auth, h.Auth.Logout)
 		// 登录二次验证（使用 mfa_ticket，无需 access token）
