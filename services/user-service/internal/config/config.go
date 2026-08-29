@@ -11,6 +11,7 @@ import (
 
 	"github.com/museflow/pkg/envloader"
 	"github.com/museflow/pkg/logger"
+	"github.com/museflow/user-service/internal/service/notify"
 )
 
 // Config user-service 运行配置。
@@ -25,6 +26,12 @@ type Config struct {
 	AccessTTL  time.Duration // access token 有效期
 	RefreshTTL time.Duration // refresh token 有效期
 	BcryptCost int           // bcrypt 加密成本
+
+	// 验证码与邮件（密码重置）
+	CodeTTL       time.Duration // 验证码有效期
+	CodeLength    int           // 验证码位数
+	CodeResendCD  time.Duration // 重发冷却时间，防止短时间重复发送
+	SMTP          notify.SMTPConfig // 邮件发送配置，未配置主机时降级为日志模式
 
 	Log *logger.Config // 日志配置（由 LOG_ 前缀读取）
 }
@@ -56,7 +63,18 @@ func Load() (*Config, error) {
 		AccessTTL:  env.GetDuration("ACCESS_TTL_SECONDS", 3600*time.Second),
 		RefreshTTL: env.GetDuration("REFRESH_TTL_SECONDS", 2592000*time.Second),
 		BcryptCost: env.GetInt("BCRYPT_COST", 10),
-		Log:        loadLogConfig(env),
+		// 验证码默认 6 位、10 分钟有效、60 秒内不可重发
+		CodeTTL:      env.GetDuration("CODE_TTL_SECONDS", 600*time.Second),
+		CodeLength:   env.GetInt("CODE_LENGTH", 6),
+		CodeResendCD: env.GetDuration("CODE_RESEND_COOLDOWN_SECONDS", 60*time.Second),
+		SMTP: notify.SMTPConfig{
+			Host:     env.Get("SMTP_HOST", ""),
+			Port:     env.GetInt("SMTP_PORT", 587),
+			Username: env.Get("SMTP_USERNAME", ""),
+			Password: env.Get("SMTP_PASSWORD", ""),
+			From:     env.Get("SMTP_FROM", ""),
+		},
+		Log: loadLogConfig(env),
 	}
 
 	if cfg.DBDSN == "" {

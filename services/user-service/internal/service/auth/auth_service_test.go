@@ -210,7 +210,7 @@ func newTestService() (*AuthService, *fakeTokenStore) {
 	store := newFakeTokenStore()
 	tm := token.NewTokenManager("test-secret", time.Hour, 30*24*time.Hour)
 	// bcrypt 使用最小成本加速测试（rbac / audit / oauth 传 nil：测试聚焦认证主流程）
-	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, bcrypt.MinCost)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), bcrypt.MinCost)
 	return svc, store
 }
 
@@ -385,7 +385,7 @@ func TestExpiredAccessTokenIsRejected(t *testing.T) {
 	store := newFakeTokenStore()
 	// 负有效期立即过期
 	tm := token.NewTokenManager("test-secret", -time.Minute, time.Hour)
-	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, bcrypt.MinCost)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), bcrypt.MinCost)
 
 	tokenStr, err := tm.GenerateAccess(uuid.NewString(), uuid.NewString())
 	if err != nil {
@@ -450,7 +450,7 @@ func TestLoginLocksAccountAfterMaxFailures(t *testing.T) {
 	repo := newFakeUserRepo()
 	store := newFakeTokenStore()
 	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour)
-	svc := NewAuthService(repo, store, tm, nil, nil, nil, bcrypt.MinCost)
+	svc := NewAuthService(repo, store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), bcrypt.MinCost)
 	ctx := context.Background()
 
 	if _, err := svc.Register(ctx, "lock@museflow.ai", "pw12345678", "n"); err != nil {

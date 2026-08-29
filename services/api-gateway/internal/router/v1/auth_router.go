@@ -16,6 +16,9 @@ func registerAuthRoutes(r *gin.RouterGroup, h *Handlers, auth gin.HandlerFunc) {
 		group.POST("/login", h.Auth.Login)
 		// 走 Cookie 校验，不需要 access token
 		group.POST("/refresh", h.Auth.Refresh)
+		// 密码重置（邮箱验证码），无需认证
+		group.POST("/password/reset-code", h.Auth.SendResetCode)
+		group.POST("/password/reset", h.Auth.ResetPassword)
 		// 需要 access token
 		group.POST("/logout", auth, h.Auth.Logout)
 	}

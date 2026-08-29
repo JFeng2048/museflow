@@ -27,6 +27,8 @@ const (
 	UserService_ValidateToken_FullMethodName      = "/user.UserService/ValidateToken"
 	UserService_UpdateProfile_FullMethodName      = "/user.UserService/UpdateProfile"
 	UserService_ChangePassword_FullMethodName     = "/user.UserService/ChangePassword"
+	UserService_SendResetCode_FullMethodName      = "/user.UserService/SendResetCode"
+	UserService_ResetPassword_FullMethodName      = "/user.UserService/ResetPassword"
 	UserService_GetUserByUUID_FullMethodName      = "/user.UserService/GetUserByUUID"
 	UserService_GetUserPermissions_FullMethodName = "/user.UserService/GetUserPermissions"
 	UserService_CheckPermission_FullMethodName    = "/user.UserService/CheckPermission"
@@ -76,6 +78,10 @@ type UserServiceClient interface {
 	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*UpdateProfileResponse, error)
 	// ChangePassword 修改密码（需验证旧密码，成功后清理权限缓存）
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
+	// SendResetCode 发送密码重置验证码到邮箱（邮箱不存在时静默成功，避免账号枚举）
+	SendResetCode(ctx context.Context, in *SendResetCodeRequest, opts ...grpc.CallOption) (*SendResetCodeResponse, error)
+	// ResetPassword 校验验证码并重置密码（验证码一次性使用）
+	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
 	// GetUserByUUID 根据 UUID 查询用户（供其他服务调用）
 	GetUserByUUID(ctx context.Context, in *GetUserByUUIDRequest, opts ...grpc.CallOption) (*GetUserByUUIDResponse, error)
 	// GetUserPermissions 获取用户权限编码列表（缓存优先，未命中查库后回填）
@@ -202,6 +208,26 @@ func (c *userServiceClient) ChangePassword(ctx context.Context, in *ChangePasswo
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ChangePasswordResponse)
 	err := c.cc.Invoke(ctx, UserService_ChangePassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) SendResetCode(ctx context.Context, in *SendResetCodeRequest, opts ...grpc.CallOption) (*SendResetCodeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendResetCodeResponse)
+	err := c.cc.Invoke(ctx, UserService_SendResetCode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResetPasswordResponse)
+	err := c.cc.Invoke(ctx, UserService_ResetPassword_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -444,6 +470,10 @@ type UserServiceServer interface {
 	UpdateProfile(context.Context, *UpdateProfileRequest) (*UpdateProfileResponse, error)
 	// ChangePassword 修改密码（需验证旧密码，成功后清理权限缓存）
 	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
+	// SendResetCode 发送密码重置验证码到邮箱（邮箱不存在时静默成功，避免账号枚举）
+	SendResetCode(context.Context, *SendResetCodeRequest) (*SendResetCodeResponse, error)
+	// ResetPassword 校验验证码并重置密码（验证码一次性使用）
+	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
 	// GetUserByUUID 根据 UUID 查询用户（供其他服务调用）
 	GetUserByUUID(context.Context, *GetUserByUUIDRequest) (*GetUserByUUIDResponse, error)
 	// GetUserPermissions 获取用户权限编码列表（缓存优先，未命中查库后回填）
@@ -519,6 +549,12 @@ func (UnimplementedUserServiceServer) UpdateProfile(context.Context, *UpdateProf
 }
 func (UnimplementedUserServiceServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChangePassword not implemented")
+}
+func (UnimplementedUserServiceServer) SendResetCode(context.Context, *SendResetCodeRequest) (*SendResetCodeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendResetCode not implemented")
+}
+func (UnimplementedUserServiceServer) ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetPassword not implemented")
 }
 func (UnimplementedUserServiceServer) GetUserByUUID(context.Context, *GetUserByUUIDRequest) (*GetUserByUUIDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserByUUID not implemented")
@@ -744,6 +780,42 @@ func _UserService_ChangePassword_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).ChangePassword(ctx, req.(*ChangePasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_SendResetCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendResetCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).SendResetCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_SendResetCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).SendResetCode(ctx, req.(*SendResetCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ResetPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ResetPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ResetPassword(ctx, req.(*ResetPasswordRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1164,6 +1236,14 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ChangePassword",
 			Handler:    _UserService_ChangePassword_Handler,
+		},
+		{
+			MethodName: "SendResetCode",
+			Handler:    _UserService_SendResetCode_Handler,
+		},
+		{
+			MethodName: "ResetPassword",
+			Handler:    _UserService_ResetPassword_Handler,
 		},
 		{
 			MethodName: "GetUserByUUID",

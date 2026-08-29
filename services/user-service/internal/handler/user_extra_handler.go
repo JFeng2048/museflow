@@ -13,6 +13,7 @@ import (
 	"github.com/museflow/pkg/logger"
 	"github.com/museflow/user-service/internal/model"
 	"github.com/museflow/user-service/internal/repository"
+	"github.com/museflow/user-service/internal/service/auth"
 	"github.com/museflow/user-service/internal/service/oauth"
 	"github.com/museflow/user-service/internal/service/rbac"
 )
@@ -40,6 +41,27 @@ func (h *UserHandler) ChangePassword(ctx context.Context, req *userpb.ChangePass
 	}
 	logger.InfoContext(ctx, "修改密码成功", logger.UserUUID(req.GetUuid()))
 	return &userpb.ChangePasswordResponse{Success: true}, nil
+}
+
+// SendResetCode 发送密码重置验证码。
+//
+// 邮箱不存在时返回成功（避免账号枚举），实际不下发验证码。
+func (h *UserHandler) SendResetCode(ctx context.Context, req *userpb.SendResetCodeRequest) (*userpb.SendResetCodeResponse, error) {
+	if err := h.auth.SendResetCode(ctx, req.GetEmail()); err != nil {
+		logger.WarnContext(ctx, "发送密码重置验证码失败", "email", req.GetEmail(), logger.Err(err))
+		return nil, mapResetError(err)
+	}
+	return &userpb.SendResetCodeResponse{Success: true}, nil
+}
+
+// ResetPassword 校验验证码并重置密码。
+func (h *UserHandler) ResetPassword(ctx context.Context, req *userpb.ResetPasswordRequest) (*userpb.ResetPasswordResponse, error) {
+	if err := h.auth.ResetPassword(ctx, req.GetEmail(), req.GetCode(), req.GetNewPassword()); err != nil {
+		logger.WarnContext(ctx, "重置密码失败", "email", req.GetEmail(), logger.Err(err))
+		return nil, mapResetError(err)
+	}
+	logger.InfoContext(ctx, "重置密码成功", "email", req.GetEmail())
+	return &userpb.ResetPasswordResponse{Success: true}, nil
 }
 
 // GetUserByUUID 根据 UUID 查询用户（供其他服务调用）。
@@ -354,6 +376,21 @@ func mapOAuthError(err error) error {
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, oauth.ErrOAuthNotFound):
 		return status.Error(codes.NotFound, err.Error())
+	default:
+		return status.Error(codes.Internal, err.Error())
+	}
+}
+
+// mapResetError 将密码重置业务错误映射为 gRPC status。
+func mapResetError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case errors.Is(err, auth.ErrCodeNotSent), errors.Is(err, auth.ErrCodeMismatch):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, auth.ErrResendTooSoon):
+		return status.Error(codes.ResourceExhausted, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}

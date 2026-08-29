@@ -198,6 +198,64 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
 }
 
+// SendResetCode 发送密码重置验证码
+//
+//	@Summary		发送密码重置验证码
+//	@Description	向邮箱发送 6 位数字验证码；为避免账号枚举，邮箱不存在时也返回成功
+//	@Tags			认证
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		authdto.SendResetCodeRequest	true	"邮箱"
+//	@Success		200		{object}	errcode.Response	"发送成功"
+//	@Failure		400		{object}	errcode.Response	"参数校验失败"
+//	@Failure		429		{object}	errcode.Response	"发送过于频繁"
+//	@Router			/auth/password/reset-code [post]
+func (h *AuthHandler) SendResetCode(c *gin.Context) {
+	var req authdto.SendResetCodeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
+		return
+	}
+
+	if _, err := h.users.Service().SendResetCode(c.Request.Context(), &userpb.SendResetCodeRequest{Email: req.Email}); err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
+}
+
+// ResetPassword 重置密码
+//
+//	@Summary		通过邮箱验证码重置密码
+//	@Description	校验验证码后设置新密码；验证码一次性使用，重置后清理权限缓存
+//	@Tags			认证
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		authdto.ResetPasswordRequest	true	"邮箱、验证码与新密码"
+//	@Success		200		{object}	errcode.Response	"重置成功"
+//	@Failure		400		{object}	errcode.Response	"参数校验失败或验证码错误"
+//	@Failure		404		{object}	errcode.Response	"用户不存在"
+//	@Router			/auth/password/reset [post]
+func (h *AuthHandler) ResetPassword(c *gin.Context) {
+	var req authdto.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
+		return
+	}
+
+	if _, err := h.users.Service().ResetPassword(c.Request.Context(), &userpb.ResetPasswordRequest{
+		Email:       req.Email,
+		Code:        req.Code,
+		NewPassword: req.NewPassword,
+	}); err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
+}
+
 // setCookie 按配置写入 Cookie。
 func (h *AuthHandler) setCookie(c *gin.Context, name, value string, maxAge int, httpOnly bool) {
 	http.SetCookie(c.Writer, &http.Cookie{

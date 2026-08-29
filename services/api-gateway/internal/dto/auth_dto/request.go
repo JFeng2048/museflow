@@ -1,4 +1,4 @@
-// Package authdto 定义认证相关接口（注册 / 登录 / 刷新 / 登出）的 HTTP 请求结构。
+// Package authdto 定义认证相关接口（注册 / 登录 / 刷新 / 登出 / 密码重置）的 HTTP 请求结构。
 package authdto
 
 // RegisterRequest 注册请求。
@@ -14,4 +14,16 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required" example:"P@ssw0rd123"`
 	// DeviceName 设备名称，用于设备列表展示，可选
 	DeviceName string `json:"device_name" binding:"omitempty,max=100" example:"Chrome on Windows"`
+}
+
+// SendResetCodeRequest 发送密码重置验证码请求。
+type SendResetCodeRequest struct {
+	Email string `json:"email" binding:"required,email" example:"author@museflow.ai"`
+}
+
+// ResetPasswordRequest 重置密码请求。
+type ResetPasswordRequest struct {
+	Email       string `json:"email" binding:"required,email" example:"author@museflow.ai"`
+	Code        string `json:"code" binding:"required" example:"824913"`
+	NewPassword string `json:"new_password" binding:"required,min=8,max=72" example:"NewP@ss456"`
 }

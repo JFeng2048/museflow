@@ -37,6 +37,12 @@ service UserService {
   // ChangePassword 修改密码（需验证旧密码，成功后清理权限缓存）
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
 
+  // SendResetCode 发送密码重置验证码到邮箱（邮箱不存在时静默成功，避免账号枚举）
+  rpc SendResetCode(SendResetCodeRequest) returns (SendResetCodeResponse);
+
+  // ResetPassword 校验验证码并重置密码（验证码一次性使用）
+  rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+
   // GetUserByUUID 根据 UUID 查询用户（供其他服务调用）
   rpc GetUserByUUID(GetUserByUUIDRequest) returns (GetUserByUUIDResponse);
 
@@ -214,6 +220,26 @@ message ChangePasswordRequest {
 }
 
 message ChangePasswordResponse {
+  bool success = 1;
+}
+
+// ---- 密码重置（邮箱验证码）----
+
+message SendResetCodeRequest {
+  string email = 1;                // 接收验证码的邮箱
+}
+
+message SendResetCodeResponse {
+  bool success = 1;
+}
+
+message ResetPasswordRequest {
+  string email = 1;
+  string code = 2;                 // 邮箱收到的验证码
+  string new_password = 3;         // 新密码，服务端 bcrypt 加密
+}
+
+message ResetPasswordResponse {
   bool success = 1;
 }
 

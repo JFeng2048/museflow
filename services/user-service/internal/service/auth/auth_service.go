@@ -16,6 +16,7 @@ import (
 	"github.com/museflow/user-service/internal/repository"
 	"github.com/museflow/user-service/internal/service/audit"
 	"github.com/museflow/user-service/internal/service/dto"
+	"github.com/museflow/user-service/internal/service/notify"
 	"github.com/museflow/user-service/internal/service/oauth"
 	"github.com/museflow/user-service/internal/service/rbac"
 	"github.com/museflow/user-service/internal/service/token"
@@ -43,6 +44,9 @@ type AuthService struct {
 	rbac       *rbac.Service
 	audit      *audit.Service
 	oauth      *oauth.Service
+	codes      repository.VerifyCodeStore // 验证码存储（密码重置）
+	mailer     notify.EmailSender         // 邮件发送器
+	reset      ResetServiceConfig         // 密码重置配置
 	bcryptCost int
 }
 
@@ -54,6 +58,9 @@ func NewAuthService(
 	rbacSvc *rbac.Service,
 	auditSvc *audit.Service,
 	oauthSvc *oauth.Service,
+	codes repository.VerifyCodeStore,
+	mailer notify.EmailSender,
+	reset ResetServiceConfig,
 	bcryptCost int,
 ) *AuthService {
 	return &AuthService{
@@ -63,6 +70,9 @@ func NewAuthService(
 		rbac:       rbacSvc,
 		audit:      auditSvc,
 		oauth:      oauthSvc,
+		codes:      codes,
+		mailer:     mailer,
+		reset:      reset,
 		bcryptCost: bcryptCost,
 	}
 }

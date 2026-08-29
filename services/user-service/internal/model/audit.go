@@ -34,6 +34,8 @@ const (
 	AuditActionLogout      = "logout"
 	AuditActionUpdateUser  = "update_user"
 	AuditActionChangePwd   = "change_password"
+	AuditActionResetPwd    = "reset_password"
+	AuditActionSendCode    = "send_reset_code"
 	AuditActionAssignRole  = "assign_role"
 	AuditActionUpdateStat  = "update_status"
 	AuditActionCreateRole  = "create_role"
