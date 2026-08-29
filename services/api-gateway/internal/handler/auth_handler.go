@@ -79,7 +79,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		authdto.LoginRequest	true	"登录信息"
-//	@Success		200		{object}	errcode.Response{data=authdto.LoginData}	"登录成功"
+//	@Success		200		{object}	errcode.Response{data=authdto.LoginResponseData}	"登录成功"
 //	@Failure		400		{object}	errcode.Response				"参数校验失败"
 //	@Failure		401		{object}	errcode.Response				"邮箱或密码错误"
 //	@Failure		500		{object}	errcode.Response				"服务内部错误"
@@ -115,11 +115,231 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	h.setCookie(c, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
 	h.setCookie(c, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginData{
+	// 账号开启 2FA 时，不下发令牌，返回票据与用户基本信息
+	if resp.GetRequiresMfa() {
+		logger.InfoContext(c.Request.Context(), "网关登录需二次验证", "email", req.Email)
+		c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginResponseData{
+			User:        toUserInfo(resp.GetUser()),
+			RequiresMFA: true,
+			MFATicket:   resp.GetMfaTicket(),
+		}))
+		return
+	}
+
+	h.setCookie(c, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
+	h.setCookie(c, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
+
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginResponseData{
 		AccessToken: resp.GetAccessToken(),
 		TokenType:   "Bearer",
 		ExpiresIn:   resp.GetExpiresIn(),
 		User:        toUserInfo(resp.GetUser()),
+	}))
+}
+
+// VerifyMFALogin 登录流程的 2FA 二次验证
+//
+//	@Summary		2FA 登录二次验证
+//	@Description	使用登录时获取的 mfa_ticket 与 TOTP 验证码完成登录，成功后签发双令牌
+//	@Tags			认证
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		authdto.VerifyMFALoginRequest	true	"票据与验证码"
+//	@Success		200		{object}	errcode.Response{data=authdto.LoginResponseData}	"验证成功"
+//	@Failure		400		{object}	errcode.Response				"验证码错误"
+//	@Failure		401		{object}	errcode.Response				"票据无效或已过期"
+//	@Router			/auth/mfa/verify-login [post]
+func (h *AuthHandler) VerifyMFALogin(c *gin.Context) {
+	var req authdto.VerifyMFALoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
+		return
+	}
+
+	deviceID, _ := c.Cookie(deviceCookieName)
+
+	resp, err := h.users.Service().VerifyMFALogin(c.Request.Context(), &userpb.VerifyMFALoginRequest{
+		MfaTicket: req.MfaTicket,
+		Code:      req.Code,
+		Device: &userpb.DeviceContext{
+			DeviceId:   deviceID,
+			UserAgent:  c.Request.UserAgent(),
+			Ip:         c.ClientIP(),
+			DeviceName: req.DeviceName,
+		},
+	})
+	if err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+
+	h.setCookie(c, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
+	h.setCookie(c, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
+
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginResponseData{
+		AccessToken: resp.GetAccessToken(),
+		TokenType:   "Bearer",
+		ExpiresIn:   resp.GetExpiresIn(),
+		User:        toUserInfo(resp.GetUser()),
+	}))
+}
+
+// SetupMFA 生成 TOTP 密钥与绑定 URL
+//
+//	@Summary		生成 2FA 密钥
+//	@Description	生成 TOTP 密钥与 otpauth URL（尚未启用）；需登录后调用，下一步用 VerifyMFA 启用
+//	@Tags			双因素认证
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200		{object}	errcode.Response{data=authdto.MFASetupData}	"生成成功"
+//	@Failure		401		{object}	errcode.Response	"未认证"
+//	@Router			/auth/mfa/setup [post]
+func (h *AuthHandler) SetupMFA(c *gin.Context) {
+	uuid := middleware.CurrentUserUUID(c)
+	if uuid == "" {
+		c.JSON(http.StatusUnauthorized, errcode.ErrorGin(c, errcode.CodeUnauthorized))
+		return
+	}
+
+	resp, err := h.users.Service().SetupMFA(c.Request.Context(), &userpb.SetupMFARequest{Uuid: uuid})
+	if err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.MFASetupData{
+		Secret:     resp.GetSecret(),
+		OtpauthURL: resp.GetOtpauthUrl(),
+	}))
+}
+
+// VerifyMFA 验证验证码并启用 2FA
+//
+//	@Summary		启用 2FA
+//	@Description	验证 TOTP 验证码后启用双因素认证，返回 8 个恢复码；需登录后调用
+//	@Tags			双因素认证
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		authdto.VerifyMFARequest	true	"验证码"
+//	@Success		200		{object}	errcode.Response{data=authdto.LoginResponseData}	"启用成功"
+//	@Failure		400		{object}	errcode.Response	"验证码错误"
+//	@Failure		401		{object}	errcode.Response	"未认证"
+//	@Router			/auth/mfa/verify [post]
+func (h *AuthHandler) VerifyMFA(c *gin.Context) {
+	uuid := middleware.CurrentUserUUID(c)
+	if uuid == "" {
+		c.JSON(http.StatusUnauthorized, errcode.ErrorGin(c, errcode.CodeUnauthorized))
+		return
+	}
+	var req authdto.VerifyMFARequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
+		return
+	}
+
+	resp, err := h.users.Service().VerifyMFA(c.Request.Context(), &userpb.VerifyMFARequest{Uuid: uuid, Code: req.Code})
+	if err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginResponseData{
+		RecoveryCodes: resp.GetRecoveryCodes(),
+	}))
+}
+
+// DisableMFA 验证验证码后关闭 2FA
+//
+//	@Summary		关闭 2FA
+//	@Description	验证 TOTP 验证码后关闭双因素认证；需登录后调用
+//	@Tags			双因素认证
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		authdto.DisableMFARequest	true	"验证码"
+//	@Success		200		{object}	errcode.Response	"关闭成功"
+//	@Failure		400		{object}	errcode.Response	"验证码错误"
+//	@Failure		401		{object}	errcode.Response	"未认证"
+//	@Router			/auth/mfa/disable [post]
+func (h *AuthHandler) DisableMFA(c *gin.Context) {
+	uuid := middleware.CurrentUserUUID(c)
+	if uuid == "" {
+		c.JSON(http.StatusUnauthorized, errcode.ErrorGin(c, errcode.CodeUnauthorized))
+		return
+	}
+	var req authdto.DisableMFARequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
+		return
+	}
+
+	if _, err := h.users.Service().DisableMFA(c.Request.Context(), &userpb.DisableMFARequest{Uuid: uuid, Code: req.Code}); err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
+}
+
+// RegenerateRecoveryCodes 重新生成恢复码
+//
+//	@Summary		重新生成恢复码
+//	@Description	验证 TOTP 验证码后重新生成 8 个恢复码；需登录后调用
+//	@Tags			双因素认证
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		authdto.RegenerateRecoveryCodesRequest	true	"验证码"
+//	@Success		200		{object}	errcode.Response{data=authdto.LoginResponseData}	"生成成功"
+//	@Failure		400		{object}	errcode.Response	"验证码错误"
+//	@Failure		401		{object}	errcode.Response	"未认证"
+//	@Router			/auth/mfa/recovery-codes [post]
+func (h *AuthHandler) RegenerateRecoveryCodes(c *gin.Context) {
+	uuid := middleware.CurrentUserUUID(c)
+	if uuid == "" {
+		c.JSON(http.StatusUnauthorized, errcode.ErrorGin(c, errcode.CodeUnauthorized))
+		return
+	}
+	var req authdto.RegenerateRecoveryCodesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
+		return
+	}
+
+	resp, err := h.users.Service().RegenerateRecoveryCodes(c.Request.Context(), &userpb.RegenerateRecoveryCodesRequest{Uuid: uuid, Code: req.Code})
+	if err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginResponseData{
+		RecoveryCodes: resp.GetRecoveryCodes(),
+	}))
+}
+
+// GetMFAStatus 查询 2FA 状态
+//
+//	@Summary		查询 2FA 状态
+//	@Description	返回是否已启用 2FA 及剩余恢复码数量；需登录后调用
+//	@Tags			双因素认证
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200		{object}	errcode.Response{data=authdto.MFAStatusData}	"查询成功"
+//	@Failure		401		{object}	errcode.Response	"未认证"
+//	@Router			/auth/mfa/status [get]
+func (h *AuthHandler) GetMFAStatus(c *gin.Context) {
+	uuid := middleware.CurrentUserUUID(c)
+	if uuid == "" {
+		c.JSON(http.StatusUnauthorized, errcode.ErrorGin(c, errcode.CodeUnauthorized))
+		return
+	}
+
+	resp, err := h.users.Service().GetMFAStatus(c.Request.Context(), &userpb.GetMFAStatusRequest{Uuid: uuid})
+	if err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.MFAStatusData{
+		Enabled:                resp.GetEnabled(),
+		RemainingRecoveryCodes: resp.GetRemainingRecoveryCodes(),
 	}))
 }
 

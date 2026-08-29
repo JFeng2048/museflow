@@ -27,3 +27,29 @@ type ResetPasswordRequest struct {
 	Code        string `json:"code" binding:"required" example:"824913"`
 	NewPassword string `json:"new_password" binding:"required,min=8,max=72" example:"NewP@ss456"`
 }
+
+// VerifyMFALoginRequest 登录二次验证请求。
+type VerifyMFALoginRequest struct {
+	MfaTicket string `json:"mfa_ticket" binding:"required" example:"eyJhbGciOiJIUzI1NiIs..."`
+	Code      string `json:"code" binding:"required" example:"824913"`
+	// DeviceName 设备名称，用于设备列表展示，可选
+	DeviceName string `json:"device_name" binding:"omitempty,max=100" example:"Chrome on Windows"`
+}
+
+// SetupMFARequest 生成 TOTP 密钥请求（需登录）。UUID 由网关从 token 注入。
+type SetupMFARequest struct{}
+
+// VerifyMFARequest 验证验证码并启用 2FA 请求（需登录）。UUID 由网关从 token 注入。
+type VerifyMFARequest struct {
+	Code string `json:"code" binding:"required" example:"824913"`
+}
+
+// DisableMFARequest 验证验证码后关闭 2FA 请求（需登录）。UUID 由网关从 token 注入。
+type DisableMFARequest struct {
+	Code string `json:"code" binding:"required" example:"824913"`
+}
+
+// RegenerateRecoveryCodesRequest 重新生成恢复码请求（需登录）。UUID 由网关从 token 注入。
+type RegenerateRecoveryCodesRequest struct {
+	Code string `json:"code" binding:"required" example:"824913"`
+}
