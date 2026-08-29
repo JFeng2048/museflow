@@ -19,6 +19,666 @@
     "host": "localhost:5001",
     "basePath": "/api/v1",
     "paths": {
+        "/admin/audit-logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按操作人、操作类型、时间范围筛选，分页返回",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "审计日志列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，默认 20",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "按操作人 UUID 过滤",
+                        "name": "user_uuid",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "按操作类型过滤，如 login / change_password",
+                        "name": "action",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "起始时间（Unix 秒）",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "结束时间（Unix 秒）",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AuditLogList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/permissions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "权限列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "按资源类型过滤，如 user / novel",
+                        "name": "resource",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.PermissionList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "角色列表",
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.RoleList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "创建角色",
+                "parameters": [
+                    {
+                        "description": "角色信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.CreateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.RoleInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "角色编码已存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/roles/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "系统内置角色不可修改",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "编辑角色",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "角色 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "角色信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.UpdateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限或系统角色不可改",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "角色不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "系统内置角色不可删除；删除后清理相关用户的权限缓存",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "删除角色",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "角色 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限或系统角色不可删",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "角色不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/roles/{id}/permissions": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "覆盖式设置角色的权限集合，变更后清理该角色下所有用户的权限缓存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "为角色分配权限",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "角色 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "权限编码列表",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.SetRolePermissionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分配成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "权限编码不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询用户，支持关键字（邮箱 / 昵称）与状态筛选、排序",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "用户列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，默认 20，最大 100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "按邮箱或昵称模糊搜索",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "状态：1=正常 2=冻结 3=已注销 4=待审核",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "排序字段：created_at/updated_at/email/nickname/status",
+                        "name": "order_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "是否倒序",
+                        "name": "desc",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.UserList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{uuid}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "查看用户资料、角色与最终权限列表",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "用户详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户 UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.UserDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "用户不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{uuid}/role": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "为用户分配角色，分配后自动清理该用户的权限缓存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "分配用户角色",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "目标用户 UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "角色编码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AssignRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "分配成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "角色不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{uuid}/status": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "冻结或解冻用户；状态变更后会清理该用户的权限缓存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "管理后台"
+                ],
+                "summary": "修改用户状态",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "用户 UUID",
+                        "name": "uuid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "目标状态",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.UpdateUserStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "操作成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数校验失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "邮箱密码登录，成功后返回 access token（body）并将 refresh token 写入 HttpOnly Cookie",
@@ -39,7 +699,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.LoginRequest"
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginRequest"
                         }
                     }
                 ],
@@ -49,13 +709,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/internal_handler.Response"
+                                    "$ref": "#/definitions/errcode.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_handler.LoginData"
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData"
                                         }
                                     }
                                 }
@@ -65,19 +725,19 @@
                     "400": {
                         "description": "参数校验失败",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     },
                     "401": {
                         "description": "邮箱或密码错误",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     },
                     "500": {
                         "description": "服务内部错误",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     }
                 }
@@ -102,13 +762,429 @@
                     "200": {
                         "description": "登出成功",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.Response"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     },
                     "401": {
                         "description": "未认证",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/disable": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "验证 TOTP 验证码后关闭双因素认证；需登录后调用",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "双因素认证"
+                ],
+                "summary": "关闭 2FA",
+                "parameters": [
+                    {
+                        "description": "验证码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.DisableMFARequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "关闭成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "验证码错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/recovery-codes": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "验证 TOTP 验证码后重新生成 8 个恢复码；需登录后调用",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "双因素认证"
+                ],
+                "summary": "重新生成恢复码",
+                "parameters": [
+                    {
+                        "description": "验证码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RegenerateRecoveryCodesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "生成成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "验证码错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/setup": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "生成 TOTP 密钥与 otpauth URL（尚未启用）；需登录后调用，下一步用 VerifyMFA 启用",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "双因素认证"
+                ],
+                "summary": "生成 2FA 密钥",
+                "responses": {
+                    "200": {
+                        "description": "生成成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.MFASetupData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回是否已启用 2FA 及剩余恢复码数量；需登录后调用",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "双因素认证"
+                ],
+                "summary": "查询 2FA 状态",
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.MFAStatusData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/verify": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "验证 TOTP 验证码后启用双因素认证，返回 8 个恢复码；需登录后调用",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "双因素认证"
+                ],
+                "summary": "启用 2FA",
+                "parameters": [
+                    {
+                        "description": "验证码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFARequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "启用成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "验证码错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/mfa/verify-login": {
+            "post": {
+                "description": "使用登录时获取的 mfa_ticket 与 TOTP 验证码完成登录，成功后签发双令牌",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "2FA 登录二次验证",
+                "parameters": [
+                    {
+                        "description": "票据与验证码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFALoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "验证成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "验证码错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "票据无效或已过期",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/password/reset": {
+            "post": {
+                "description": "校验验证码后设置新密码；验证码一次性使用，重置后清理权限缓存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "通过邮箱验证码重置密码",
+                "parameters": [
+                    {
+                        "description": "邮箱、验证码与新密码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "重置成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数校验失败或验证码错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "用户不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/password/reset-code": {
+            "post": {
+                "description": "向邮箱发送 6 位数字验证码；为避免账号枚举，邮箱不存在时也返回成功",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "认证"
+                ],
+                "summary": "发送密码重置验证码",
+                "parameters": [
+                    {
+                        "description": "邮箱",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendResetCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "发送成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数校验失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "发送过于频繁",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     }
                 }
@@ -130,13 +1206,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/internal_handler.Response"
+                                    "$ref": "#/definitions/errcode.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_handler.RefreshData"
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RefreshData"
                                         }
                                     }
                                 }
@@ -146,13 +1222,13 @@
                     "401": {
                         "description": "刷新令牌无效或已过期",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     },
                     "403": {
                         "description": "设备校验失败",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     }
                 }
@@ -178,7 +1254,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.RegisterRequest"
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RegisterRequest"
                         }
                     }
                 ],
@@ -188,13 +1264,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/internal_handler.Response"
+                                    "$ref": "#/definitions/errcode.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_handler.UserInfo"
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo"
                                         }
                                     }
                                 }
@@ -204,19 +1280,200 @@
                     "400": {
                         "description": "参数校验失败",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     },
                     "409": {
                         "description": "邮箱已被注册",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     },
                     "500": {
                         "description": "服务内部错误",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/oauth": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "第三方账号绑定列表",
+                "responses": {
+                    "200": {
+                        "description": "获取成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.OAuthBindingList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/oauth/{provider}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "解绑第三方账号",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "平台标识，如 github",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "解绑成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "未绑定该账号",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/password": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "校验旧密码后设置新密码，成功后清理该用户的权限缓存",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "修改当前用户密码",
+                "parameters": [
+                    {
+                        "description": "新旧密码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "修改成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数校验失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "旧密码错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/permissions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回当前用户拥有的全部权限编码，供前端做菜单与按钮级控制",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "获取当前用户权限",
+                "responses": {
+                    "200": {
+                        "description": "获取成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.PermissionListData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     }
                 }
@@ -243,13 +1500,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/internal_handler.Response"
+                                    "$ref": "#/definitions/errcode.Response"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/internal_handler.UserInfo"
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo"
                                         }
                                     }
                                 }
@@ -259,13 +1516,157 @@
                     "401": {
                         "description": "未认证或令牌已失效",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     },
                     "404": {
                         "description": "用户不存在",
                         "schema": {
-                            "$ref": "#/definitions/internal_handler.ErrorResponse"
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "更新昵称 / 头像 / 简介，传入空字符串的字段不做修改",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "更新当前用户信息",
+                "parameters": [
+                    {
+                        "description": "更新信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数校验失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "返回当前账号的登录设备与登录时间，可据此强制下线指定设备",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "获取当前用户会话列表",
+                "responses": {
+                    "200": {
+                        "description": "获取成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.SessionList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/sessions/{token}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "吊销指定设备的刷新令牌，使其 access token 到期后无法续期",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "用户"
+                ],
+                "summary": "强制下线指定会话",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "会话标识",
+                        "name": "token",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "下线成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
                         }
                     }
                 }
@@ -273,40 +1674,331 @@
         }
     },
     "definitions": {
-        "internal_handler.ErrorResponse": {
+        "errcode.Response": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "integer",
-                    "example": 400
+                    "example": 2000
                 },
+                "data": {},
                 "message": {
                     "type": "string",
-                    "example": "参数校验失败"
+                    "example": "success"
                 }
             }
         },
-        "internal_handler.LoginData": {
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.AdminUserItem": {
             "type": "object",
             "properties": {
-                "access_token": {
-                    "type": "string",
-                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "admin",
+                        "user"
+                    ]
                 },
-                "expires_in": {
+                "updated_at": {
                     "type": "integer",
-                    "example": 3600
-                },
-                "token_type": {
-                    "type": "string",
-                    "example": "Bearer"
+                    "example": 1756280000
                 },
                 "user": {
-                    "$ref": "#/definitions/internal_handler.UserInfo"
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo"
                 }
             }
         },
-        "internal_handler.LoginRequest": {
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.AssignRoleRequest": {
+            "type": "object",
+            "required": [
+                "role_code"
+            ],
+            "properties": {
+                "role_code": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "admin"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.AuditLogItem": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "example": "login"
+                },
+                "created_at": {
+                    "type": "integer",
+                    "example": 1756280000
+                },
+                "detail": {
+                    "type": "string",
+                    "example": "{\"reason\":\"bad_password\"}"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "ip": {
+                    "type": "string",
+                    "example": "203.0.113.10"
+                },
+                "resource": {
+                    "type": "string",
+                    "example": "auth"
+                },
+                "resource_id": {
+                    "type": "string",
+                    "example": "3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b"
+                },
+                "user_agent": {
+                    "type": "string"
+                },
+                "user_uuid": {
+                    "type": "string",
+                    "example": "3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.AuditLogList": {
+            "type": "object",
+            "properties": {
+                "logs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AuditLogItem"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 1024
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.CreateRoleRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "name"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "auditor"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "负责内容审核"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "审核员"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.PermissionInfo": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "example": "read"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "user:read"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "查看用户列表与详情"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "查看用户"
+                },
+                "resource": {
+                    "type": "string",
+                    "example": "user"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.PermissionList": {
+            "type": "object",
+            "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.PermissionInfo"
+                    }
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.RoleInfo": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "super_admin"
+                },
+                "created_at": {
+                    "type": "integer",
+                    "example": 1756270000
+                },
+                "description": {
+                    "type": "string",
+                    "example": "拥有全部系统权限"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_system": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "超级管理员"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.RoleList": {
+            "type": "object",
+            "properties": {
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.RoleInfo"
+                    }
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.SetRolePermissionsRequest": {
+            "type": "object",
+            "required": [
+                "permission_codes"
+            ],
+            "properties": {
+                "permission_codes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "novel:read",
+                        "novel:write"
+                    ]
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.UpdateRoleRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "负责内容审核"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "审核员"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.UpdateUserStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "type": "integer",
+                    "enum": [
+                        1,
+                        2,
+                        3,
+                        4
+                    ],
+                    "example": 2
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.UserDetail": {
+            "type": "object",
+            "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "user:read",
+                        "novel:write"
+                    ]
+                },
+                "user": {
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AdminUserItem"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_admin_dto.UserList": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 128
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AdminUserItem"
+                    }
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.DisableMFARequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "824913"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.LoginRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -329,7 +2021,75 @@
                 }
             }
         },
-        "internal_handler.RefreshData": {
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                },
+                "expires_in": {
+                    "type": "integer",
+                    "example": 3600
+                },
+                "mfa_ticket": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                },
+                "recovery_codes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"a1b2c3d4\"",
+                        "\"e5f6g7h8\"]"
+                    ]
+                },
+                "remaining_recovery_codes": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "requires_mfa": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
+                },
+                "user": {
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.MFASetupData": {
+            "type": "object",
+            "properties": {
+                "otpauth_url": {
+                    "type": "string",
+                    "example": "otpauth://totp/MuseFlow:author@museflow.ai?secret=JBSWY3DPEHPK3PXP\u0026issuer=MuseFlow"
+                },
+                "secret": {
+                    "type": "string",
+                    "example": "JBSWY3DPEHPK3PXP"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.MFAStatusData": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "remaining_recovery_codes": {
+                    "type": "integer",
+                    "example": 8
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.RefreshData": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -346,7 +2106,19 @@
                 }
             }
         },
-        "internal_handler.RegisterRequest": {
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.RegenerateRecoveryCodesRequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "824913"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.RegisterRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -370,21 +2142,210 @@
                 }
             }
         },
-        "internal_handler.Response": {
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.ResetPasswordRequest": {
             "type": "object",
+            "required": [
+                "code",
+                "email",
+                "new_password"
+            ],
             "properties": {
                 "code": {
-                    "type": "integer",
-                    "example": 0
-                },
-                "data": {},
-                "message": {
                     "type": "string",
-                    "example": "success"
+                    "example": "824913"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "author@museflow.ai"
+                },
+                "new_password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 8,
+                    "example": "NewP@ss456"
                 }
             }
         },
-        "internal_handler.UserInfo": {
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.SendResetCodeRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "author@museflow.ai"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFALoginRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "mfa_ticket"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "824913"
+                },
+                "device_name": {
+                    "description": "DeviceName 设备名称，用于设备列表展示，可选",
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Chrome on Windows"
+                },
+                "mfa_ticket": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFARequest": {
+            "type": "object",
+            "required": [
+                "code"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "824913"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_user_dto.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "new_password",
+                "old_password"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 8,
+                    "example": "NewP@ss456"
+                },
+                "old_password": {
+                    "type": "string",
+                    "example": "OldP@ss123"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_user_dto.OAuthBinding": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer",
+                    "example": 1756270000
+                },
+                "last_login_at": {
+                    "type": "integer",
+                    "example": 1756280000
+                },
+                "provider": {
+                    "type": "string",
+                    "example": "github"
+                },
+                "provider_avatar": {
+                    "type": "string"
+                },
+                "provider_email": {
+                    "type": "string",
+                    "example": "dev@github.com"
+                },
+                "provider_nickname": {
+                    "type": "string",
+                    "example": "octocat"
+                },
+                "provider_user_id": {
+                    "type": "string",
+                    "example": "gh-123456"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_user_dto.OAuthBindingList": {
+            "type": "object",
+            "properties": {
+                "bindings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.OAuthBinding"
+                    }
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_user_dto.PermissionListData": {
+            "type": "object",
+            "properties": {
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "user:read",
+                        "novel:write"
+                    ]
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_user_dto.SessionInfo": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "example": "a1b2c3d4e5f6"
+                },
+                "device_name": {
+                    "type": "string",
+                    "example": "Chrome on Windows"
+                },
+                "last_refresh_time": {
+                    "type": "integer",
+                    "example": 1756283600
+                },
+                "login_time": {
+                    "type": "integer",
+                    "example": 1756280000
+                },
+                "token_id": {
+                    "type": "string",
+                    "example": "9f8e7d6c-5b4a-3928-1706-0f1e2d3c4b5a"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_user_dto.SessionList": {
+            "type": "object",
+            "properties": {
+                "sessions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.SessionInfo"
+                    }
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_user_dto.UpdateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string",
+                    "example": "https://cdn.museflow.ai/avatar/1.png"
+                },
+                "bio": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "专注于玄幻小说创作"
+                },
+                "nickname": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "墨流作者"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo": {
             "type": "object",
             "properties": {
                 "avatar_url": {

@@ -1,29 +1,234 @@
 basePath: /api/v1
 definitions:
-  internal_handler.ErrorResponse:
+  errcode.Response:
     properties:
       code:
-        example: 400
+        example: 2000
         type: integer
+      data: {}
       message:
-        example: 参数校验失败
+        example: success
         type: string
     type: object
-  internal_handler.LoginData:
+  github_com_museflow_api-gateway_internal_dto_admin_dto.AdminUserItem:
     properties:
-      access_token:
-        example: eyJhbGciOiJIUzI1NiIs...
-        type: string
-      expires_in:
-        example: 3600
+      roles:
+        example:
+        - admin
+        - user
+        items:
+          type: string
+        type: array
+      updated_at:
+        example: 1756280000
         type: integer
-      token_type:
-        example: Bearer
-        type: string
       user:
-        $ref: '#/definitions/internal_handler.UserInfo'
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo'
     type: object
-  internal_handler.LoginRequest:
+  github_com_museflow_api-gateway_internal_dto_admin_dto.AssignRoleRequest:
+    properties:
+      role_code:
+        example: admin
+        maxLength: 50
+        type: string
+    required:
+    - role_code
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.AuditLogItem:
+    properties:
+      action:
+        example: login
+        type: string
+      created_at:
+        example: 1756280000
+        type: integer
+      detail:
+        example: '{"reason":"bad_password"}'
+        type: string
+      id:
+        example: 1
+        type: integer
+      ip:
+        example: 203.0.113.10
+        type: string
+      resource:
+        example: auth
+        type: string
+      resource_id:
+        example: 3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b
+        type: string
+      user_agent:
+        type: string
+      user_uuid:
+        example: 3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.AuditLogList:
+    properties:
+      logs:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AuditLogItem'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 1024
+        type: integer
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.CreateRoleRequest:
+    properties:
+      code:
+        example: auditor
+        maxLength: 50
+        type: string
+      description:
+        example: 负责内容审核
+        maxLength: 500
+        type: string
+      name:
+        example: 审核员
+        maxLength: 100
+        type: string
+    required:
+    - code
+    - name
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.PermissionInfo:
+    properties:
+      action:
+        example: read
+        type: string
+      code:
+        example: user:read
+        type: string
+      description:
+        example: 查看用户列表与详情
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: 查看用户
+        type: string
+      resource:
+        example: user
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.PermissionList:
+    properties:
+      permissions:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.PermissionInfo'
+        type: array
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.RoleInfo:
+    properties:
+      code:
+        example: super_admin
+        type: string
+      created_at:
+        example: 1756270000
+        type: integer
+      description:
+        example: 拥有全部系统权限
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_system:
+        example: true
+        type: boolean
+      name:
+        example: 超级管理员
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.RoleList:
+    properties:
+      roles:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.RoleInfo'
+        type: array
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.SetRolePermissionsRequest:
+    properties:
+      permission_codes:
+        example:
+        - novel:read
+        - novel:write
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - permission_codes
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.UpdateRoleRequest:
+    properties:
+      description:
+        example: 负责内容审核
+        maxLength: 500
+        type: string
+      name:
+        example: 审核员
+        maxLength: 100
+        type: string
+    required:
+    - name
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.UpdateUserStatusRequest:
+    properties:
+      status:
+        enum:
+        - 1
+        - 2
+        - 3
+        - 4
+        example: 2
+        type: integer
+    required:
+    - status
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.UserDetail:
+    properties:
+      permissions:
+        example:
+        - user:read
+        - novel:write
+        items:
+          type: string
+        type: array
+      user:
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AdminUserItem'
+    type: object
+  github_com_museflow_api-gateway_internal_dto_admin_dto.UserList:
+    properties:
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 128
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AdminUserItem'
+        type: array
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.DisableMFARequest:
+    properties:
+      code:
+        example: "824913"
+        type: string
+    required:
+    - code
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.LoginRequest:
     properties:
       device_name:
         description: DeviceName 设备名称，用于设备列表展示，可选
@@ -40,7 +245,55 @@ definitions:
     - email
     - password
     type: object
-  internal_handler.RefreshData:
+  github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      expires_in:
+        example: 3600
+        type: integer
+      mfa_ticket:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      recovery_codes:
+        example:
+        - '["a1b2c3d4"'
+        - '"e5f6g7h8"]'
+        items:
+          type: string
+        type: array
+      remaining_recovery_codes:
+        example: 8
+        type: integer
+      requires_mfa:
+        example: false
+        type: boolean
+      token_type:
+        example: Bearer
+        type: string
+      user:
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo'
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.MFASetupData:
+    properties:
+      otpauth_url:
+        example: otpauth://totp/MuseFlow:author@museflow.ai?secret=JBSWY3DPEHPK3PXP&issuer=MuseFlow
+        type: string
+      secret:
+        example: JBSWY3DPEHPK3PXP
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.MFAStatusData:
+    properties:
+      enabled:
+        example: true
+        type: boolean
+      remaining_recovery_codes:
+        example: 8
+        type: integer
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.RefreshData:
     properties:
       access_token:
         example: eyJhbGciOiJIUzI1NiIs...
@@ -52,7 +305,15 @@ definitions:
         example: Bearer
         type: string
     type: object
-  internal_handler.RegisterRequest:
+  github_com_museflow_api-gateway_internal_dto_auth_dto.RegenerateRecoveryCodesRequest:
+    properties:
+      code:
+        example: "824913"
+        type: string
+    required:
+    - code
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.RegisterRequest:
     properties:
       email:
         example: author@museflow.ai
@@ -70,17 +331,151 @@ definitions:
     - email
     - password
     type: object
-  internal_handler.Response:
+  github_com_museflow_api-gateway_internal_dto_auth_dto.ResetPasswordRequest:
     properties:
       code:
-        example: 0
+        example: "824913"
+        type: string
+      email:
+        example: author@museflow.ai
+        type: string
+      new_password:
+        example: NewP@ss456
+        maxLength: 72
+        minLength: 8
+        type: string
+    required:
+    - code
+    - email
+    - new_password
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.SendResetCodeRequest:
+    properties:
+      email:
+        example: author@museflow.ai
+        type: string
+    required:
+    - email
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFALoginRequest:
+    properties:
+      code:
+        example: "824913"
+        type: string
+      device_name:
+        description: DeviceName 设备名称，用于设备列表展示，可选
+        example: Chrome on Windows
+        maxLength: 100
+        type: string
+      mfa_ticket:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+    required:
+    - code
+    - mfa_ticket
+    type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFARequest:
+    properties:
+      code:
+        example: "824913"
+        type: string
+    required:
+    - code
+    type: object
+  github_com_museflow_api-gateway_internal_dto_user_dto.ChangePasswordRequest:
+    properties:
+      new_password:
+        example: NewP@ss456
+        maxLength: 72
+        minLength: 8
+        type: string
+      old_password:
+        example: OldP@ss123
+        type: string
+    required:
+    - new_password
+    - old_password
+    type: object
+  github_com_museflow_api-gateway_internal_dto_user_dto.OAuthBinding:
+    properties:
+      created_at:
+        example: 1756270000
         type: integer
-      data: {}
-      message:
-        example: success
+      last_login_at:
+        example: 1756280000
+        type: integer
+      provider:
+        example: github
+        type: string
+      provider_avatar:
+        type: string
+      provider_email:
+        example: dev@github.com
+        type: string
+      provider_nickname:
+        example: octocat
+        type: string
+      provider_user_id:
+        example: gh-123456
         type: string
     type: object
-  internal_handler.UserInfo:
+  github_com_museflow_api-gateway_internal_dto_user_dto.OAuthBindingList:
+    properties:
+      bindings:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.OAuthBinding'
+        type: array
+    type: object
+  github_com_museflow_api-gateway_internal_dto_user_dto.PermissionListData:
+    properties:
+      permissions:
+        example:
+        - user:read
+        - novel:write
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_museflow_api-gateway_internal_dto_user_dto.SessionInfo:
+    properties:
+      device_id:
+        example: a1b2c3d4e5f6
+        type: string
+      device_name:
+        example: Chrome on Windows
+        type: string
+      last_refresh_time:
+        example: 1756283600
+        type: integer
+      login_time:
+        example: 1756280000
+        type: integer
+      token_id:
+        example: 9f8e7d6c-5b4a-3928-1706-0f1e2d3c4b5a
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_user_dto.SessionList:
+    properties:
+      sessions:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.SessionInfo'
+        type: array
+    type: object
+  github_com_museflow_api-gateway_internal_dto_user_dto.UpdateProfileRequest:
+    properties:
+      avatar_url:
+        example: https://cdn.museflow.ai/avatar/1.png
+        type: string
+      bio:
+        example: 专注于玄幻小说创作
+        maxLength: 500
+        type: string
+      nickname:
+        example: 墨流作者
+        maxLength: 100
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo:
     properties:
       avatar_url:
         type: string
@@ -133,6 +528,408 @@ info:
   title: MuseFlow API Gateway
   version: "1.0"
 paths:
+  /admin/audit-logs:
+    get:
+      description: 按操作人、操作类型、时间范围筛选，分页返回
+      parameters:
+      - description: 页码，默认 1
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数，默认 20
+        in: query
+        name: page_size
+        type: integer
+      - description: 按操作人 UUID 过滤
+        in: query
+        name: user_uuid
+        type: string
+      - description: 按操作类型过滤，如 login / change_password
+        in: query
+        name: action
+        type: string
+      - description: 起始时间（Unix 秒）
+        in: query
+        name: from
+        type: integer
+      - description: 结束时间（Unix 秒）
+        in: query
+        name: to
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AuditLogList'
+              type: object
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 审计日志列表
+      tags:
+      - 管理后台
+  /admin/permissions:
+    get:
+      parameters:
+      - description: 按资源类型过滤，如 user / novel
+        in: query
+        name: resource
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.PermissionList'
+              type: object
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 权限列表
+      tags:
+      - 管理后台
+  /admin/roles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.RoleList'
+              type: object
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 角色列表
+      tags:
+      - 管理后台
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 角色信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.RoleInfo'
+              type: object
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "409":
+          description: 角色编码已存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 创建角色
+      tags:
+      - 管理后台
+  /admin/roles/{id}:
+    delete:
+      description: 系统内置角色不可删除；删除后清理相关用户的权限缓存
+      parameters:
+      - description: 角色 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限或系统角色不可删
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除角色
+      tags:
+      - 管理后台
+    put:
+      consumes:
+      - application/json
+      description: 系统内置角色不可修改
+      parameters:
+      - description: 角色 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 角色信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限或系统角色不可改
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 编辑角色
+      tags:
+      - 管理后台
+  /admin/roles/{id}/permissions:
+    put:
+      consumes:
+      - application/json
+      description: 覆盖式设置角色的权限集合，变更后清理该角色下所有用户的权限缓存
+      parameters:
+      - description: 角色 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 权限编码列表
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.SetRolePermissionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 分配成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 权限编码不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 为角色分配权限
+      tags:
+      - 管理后台
+  /admin/users:
+    get:
+      description: 分页查询用户，支持关键字（邮箱 / 昵称）与状态筛选、排序
+      parameters:
+      - description: 页码，默认 1
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数，默认 20，最大 100
+        in: query
+        name: page_size
+        type: integer
+      - description: 按邮箱或昵称模糊搜索
+        in: query
+        name: keyword
+        type: string
+      - description: 状态：1=正常 2=冻结 3=已注销 4=待审核
+        in: query
+        name: status
+        type: integer
+      - description: 排序字段：created_at/updated_at/email/nickname/status
+        in: query
+        name: order_by
+        type: string
+      - description: 是否倒序
+        in: query
+        name: desc
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.UserList'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 用户列表
+      tags:
+      - 管理后台
+  /admin/users/{uuid}:
+    get:
+      description: 查看用户资料、角色与最终权限列表
+      parameters:
+      - description: 用户 UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.UserDetail'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 用户详情
+      tags:
+      - 管理后台
+  /admin/users/{uuid}/role:
+    put:
+      consumes:
+      - application/json
+      description: 为用户分配角色，分配后自动清理该用户的权限缓存
+      parameters:
+      - description: 目标用户 UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: 角色编码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AssignRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 分配成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 角色不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 分配用户角色
+      tags:
+      - 管理后台
+  /admin/users/{uuid}/status:
+    put:
+      consumes:
+      - application/json
+      description: 冻结或解冻用户；状态变更后会清理该用户的权限缓存
+      parameters:
+      - description: 用户 UUID
+        in: path
+        name: uuid
+        required: true
+        type: string
+      - description: 目标状态
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.UpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 操作成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 参数校验失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改用户状态
+      tags:
+      - 管理后台
   /auth/login:
     post:
       consumes:
@@ -144,7 +941,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.LoginRequest'
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginRequest'
       produces:
       - application/json
       responses:
@@ -152,23 +949,23 @@ paths:
           description: 登录成功
           schema:
             allOf:
-            - $ref: '#/definitions/internal_handler.Response'
+            - $ref: '#/definitions/errcode.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_handler.LoginData'
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData'
               type: object
         "400":
           description: 参数校验失败
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
         "401":
           description: 邮箱或密码错误
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
         "500":
           description: 服务内部错误
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
       summary: 用户登录
       tags:
       - 认证
@@ -181,14 +978,265 @@ paths:
         "200":
           description: 登出成功
           schema:
-            $ref: '#/definitions/internal_handler.Response'
+            $ref: '#/definitions/errcode.Response'
         "401":
           description: 未认证
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
       security:
       - BearerAuth: []
       summary: 用户登出
+      tags:
+      - 认证
+  /auth/mfa/disable:
+    post:
+      consumes:
+      - application/json
+      description: 验证 TOTP 验证码后关闭双因素认证；需登录后调用
+      parameters:
+      - description: 验证码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.DisableMFARequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 关闭成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 验证码错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 关闭 2FA
+      tags:
+      - 双因素认证
+  /auth/mfa/recovery-codes:
+    post:
+      consumes:
+      - application/json
+      description: 验证 TOTP 验证码后重新生成 8 个恢复码；需登录后调用
+      parameters:
+      - description: 验证码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RegenerateRecoveryCodesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 生成成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData'
+              type: object
+        "400":
+          description: 验证码错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 重新生成恢复码
+      tags:
+      - 双因素认证
+  /auth/mfa/setup:
+    post:
+      consumes:
+      - application/json
+      description: 生成 TOTP 密钥与 otpauth URL（尚未启用）；需登录后调用，下一步用 VerifyMFA 启用
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 生成成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.MFASetupData'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 生成 2FA 密钥
+      tags:
+      - 双因素认证
+  /auth/mfa/status:
+    get:
+      description: 返回是否已启用 2FA 及剩余恢复码数量；需登录后调用
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.MFAStatusData'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 查询 2FA 状态
+      tags:
+      - 双因素认证
+  /auth/mfa/verify:
+    post:
+      consumes:
+      - application/json
+      description: 验证 TOTP 验证码后启用双因素认证，返回 8 个恢复码；需登录后调用
+      parameters:
+      - description: 验证码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFARequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 启用成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData'
+              type: object
+        "400":
+          description: 验证码错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 启用 2FA
+      tags:
+      - 双因素认证
+  /auth/mfa/verify-login:
+    post:
+      consumes:
+      - application/json
+      description: 使用登录时获取的 mfa_ticket 与 TOTP 验证码完成登录，成功后签发双令牌
+      parameters:
+      - description: 票据与验证码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFALoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 验证成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.LoginResponseData'
+              type: object
+        "400":
+          description: 验证码错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 票据无效或已过期
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 2FA 登录二次验证
+      tags:
+      - 认证
+  /auth/password/reset:
+    post:
+      consumes:
+      - application/json
+      description: 校验验证码后设置新密码；验证码一次性使用，重置后清理权限缓存
+      parameters:
+      - description: 邮箱、验证码与新密码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 重置成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 参数校验失败或验证码错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 用户不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 通过邮箱验证码重置密码
+      tags:
+      - 认证
+  /auth/password/reset-code:
+    post:
+      consumes:
+      - application/json
+      description: 向邮箱发送 6 位数字验证码；为避免账号枚举，邮箱不存在时也返回成功
+      parameters:
+      - description: 邮箱
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendResetCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 发送成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 参数校验失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "429":
+          description: 发送过于频繁
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 发送密码重置验证码
       tags:
       - 认证
   /auth/refresh:
@@ -201,19 +1249,19 @@ paths:
           description: 刷新成功
           schema:
             allOf:
-            - $ref: '#/definitions/internal_handler.Response'
+            - $ref: '#/definitions/errcode.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_handler.RefreshData'
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RefreshData'
               type: object
         "401":
           description: 刷新令牌无效或已过期
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
         "403":
           description: 设备校验失败
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
       summary: 刷新访问令牌
       tags:
       - 认证
@@ -228,7 +1276,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/internal_handler.RegisterRequest'
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -236,26 +1284,133 @@ paths:
           description: 注册成功
           schema:
             allOf:
-            - $ref: '#/definitions/internal_handler.Response'
+            - $ref: '#/definitions/errcode.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_handler.UserInfo'
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo'
               type: object
         "400":
           description: 参数校验失败
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
         "409":
           description: 邮箱已被注册
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
         "500":
           description: 服务内部错误
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
       summary: 用户注册
       tags:
       - 认证
+  /user/oauth:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.OAuthBindingList'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 第三方账号绑定列表
+      tags:
+      - 用户
+  /user/oauth/{provider}:
+    delete:
+      parameters:
+      - description: 平台标识，如 github
+        in: path
+        name: provider
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 解绑成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 未绑定该账号
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 解绑第三方账号
+      tags:
+      - 用户
+  /user/password:
+    put:
+      consumes:
+      - application/json
+      description: 校验旧密码后设置新密码，成功后清理该用户的权限缓存
+      parameters:
+      - description: 新旧密码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 修改成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 参数校验失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 旧密码错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改当前用户密码
+      tags:
+      - 用户
+  /user/permissions:
+    get:
+      description: 返回当前用户拥有的全部权限编码，供前端做菜单与按钮级控制
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.PermissionListData'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户权限
+      tags:
+      - 用户
   /user/profile:
     get:
       description: 根据 access token 中的用户标识返回当前登录用户的详细信息
@@ -266,22 +1421,107 @@ paths:
           description: 获取成功
           schema:
             allOf:
-            - $ref: '#/definitions/internal_handler.Response'
+            - $ref: '#/definitions/errcode.Response'
             - properties:
                 data:
-                  $ref: '#/definitions/internal_handler.UserInfo'
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo'
               type: object
         "401":
           description: 未认证或令牌已失效
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
         "404":
           description: 用户不存在
           schema:
-            $ref: '#/definitions/internal_handler.ErrorResponse'
+            $ref: '#/definitions/errcode.Response'
       security:
       - BearerAuth: []
       summary: 获取当前用户信息
+      tags:
+      - 用户
+    put:
+      consumes:
+      - application/json
+      description: 更新昵称 / 头像 / 简介，传入空字符串的字段不做修改
+      parameters:
+      - description: 更新信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.UserInfo'
+              type: object
+        "400":
+          description: 参数校验失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 更新当前用户信息
+      tags:
+      - 用户
+  /user/sessions:
+    get:
+      description: 返回当前账号的登录设备与登录时间，可据此强制下线指定设备
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 获取成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_user_dto.SessionList'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 获取当前用户会话列表
+      tags:
+      - 用户
+  /user/sessions/{token}:
+    delete:
+      description: 吊销指定设备的刷新令牌，使其 access token 到期后无法续期
+      parameters:
+      - description: 会话标识
+        in: path
+        name: token
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 下线成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 强制下线指定会话
       tags:
       - 用户
 schemes:
