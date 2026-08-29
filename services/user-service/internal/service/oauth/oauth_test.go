@@ -109,6 +109,7 @@ func (r *fakeUserRepo) ListUsers(_ context.Context, _ string, _ int16, _ string,
 	return nil, nil
 }
 func (r *fakeUserRepo) CountUsers(_ context.Context, _ string, _ int16) (int64, error) { return 0, nil }
+func (r *fakeUserRepo) SetEmailVerified(_ context.Context, _ uuid.UUID, _ bool) error { return nil }
 
 func newTestService() (*Service, *fakeOAuthRepo, *fakeUserRepo) {
 	or := newFakeOAuthRepo()

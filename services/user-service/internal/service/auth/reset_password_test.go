@@ -61,6 +61,9 @@ func (m *stubMailer) Send(to, subject, body string) error {
 // testMFAConfig 返回测试用 2FA 配置（使用默认值）。
 func testMFAConfig() MFAConfig { return MFAConfig{} }
 
+// testEmailCodeConfig 返回测试用邮箱验证码配置（使用默认值）。
+func testEmailCodeConfig() EmailCodeConfig { return EmailCodeConfig{} }
+
 func testResetConfig() ResetServiceConfig {
 	return ResetServiceConfig{
 		CodeTTL:      10 * time.Minute,
@@ -77,7 +80,7 @@ func newResetTestService() (*AuthService, *fakeCodeStore, *stubMailer) {
 	svc := NewAuthService(
 		newFakeUserRepo(), newFakeTokenStore(), tm,
 		nil, nil, nil, // rbac / audit / oauth 传 nil
-		store, mailer, testResetConfig(), testMFAConfig(), bcrypt.MinCost,
+		store, mailer, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
 	)
 	return svc, store, mailer
 }
@@ -88,9 +91,7 @@ func TestSendResetCodeStoresCodeAndSendsMail(t *testing.T) {
 	svc, store, mailer := newResetTestService()
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "reset@museflow.ai", "oldpass1234", "n"); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	registerOK(t, svc, store, "reset@museflow.ai", "oldpass1234", "n")
 
 	if err := svc.SendResetCode(ctx, "reset@museflow.ai"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
@@ -128,9 +129,7 @@ func TestResetPasswordRejectsWrongCode(t *testing.T) {
 	svc, store, _ := newResetTestService()
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "reset2@museflow.ai", "oldpass1234", "n"); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	registerOK(t, svc, store, "reset2@museflow.ai", "oldpass1234", "n")
 	if err := svc.SendResetCode(ctx, "reset2@museflow.ai"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
@@ -145,12 +144,10 @@ func TestResetPasswordRejectsWrongCode(t *testing.T) {
 }
 
 func TestResetPasswordRejectsMissingCode(t *testing.T) {
-	svc, _, _ := newResetTestService()
+	svc, codes, _ := newResetTestService()
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "reset3@museflow.ai", "oldpass1234", "n"); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	registerOK(t, svc, codes, "reset3@museflow.ai", "oldpass1234", "n")
 
 	// 从未发送过验证码 -> 应提示重新获取
 	if err := svc.ResetPassword(ctx, "reset3@museflow.ai", "123456", "newpass5678"); !errors.Is(err, ErrCodeNotSent) {
@@ -162,9 +159,7 @@ func TestResetPasswordConsumesCodeAndAllowsNewLogin(t *testing.T) {
 	svc, store, _ := newResetTestService()
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "reset4@museflow.ai", "oldpass1234", "n"); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	registerOK(t, svc, store, "reset4@museflow.ai", "oldpass1234", "n")
 	if err := svc.SendResetCode(ctx, "reset4@museflow.ai"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
@@ -199,10 +194,11 @@ func TestSendResetCodeEnforcesResendCooldown(t *testing.T) {
 		token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute),
 		nil, nil, nil, codes, &stubMailer{},
 		ResetServiceConfig{CodeTTL: 10 * time.Minute, CodeLength: 6, CodeResendCD: time.Minute},
-		testMFAConfig(), bcrypt.MinCost,
+		testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
 	)
 
-	if _, err := withCD.Register(ctx, "cooldown@museflow.ai", "oldpass1234", "n"); err != nil {
+	codes.codes["register:cooldown@museflow.ai"] = testRegisterCode
+	if _, err := withCD.Register(ctx, "cooldown@museflow.ai", "oldpass1234", "n", testRegisterCode); err != nil {
 		t.Fatalf("注册失败: %v", err)
 	}
 	if err := withCD.SendResetCode(ctx, "cooldown@museflow.ai"); err != nil {

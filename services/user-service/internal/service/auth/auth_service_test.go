@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -166,6 +167,15 @@ func (r *fakeUserRepo) CountUsers(_ context.Context, _ string, _ int16) (int64, 
 	return int64(len(r.byUUID)), nil
 }
 
+func (r *fakeUserRepo) SetEmailVerified(_ context.Context, id uuid.UUID, verified bool) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	u.EmailVerified = verified
+	return nil
+}
+
 // ---- 内存版 TokenStore ----
 
 type fakeTokenStore struct {
@@ -245,12 +255,29 @@ func (s *fakeTokenStore) ListUserTokens(_ context.Context, userID string) ([]rep
 
 // ---- 测试辅助 ----
 
-func newTestService() (*AuthService, *fakeTokenStore) {
+func newTestService() (*AuthService, *fakeTokenStore, *fakeCodeStore) {
 	store := newFakeTokenStore()
 	tm := token.NewTokenManager("test-secret", time.Hour, 30*24*time.Hour, 5*time.Minute)
+	codes := newFakeCodeStore()
 	// bcrypt 使用最小成本加速测试（rbac / audit / oauth 传 nil：测试聚焦认证主流程）
-	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), testMFAConfig(), bcrypt.MinCost)
-	return svc, store
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, codes, &stubMailer{}, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
+	return svc, store, codes
+}
+
+// testRegisterCode 注册用例使用的固定验证码（预置到验证码存储）。
+const testRegisterCode = "123456"
+
+// registerOK 通过预置邮箱验证码完成注册，返回创建的用户。
+func registerOK(t *testing.T, svc *AuthService, codes *fakeCodeStore, email, password, nickname string) *model.User {
+	t.Helper()
+	// Register 内部会规范化邮箱（小写），验证码需以规范化后的邮箱预置
+	key := normalizeEmail(email)
+	codes.codes["register:"+key] = testRegisterCode
+	u, err := svc.Register(context.Background(), email, password, nickname, testRegisterCode)
+	if err != nil {
+		t.Fatalf("注册失败 %s: %v", email, err)
+	}
+	return u
 }
 
 func testDevice() dto.Device {
@@ -260,13 +287,10 @@ func testDevice() dto.Device {
 // ---- 用例 ----
 
 func TestRegisterHashesPasswordAndRejectsDuplicate(t *testing.T) {
-	svc, _ := newTestService()
-	ctx := context.Background()
+	svc, _, codes := newTestService()
 
-	u, err := svc.Register(ctx, "Author@MuseFlow.ai", "P@ssw0rd123", "")
-	if err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	u := registerOK(t, svc, codes, "Author@MuseFlow.ai", "P@ssw0rd123", "")
+	ctx := context.Background()
 
 	// 邮箱应被规范化为小写
 	if u.Email != "author@museflow.ai" {
@@ -284,19 +308,24 @@ func TestRegisterHashesPasswordAndRejectsDuplicate(t *testing.T) {
 		t.Errorf("bcrypt 哈希无法校验: %v", err)
 	}
 
-	// 大小写不同的同一邮箱应判定为重复
-	if _, err := svc.Register(ctx, "author@museflow.ai", "another", ""); !errors.Is(err, ErrEmailExists) {
+	// 大小写不同的同一邮箱应判定为重复（需重新预置验证码，因为首次注册已消费）
+	codes.codes["register:author@museflow.ai"] = testRegisterCode
+	if _, err := svc.Register(ctx, "author@museflow.ai", "another", "", testRegisterCode); !errors.Is(err, ErrEmailExists) {
 		t.Errorf("期望 ErrEmailExists，实际: %v", err)
 	}
 }
 
+// registerWithCode 预置邮箱验证码后注册（忽略返回的用户）。
+func registerWithCode(t *testing.T, svc *AuthService, codes *fakeCodeStore, email, password, nickname string) {
+	t.Helper()
+	registerOK(t, svc, codes, email, password, nickname)
+}
+
 func TestLoginWrongPasswordAndUnknownEmailReturnSameError(t *testing.T) {
-	svc, _ := newTestService()
+	svc, _, codes := newTestService()
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "a@b.com", "correct-password", "n"); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	registerWithCode(t, svc, codes, "a@b.com", "correct-password", "n")
 
 	_, errWrong := svc.Login(ctx, "a@b.com", "wrong-password", testDevice())
 	_, errUnknown := svc.Login(ctx, "nobody@b.com", "whatever", testDevice())
@@ -308,12 +337,10 @@ func TestLoginWrongPasswordAndUnknownEmailReturnSameError(t *testing.T) {
 }
 
 func TestLoginIssuesUsableTokenPair(t *testing.T) {
-	svc, store := newTestService()
+	svc, store, codes := newTestService()
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "a@b.com", "pw12345678", "n"); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	registerWithCode(t, svc, codes, "a@b.com", "pw12345678", "n")
 
 	res, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
 	if err != nil {
@@ -342,12 +369,10 @@ func TestLoginIssuesUsableTokenPair(t *testing.T) {
 }
 
 func TestRefreshRejectsMismatchedDeviceAndAccessTokenMisuse(t *testing.T) {
-	svc, _ := newTestService()
+	svc, _, codes := newTestService()
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "a@b.com", "pw12345678", "n"); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	registerWithCode(t, svc, codes, "a@b.com", "pw12345678", "n")
 	res, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
 	if err != nil {
 		t.Fatalf("登录失败: %v", err)
@@ -380,12 +405,10 @@ func TestRefreshRejectsMismatchedDeviceAndAccessTokenMisuse(t *testing.T) {
 }
 
 func TestLogoutBlacklistsAccessAndRevokesRefresh(t *testing.T) {
-	svc, store := newTestService()
+	svc, store, codes := newTestService()
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "a@b.com", "pw12345678", "n"); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	registerWithCode(t, svc, codes, "a@b.com", "pw12345678", "n")
 	res, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
 	if err != nil {
 		t.Fatalf("登录失败: %v", err)
@@ -412,7 +435,7 @@ func TestLogoutBlacklistsAccessAndRevokesRefresh(t *testing.T) {
 }
 
 func TestValidateAccessRejectsTamperedToken(t *testing.T) {
-	svc, _ := newTestService()
+	svc, _, _ := newTestService()
 	ctx := context.Background()
 
 	// 用不同密钥签发的令牌不应通过校验
@@ -431,7 +454,7 @@ func TestExpiredAccessTokenIsRejected(t *testing.T) {
 	store := newFakeTokenStore()
 	// 负有效期立即过期
 	tm := token.NewTokenManager("test-secret", -time.Minute, time.Hour, 5*time.Minute)
-	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), testMFAConfig(), bcrypt.MinCost)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
 
 	tokenStr, err := tm.GenerateAccess(uuid.NewString(), uuid.NewString())
 	if err != nil {
@@ -444,13 +467,10 @@ func TestExpiredAccessTokenIsRejected(t *testing.T) {
 }
 
 func TestUpdateProfileChangesProvidedFieldsOnly(t *testing.T) {
-	svc, _ := newTestService()
+	svc, _, codes := newTestService()
 	ctx := context.Background()
 
-	u, err := svc.Register(ctx, "profile@museflow.ai", "pw12345678", "原始昵称")
-	if err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	u := registerOK(t, svc, codes, "profile@museflow.ai", "pw12345678", "原始昵称")
 
 	// 只传昵称，头像与简介应保持为空（不覆盖）
 	got, err := svc.UpdateProfile(ctx, u.UUID.String(), "新昵称", "", "")
@@ -466,13 +486,10 @@ func TestUpdateProfileChangesProvidedFieldsOnly(t *testing.T) {
 }
 
 func TestChangePasswordRequiresCorrectOldPassword(t *testing.T) {
-	svc, _ := newTestService()
+	svc, _, codes := newTestService()
 	ctx := context.Background()
 
-	u, err := svc.Register(ctx, "pwd@museflow.ai", "oldpass1234", "n")
-	if err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	u := registerOK(t, svc, codes, "pwd@museflow.ai", "oldpass1234", "n")
 
 	// 旧密码错误 -> 拒绝
 	if err := svc.ChangePassword(ctx, u.UUID.String(), "wrong-old", "newpass5678"); !errors.Is(err, ErrInvalidCredentials) {
@@ -496,10 +513,12 @@ func TestLoginLocksAccountAfterMaxFailures(t *testing.T) {
 	repo := newFakeUserRepo()
 	store := newFakeTokenStore()
 	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute)
-	svc := NewAuthService(repo, store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), testMFAConfig(), bcrypt.MinCost)
+	codes := newFakeCodeStore()
+	svc := NewAuthService(repo, store, tm, nil, nil, nil, codes, &stubMailer{}, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
 	ctx := context.Background()
 
-	if _, err := svc.Register(ctx, "lock@museflow.ai", "pw12345678", "n"); err != nil {
+	codes.codes["register:lock@museflow.ai"] = testRegisterCode
+	if _, err := svc.Register(ctx, "lock@museflow.ai", "pw12345678", "n", testRegisterCode); err != nil {
 		t.Fatalf("注册失败: %v", err)
 	}
 
@@ -517,13 +536,10 @@ func TestLoginLocksAccountAfterMaxFailures(t *testing.T) {
 }
 
 func TestListSessionsReturnsActiveDevices(t *testing.T) {
-	svc, _ := newTestService()
+	svc, _, codes := newTestService()
 	ctx := context.Background()
 
-	u, err := svc.Register(ctx, "sess@museflow.ai", "pw12345678", "n")
-	if err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
+	u := registerOK(t, svc, codes, "sess@museflow.ai", "pw12345678", "n")
 	if _, err := svc.Login(ctx, "sess@museflow.ai", "pw12345678", testDevice()); err != nil {
 		t.Fatalf("登录失败: %v", err)
 	}
@@ -546,5 +562,112 @@ func TestListSessionsReturnsActiveDevices(t *testing.T) {
 	left, _ := svc.ListSessions(ctx, u.UUID.String())
 	if len(left) != 0 {
 		t.Errorf("吊销后仍残留会话: %d", len(left))
+	}
+}
+
+// ---- 邮箱验证码（注册校验 / 补验证 / 免密登录） ----
+
+func TestSendVerifyCodeStoresCodeAndSendsMail(t *testing.T) {
+	svc, codes, mailer := newResetTestService()
+	ctx := context.Background()
+
+	if err := svc.SendVerifyCode(ctx, "Code@MuseFlow.ai", "register"); err != nil {
+		t.Fatalf("发送验证码失败: %v", err)
+	}
+
+	// 邮箱在存储与邮件中均被规范化为小写
+	code, _ := codes.GetCode(ctx, "register", "code@museflow.ai")
+	if len(code) != svc.emailCfg.CodeLength {
+		t.Errorf("应生成 %d 位验证码，实际 %q", svc.emailCfg.CodeLength, code)
+	}
+	if mailer.sentTo != "code@museflow.ai" {
+		t.Errorf("收件人未规范化: %s", mailer.sentTo)
+	}
+	if !strings.Contains(mailer.sentBody, code) {
+		t.Errorf("邮件正文应包含验证码 %s，实际: %s", code, mailer.sentBody)
+	}
+}
+
+func TestSendVerifyCodeRejectsUnsupportedScene(t *testing.T) {
+	svc, _, _ := newResetTestService()
+	// 非法场景应被拒绝（不应静默成功）
+	if err := svc.SendVerifyCode(context.Background(), "x@y.com", "hack"); err == nil {
+		t.Fatal("非法场景应被拒绝")
+	}
+}
+
+func TestVerifyEmailMarksAccountVerified(t *testing.T) {
+	svc, codes, _ := newResetTestService()
+	ctx := context.Background()
+
+	// 模拟历史未验证账号（注册流程已默认验证，这里直接落库一个未验证用户）
+	legacy := &model.User{
+		UUID:         uuid.New(),
+		Email:        "legacy@museflow.ai",
+		EmailVerified: false,
+		Nickname:     "legacy",
+		PasswordHash: new(string),
+	}
+	if err := svc.users.Create(ctx, legacy); err != nil {
+		t.Fatalf("创建未验证用户失败: %v", err)
+	}
+
+	// 通过 verify 场景补验证
+	if err := svc.SendVerifyCode(ctx, "legacy@museflow.ai", "verify"); err != nil {
+		t.Fatalf("发送验证码失败: %v", err)
+	}
+	code, _ := codes.GetCode(ctx, "verify", "legacy@museflow.ai")
+	if err := svc.VerifyEmail(ctx, "legacy@museflow.ai", code); err != nil {
+		t.Fatalf("验证邮箱失败: %v", err)
+	}
+	got, _ := svc.users.FindByEmail(ctx, "legacy@museflow.ai")
+	if !got.EmailVerified {
+		t.Error("邮箱验证后仍未标记已验证")
+	}
+
+	// 验证码一次性：重用应失败
+	if err := svc.VerifyEmail(ctx, "legacy@museflow.ai", code); !errors.Is(err, ErrCodeNotSent) {
+		t.Errorf("验证码不应可重复使用，实际: %v", err)
+	}
+}
+
+func TestLoginWithCodeIssuesUsableTokens(t *testing.T) {
+	svc, codes, _ := newResetTestService()
+	ctx := context.Background()
+
+	registerOK(t, svc, codes, "codeuser@museflow.ai", "pw12345678", "n")
+	if err := svc.SendVerifyCode(ctx, "codeuser@museflow.ai", "login"); err != nil {
+		t.Fatalf("发送登录验证码失败: %v", err)
+	}
+	code, _ := codes.GetCode(ctx, "login", "codeuser@museflow.ai")
+
+	res, err := svc.LoginWithCode(ctx, "codeuser@museflow.ai", code, testDevice())
+	if err != nil {
+		t.Fatalf("验证码登录失败: %v", err)
+	}
+	if res.RequiresMFA {
+		t.Fatal("未开启 2FA 时不应要求二次验证")
+	}
+	if _, err := svc.ValidateAccess(ctx, res.TokenPair.AccessToken); err != nil {
+		t.Errorf("access token 校验失败: %v", err)
+	}
+}
+
+func TestLoginWithCodeRejectsWrongCodeAndUnknownEmail(t *testing.T) {
+	svc, codes, _ := newResetTestService()
+	ctx := context.Background()
+
+	registerOK(t, svc, codes, "codeuser2@museflow.ai", "pw12345678", "n")
+	if err := svc.SendVerifyCode(ctx, "codeuser2@museflow.ai", "login"); err != nil {
+		t.Fatalf("发送登录验证码失败: %v", err)
+	}
+
+	// 错误验证码 -> 拒绝
+	if _, err := svc.LoginWithCode(ctx, "codeuser2@museflow.ai", "000000", testDevice()); !errors.Is(err, ErrCodeMismatch) {
+		t.Errorf("错误验证码应被拒绝，实际: %v", err)
+	}
+	// 未知邮箱 -> 先校验验证码，统一返回验证码错误（避免邮箱枚举）
+	if _, err := svc.LoginWithCode(ctx, "nobody@museflow.ai", "123456", testDevice()); !errors.Is(err, ErrCodeNotSent) {
+		t.Errorf("未知邮箱应返回验证码错误，实际: %v", err)
 	}
 }

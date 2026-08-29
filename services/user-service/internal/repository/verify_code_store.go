@@ -8,13 +8,45 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Redis 键前缀（验证码相关）。
+// Redis 键前缀（验证码相关）。按场景区分，避免不同用途的验证码互相覆盖。
 const (
 	// resetCodePrefix 密码重置验证码：pwd:reset:code:{email} -> 验证码
 	resetCodePrefix = "pwd:reset:code:"
+	// registerCodePrefix 注册邮箱校验验证码：email:verify:code:{email} -> 验证码
+	registerCodePrefix = "email:verify:code:"
+	// loginCodePrefix 验证码登录验证码：email:login:code:{email} -> 验证码
+	loginCodePrefix = "email:login:code:"
 	// resetCodeLimitPrefix 发送频率限制：pwd:reset:limit:{email} -> 1
 	resetCodeLimitPrefix = "pwd:reset:limit:"
+	// registerCodeLimitPrefix 注册验证码发送频率限制
+	registerCodeLimitPrefix = "email:verify:limit:"
+	// loginCodeLimitPrefix 验证码登录发送频率限制
+	loginCodeLimitPrefix = "email:login:limit:"
 )
+
+// codePrefixForScene 根据场景返回验证码键前缀。
+func codePrefixForScene(scene string) string {
+	switch scene {
+	case "register":
+		return registerCodePrefix
+	case "login":
+		return loginCodePrefix
+	default:
+		return resetCodePrefix
+	}
+}
+
+// limitPrefixForScene 根据场景返回防重发键前缀。
+func limitPrefixForScene(scene string) string {
+	switch scene {
+	case "register":
+		return registerCodeLimitPrefix
+	case "login":
+		return loginCodeLimitPrefix
+	default:
+		return resetCodeLimitPrefix
+	}
+}
 
 // VerifyCodeStore 验证码存储接口。
 //
@@ -45,11 +77,11 @@ func keyFor(prefix, scene, target string) string {
 }
 
 func (s *redisVerifyCodeStore) SaveCode(ctx context.Context, scene, target, code string, ttl time.Duration) error {
-	return s.rdb.Set(ctx, keyFor(resetCodePrefix, scene, target), code, ttl).Err()
+	return s.rdb.Set(ctx, keyFor(codePrefixForScene(scene), scene, target), code, ttl).Err()
 }
 
 func (s *redisVerifyCodeStore) GetCode(ctx context.Context, scene, target string) (string, error) {
-	code, err := s.rdb.Get(ctx, keyFor(resetCodePrefix, scene, target)).Result()
+	code, err := s.rdb.Get(ctx, keyFor(codePrefixForScene(scene), scene, target)).Result()
 	if err == redis.Nil {
 		return "", nil
 	}
@@ -60,10 +92,10 @@ func (s *redisVerifyCodeStore) GetCode(ctx context.Context, scene, target string
 }
 
 func (s *redisVerifyCodeStore) DeleteCode(ctx context.Context, scene, target string) error {
-	return s.rdb.Del(ctx, keyFor(resetCodePrefix, scene, target)).Err()
+	return s.rdb.Del(ctx, keyFor(codePrefixForScene(scene), scene, target)).Err()
 }
 
 // TryLockResend 通过 SetNX 实现冷却期内的防重发。
 func (s *redisVerifyCodeStore) TryLockResend(ctx context.Context, scene, target string, cooldown time.Duration) (bool, error) {
-	return s.rdb.SetNX(ctx, keyFor(resetCodeLimitPrefix, scene, target), 1, cooldown).Result()
+	return s.rdb.SetNX(ctx, keyFor(limitPrefixForScene(scene), scene, target), 1, cooldown).Result()
 }

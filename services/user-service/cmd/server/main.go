@@ -80,6 +80,11 @@ func main() {
 			CodeLength:   cfg.CodeLength,
 			CodeResendCD: cfg.CodeResendCD,
 		},
+		auth.EmailCodeConfig{
+			CodeTTL:      cfg.CodeTTL,
+			CodeLength:   cfg.CodeLength,
+			CodeResendCD: cfg.CodeResendCD,
+		},
 		auth.MFAConfig{
 			Issuer:             cfg.MFAIssuer,
 			CodeSkew:           cfg.MFASkew,

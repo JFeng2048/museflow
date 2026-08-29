@@ -51,6 +51,11 @@ const (
 	AuditActionUpdateRole  = "update_role"
 	AuditActionDeleteRole  = "delete_role"
 	AuditActionSetRolePerm = "set_role_permissions"
+
+	// 邮箱验证与验证码登录相关操作
+	AuditActionEmailVerifySend   = "email_verify_send"  // 发送邮箱验证码
+	AuditActionEmailVerifySuccess = "email_verify_success" // 邮箱验证成功
+	AuditActionEmailLoginCode     = "email_login_code"  // 使用邮箱验证码登录
 )
 
 // 审计资源类型常量，与 audit_log.resource 字段对应。

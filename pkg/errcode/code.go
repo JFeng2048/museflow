@@ -77,6 +77,10 @@ const (
 	CodeAccountLocked Code = 4110
 	// CodeAccountDisabled 账号已冻结或注销。
 	CodeAccountDisabled Code = 4111
+	// CodeCodeInvalid 邮箱验证码错误（对应 HTTP 400）。
+	CodeCodeInvalid Code = 4120
+	// CodeEmailNotVerified 邮箱未验证（对应 HTTP 403）。
+	CodeEmailNotVerified Code = 4121
 )
 
 // IsSuccess 判断业务码是否表示成功（2xxx 段）。

@@ -21,6 +21,9 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	UserService_Register_FullMethodName                = "/user.UserService/Register"
 	UserService_Login_FullMethodName                   = "/user.UserService/Login"
+	UserService_SendVerifyCode_FullMethodName          = "/user.UserService/SendVerifyCode"
+	UserService_VerifyEmail_FullMethodName             = "/user.UserService/VerifyEmail"
+	UserService_LoginWithCode_FullMethodName           = "/user.UserService/LoginWithCode"
 	UserService_Refresh_FullMethodName                 = "/user.UserService/Refresh"
 	UserService_Logout_FullMethodName                  = "/user.UserService/Logout"
 	UserService_GetProfile_FullMethodName              = "/user.UserService/GetProfile"
@@ -72,6 +75,12 @@ type UserServiceClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	// Login 用户登录，签发 access + refresh 双令牌
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
+	// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 补验证邮箱）
+	SendVerifyCode(ctx context.Context, in *SendVerifyCodeRequest, opts ...grpc.CallOption) (*SendVerifyCodeResponse, error)
+	// VerifyEmail 校验邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
+	VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error)
+	// LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
+	LoginWithCode(ctx context.Context, in *LoginWithCodeRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	// Refresh 使用 refresh token 换取新的 access token（refresh 不轮换）
 	Refresh(ctx context.Context, in *RefreshRequest, opts ...grpc.CallOption) (*RefreshResponse, error)
 	// Logout 登出：删除 refresh 白名单 + 将 access token 加入黑名单
@@ -166,6 +175,36 @@ func (c *userServiceClient) Login(ctx context.Context, in *LoginRequest, opts ..
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LoginResponse)
 	err := c.cc.Invoke(ctx, UserService_Login_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) SendVerifyCode(ctx context.Context, in *SendVerifyCodeRequest, opts ...grpc.CallOption) (*SendVerifyCodeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendVerifyCodeResponse)
+	err := c.cc.Invoke(ctx, UserService_SendVerifyCode_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyEmailResponse)
+	err := c.cc.Invoke(ctx, UserService_VerifyEmail_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) LoginWithCode(ctx context.Context, in *LoginWithCodeRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginResponse)
+	err := c.cc.Invoke(ctx, UserService_LoginWithCode_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -536,6 +575,12 @@ type UserServiceServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	// Login 用户登录，签发 access + refresh 双令牌
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
+	// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 补验证邮箱）
+	SendVerifyCode(context.Context, *SendVerifyCodeRequest) (*SendVerifyCodeResponse, error)
+	// VerifyEmail 校验邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
+	VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error)
+	// LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
+	LoginWithCode(context.Context, *LoginWithCodeRequest) (*LoginResponse, error)
 	// Refresh 使用 refresh token 换取新的 access token（refresh 不轮换）
 	Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error)
 	// Logout 登出：删除 refresh 白名单 + 将 access token 加入黑名单
@@ -621,6 +666,15 @@ func (UnimplementedUserServiceServer) Register(context.Context, *RegisterRequest
 }
 func (UnimplementedUserServiceServer) Login(context.Context, *LoginRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Login not implemented")
+}
+func (UnimplementedUserServiceServer) SendVerifyCode(context.Context, *SendVerifyCodeRequest) (*SendVerifyCodeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendVerifyCode not implemented")
+}
+func (UnimplementedUserServiceServer) VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyEmail not implemented")
+}
+func (UnimplementedUserServiceServer) LoginWithCode(context.Context, *LoginWithCodeRequest) (*LoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method LoginWithCode not implemented")
 }
 func (UnimplementedUserServiceServer) Refresh(context.Context, *RefreshRequest) (*RefreshResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Refresh not implemented")
@@ -780,6 +834,60 @@ func _UserService_Login_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).Login(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_SendVerifyCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendVerifyCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).SendVerifyCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_SendVerifyCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).SendVerifyCode(ctx, req.(*SendVerifyCodeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_VerifyEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).VerifyEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_VerifyEmail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).VerifyEmail(ctx, req.(*VerifyEmailRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_LoginWithCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginWithCodeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).LoginWithCode(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_LoginWithCode_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).LoginWithCode(ctx, req.(*LoginWithCodeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1428,6 +1536,18 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Login",
 			Handler:    _UserService_Login_Handler,
+		},
+		{
+			MethodName: "SendVerifyCode",
+			Handler:    _UserService_SendVerifyCode_Handler,
+		},
+		{
+			MethodName: "VerifyEmail",
+			Handler:    _UserService_VerifyEmail_Handler,
+		},
+		{
+			MethodName: "LoginWithCode",
+			Handler:    _UserService_LoginWithCode_Handler,
 		},
 		{
 			MethodName: "Refresh",

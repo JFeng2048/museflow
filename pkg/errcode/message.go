@@ -111,6 +111,14 @@ var messages = map[Code]map[Lang]string{
 		LangZH: "账号已冻结或注销",
 		LangEN: "account disabled or deleted",
 	},
+	CodeCodeInvalid: {
+		LangZH: "邮箱验证码错误",
+		LangEN: "invalid email verification code",
+	},
+	CodeEmailNotVerified: {
+		LangZH: "邮箱未验证",
+		LangEN: "email not verified",
+	},
 }
 
 // defaultLang 默认语言（中文）。

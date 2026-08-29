@@ -17,6 +17,17 @@ service UserService {
   // Login 用户登录，签发 access + refresh 双令牌
   rpc Login(LoginRequest) returns (LoginResponse);
 
+  // ---- 邮箱验证与验证码登录 ----
+
+  // SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 补验证邮箱）
+  rpc SendVerifyCode(SendVerifyCodeRequest) returns (SendVerifyCodeResponse);
+
+  // VerifyEmail 校验邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
+  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
+
+  // LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
+  rpc LoginWithCode(LoginWithCodeRequest) returns (LoginResponse);
+
   // Refresh 使用 refresh token 换取新的 access token（refresh 不轮换）
   rpc Refresh(RefreshRequest) returns (RefreshResponse);
 
@@ -163,6 +174,7 @@ message RegisterRequest {
   string email = 1;                // 邮箱，必填
   string password = 2;             // 明文密码，必填（服务端 bcrypt 加密）
   string nickname = 3;             // 昵称，为空时由邮箱前缀生成
+  string code = 4;                 // 邮箱验证码，注册前需先调用 SendVerifyCode 获取并校验
 }
 
 message RegisterResponse {
@@ -188,6 +200,30 @@ message LoginResponse {
   // mfa_ticket 2FA 中间票据：账号密码校验通过后签发，
   // 用于关联后续的 2FA 验证请求，有效期较短（默认 5 分钟）。
   string mfa_ticket = 8;
+}
+
+// SendVerifyCodeRequest 发送邮箱验证码请求。
+// scene 取值：register（注册校验）/ login（验证码登录）/ verify（补验证邮箱）。
+message SendVerifyCodeRequest {
+  string email = 1;                // 邮箱，必填
+  string scene = 2;                // 用途场景，必填
+}
+
+message SendVerifyCodeResponse {}
+
+// VerifyEmailRequest 校验邮箱验证码并标记已验证请求。
+message VerifyEmailRequest {
+  string email = 1;                // 邮箱，必填
+  string code = 2;                 // 验证码，必填
+}
+
+message VerifyEmailResponse {}
+
+// LoginWithCodeRequest 邮箱验证码登录请求。
+message LoginWithCodeRequest {
+  string email = 1;                // 邮箱，必填
+  string code = 2;                 // 邮箱验证码，必填
+  DeviceContext device = 3;        // 设备上下文（指纹 / IP / UA）
 }
 
 message RefreshRequest {

@@ -92,7 +92,7 @@ func clientErrorHTTPStatus(c Code) int {
 		CodeRefreshInvalid, CodeMissingToken, CodeMissingRefresh,
 		CodeMissingDevice, CodeWrongPassword:
 		return http.StatusUnauthorized
-	case CodeForbidden, CodeDeviceMismatch, CodeAccountDisabled:
+	case CodeForbidden, CodeDeviceMismatch, CodeAccountDisabled, CodeEmailNotVerified:
 		return http.StatusForbidden
 	case CodeNotFound, CodeUserNotFound:
 		return http.StatusNotFound

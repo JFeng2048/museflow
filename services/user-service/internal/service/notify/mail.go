@@ -114,3 +114,18 @@ func ResetPasswordBody(code string, ttl time.Duration) string {
 			"如果这不是您本人的操作，请忽略此邮件，您的密码不会发生变化。\n",
 		code, minutes)
 }
+
+// VerifyCodeBody 构造邮箱验证码邮件正文（注册校验 / 验证码登录 / 补验证邮箱）。
+// purpose 用于区分场景，例如「注册账号」「登录账号」「验证邮箱」。
+func VerifyCodeBody(purpose, code string, ttl time.Duration) string {
+	minutes := int(ttl.Minutes())
+	if minutes < 1 {
+		minutes = 1
+	}
+	return fmt.Sprintf(
+		"您正在%s。\n\n"+
+			"验证码：%s\n"+
+			"有效期：%d 分钟\n\n"+
+			"如果这不是您本人的操作，请忽略此邮件。\n",
+		purpose, code, minutes)
+}

@@ -33,7 +33,7 @@ func NewUserHandler(a *auth.AuthService, adm *admin.Service) *UserHandler {
 // Register 用户注册。
 func (h *UserHandler) Register(ctx context.Context, req *userpb.RegisterRequest) (*userpb.RegisterResponse, error) {
 	logger.InfoContext(ctx, "收到注册请求", "email", req.GetEmail())
-	u, err := h.auth.Register(ctx, req.GetEmail(), req.GetPassword(), req.GetNickname())
+	u, err := h.auth.Register(ctx, req.GetEmail(), req.GetPassword(), req.GetNickname(), req.GetCode())
 	if err != nil {
 		logger.WarnContext(ctx, "注册失败", "email", req.GetEmail(), logger.Err(err))
 		return nil, mapError(err)
@@ -96,6 +96,52 @@ func (h *UserHandler) VerifyMFALogin(ctx context.Context, req *userpb.VerifyMFAL
 	// 使用恢复码登录时，在 user 信息中无法表达，交由上层通过日志/审计感知；
 	// 前端可据此引导用户重新生成恢复码（此处借用 mfa_ticket 字段置空表示已完成）。
 	return resp, nil
+}
+
+// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 补验证邮箱）。
+func (h *UserHandler) SendVerifyCode(ctx context.Context, req *userpb.SendVerifyCodeRequest) (*userpb.SendVerifyCodeResponse, error) {
+	if err := h.auth.SendVerifyCode(ctx, req.GetEmail(), req.GetScene()); err != nil {
+		return nil, mapError(err)
+	}
+	return &userpb.SendVerifyCodeResponse{}, nil
+}
+
+// VerifyEmail 校验邮箱验证码并标记已验证。
+func (h *UserHandler) VerifyEmail(ctx context.Context, req *userpb.VerifyEmailRequest) (*userpb.VerifyEmailResponse, error) {
+	if err := h.auth.VerifyEmail(ctx, req.GetEmail(), req.GetCode()); err != nil {
+		return nil, mapError(err)
+	}
+	return &userpb.VerifyEmailResponse{}, nil
+}
+
+// LoginWithCode 邮箱验证码登录（免密）。
+func (h *UserHandler) LoginWithCode(ctx context.Context, req *userpb.LoginWithCodeRequest) (*userpb.LoginResponse, error) {
+	logger.InfoContext(ctx, "收到邮箱验证码登录请求", "email", req.GetEmail())
+	res, err := h.auth.LoginWithCode(ctx, req.GetEmail(), req.GetCode(), toDevice(req.GetDevice()))
+	if err != nil {
+		logger.WarnContext(ctx, "邮箱验证码登录失败", "email", req.GetEmail(), logger.Err(err))
+		return nil, mapError(err)
+	}
+
+	// 需要二次验证：不下发令牌，仅返回票据
+	if res.RequiresMFA {
+		logger.InfoContext(ctx, "账号已开启 2FA，等待二次验证", logger.UserUUID(res.User.UUID.String()))
+		return &userpb.LoginResponse{
+			User:        toUserInfo(res.User),
+			RequiresMfa: true,
+			MfaTicket:   res.MFATicket,
+		}, nil
+	}
+
+	logger.InfoContext(ctx, "邮箱验证码登录成功", logger.UserUUID(res.User.UUID.String()))
+	return &userpb.LoginResponse{
+		AccessToken:      res.TokenPair.AccessToken,
+		RefreshToken:     res.TokenPair.RefreshToken,
+		DeviceId:         res.TokenPair.DeviceID,
+		ExpiresIn:        res.TokenPair.ExpiresIn,
+		RefreshExpiresIn: res.TokenPair.RefreshExpiresIn,
+		User:             toUserInfo(res.User),
+	}, nil
 }
 
 // Refresh 刷新 access token。
@@ -196,6 +242,10 @@ func mapError(err error) error {
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, auth.ErrInvalidCredentials):
 		return status.Error(codes.Unauthenticated, err.Error())
+	case errors.Is(err, auth.ErrCodeNotSent), errors.Is(err, auth.ErrCodeMismatch):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, auth.ErrResendTooSoon):
+		return status.Error(codes.ResourceExhausted, err.Error())
 	case errors.Is(err, auth.ErrTokenInvalid):
 		return status.Error(codes.Unauthenticated, err.Error())
 	case errors.Is(err, auth.ErrDeviceMismatch):

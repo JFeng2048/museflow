@@ -44,9 +44,10 @@ type AuthService struct {
 	rbac       *rbac.Service
 	audit      *audit.Service
 	oauth      *oauth.Service
-	codes      repository.VerifyCodeStore // 验证码存储（密码重置）
+	codes      repository.VerifyCodeStore // 验证码存储（密码重置 / 注册校验 / 验证码登录）
 	mailer     notify.EmailSender         // 邮件发送器
 	reset      ResetServiceConfig         // 密码重置配置
+	emailCfg   EmailCodeConfig            // 邮箱验证码（注册校验 / 验证码登录）配置
 	mfaCfg     MFAConfig                  // 2FA 配置
 	bcryptCost int
 }
@@ -62,10 +63,12 @@ func NewAuthService(
 	codes repository.VerifyCodeStore,
 	mailer notify.EmailSender,
 	reset ResetServiceConfig,
+	emailCfg EmailCodeConfig,
 	mfaCfg MFAConfig,
 	bcryptCost int,
 ) *AuthService {
 	mfaCfg.applyDefaults()
+	emailCfg.applyDefaults()
 	return &AuthService{
 		users:      users,
 		tokens:     tokens,
@@ -76,19 +79,38 @@ func NewAuthService(
 		codes:      codes,
 		mailer:     mailer,
 		reset:      reset,
+		emailCfg:   emailCfg,
 		mfaCfg:     mfaCfg,
 		bcryptCost: bcryptCost,
 	}
 }
 
-// Register 用户注册：校验邮箱唯一性后以 bcrypt 存储密码，并授予默认角色 user。
-func (s *AuthService) Register(ctx context.Context, email, password, nickname string) (*model.User, error) {
+// Register 用户注册：校验邮箱验证码后创建账号（邮箱直接标记为已验证），并授予默认角色 user。
+//
+// 注册前需先调用 SendVerifyCode{scene:"register"} 获取验证码，code 校验失败返回 ErrCodeMismatch。
+func (s *AuthService) Register(ctx context.Context, email, password, nickname, code string) (*model.User, error) {
 	email = normalizeEmail(email)
 	if email == "" || password == "" {
 		return nil, fmt.Errorf("邮箱和密码不能为空")
 	}
 	if len(password) > maxPasswordBytes {
 		return nil, fmt.Errorf("密码长度不能超过 %d 字节", maxPasswordBytes)
+	}
+
+	// 先校验邮箱验证码，避免邮箱枚举（无效验证码统一返回验证码错误）
+	saved, err := s.codes.GetCode(ctx, "register", email)
+	if err != nil {
+		return nil, fmt.Errorf("读取邮箱验证码失败: %w", err)
+	}
+	if saved == "" {
+		return nil, ErrCodeNotSent
+	}
+	if !strings.EqualFold(saved, strings.TrimSpace(code)) {
+		return nil, ErrCodeMismatch
+	}
+	// 校验通过立即删除，防止重复使用
+	if err := s.codes.DeleteCode(ctx, "register", email); err != nil {
+		logger.WarnContext(ctx, "删除已用邮箱验证码失败", "email", email, logger.Err(err))
 	}
 
 	exists, err := s.users.ExistsByEmail(ctx, email)
@@ -116,6 +138,7 @@ func (s *AuthService) Register(ctx context.Context, email, password, nickname st
 		PasswordHash: &hashStr,
 		Nickname:     nickname,
 		Status:       model.StatusNormal,
+		EmailVerified: true,
 	}
 
 	if err := s.users.Create(ctx, u); err != nil {
@@ -427,6 +450,191 @@ func (s *AuthService) GetProfile(ctx context.Context, userUUID string) (*model.U
 		return nil, fmt.Errorf("查询用户失败: %w", err)
 	}
 	return u, nil
+}
+
+// EmailCodeConfig 邮箱验证码（注册校验 / 验证码登录）配置。
+type EmailCodeConfig struct {
+	CodeLength  int           // 验证码长度
+	CodeTTL     time.Duration // 验证码有效期
+	CodeResendCD time.Duration // 重发冷却
+}
+
+// applyDefaults 补全默认值。
+func (c *EmailCodeConfig) applyDefaults() {
+	if c.CodeLength <= 0 {
+		c.CodeLength = 6
+	}
+	if c.CodeTTL <= 0 {
+		c.CodeTTL = 10 * time.Minute
+	}
+	if c.CodeResendCD <= 0 {
+		c.CodeResendCD = time.Minute
+	}
+}
+
+// emailPurpose 根据场景返回邮件正文用途描述。
+func emailPurpose(scene string) string {
+	switch scene {
+	case "register":
+		return "注册 MuseFlow 账号"
+	case "login":
+		return "登录 MuseFlow 账号"
+	default:
+		return "验证 MuseFlow 邮箱"
+	}
+}
+
+// SendVerifyCode 发送邮箱验证码。
+//
+// scene 取值：register（注册校验）/ login（验证码登录）/ verify（补验证邮箱）。
+// 重发冷却内返回 ErrResendTooSoon；邮件发送失败时降级为日志模式（便于联调）。
+func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) error {
+	email = normalizeEmail(email)
+	if email == "" {
+		return fmt.Errorf("邮箱不能为空")
+	}
+	if scene != "register" && scene != "login" && scene != "verify" {
+		return fmt.Errorf("不支持的验证码场景: %s", scene)
+	}
+
+	ok, err := s.codes.TryLockResend(ctx, scene, email, s.emailCfg.CodeResendCD)
+	if err != nil {
+		return fmt.Errorf("检查验证码重发频率失败: %w", err)
+	}
+	if !ok {
+		return ErrResendTooSoon
+	}
+
+	code, err := notify.GenerateNumericCode(s.emailCfg.CodeLength)
+	if err != nil {
+		return fmt.Errorf("生成邮箱验证码失败: %w", err)
+	}
+	if err := s.codes.SaveCode(ctx, scene, email, code, s.emailCfg.CodeTTL); err != nil {
+		return fmt.Errorf("保存邮箱验证码失败: %w", err)
+	}
+
+	body := notify.VerifyCodeBody(emailPurpose(scene), code, s.emailCfg.CodeTTL)
+	if err := s.mailer.Send(email, "MuseFlow 邮箱验证码", body); err != nil {
+		// 降级：记录日志但不阻断流程，便于本地无 SMTP 联调
+		logger.WarnContext(ctx, "发送邮箱验证码失败，已降级为日志模式", "email", email, logger.Err(err))
+	}
+
+	if s.audit != nil {
+		s.audit.Record(ctx, audit.Entry{
+			Action:   model.AuditActionEmailVerifySend,
+			Resource: model.AuditResourceAuth,
+			Detail:   "scene=" + scene,
+		})
+	}
+	return nil
+}
+
+// VerifyEmail 校验邮箱验证码并标记邮箱已验证（兼容历史未验证账号）。
+func (s *AuthService) VerifyEmail(ctx context.Context, email, code string) error {
+	email = normalizeEmail(email)
+	saved, err := s.codes.GetCode(ctx, "verify", email)
+	if err != nil {
+		return fmt.Errorf("读取邮箱验证码失败: %w", err)
+	}
+	if saved == "" {
+		return ErrCodeNotSent
+	}
+	if !strings.EqualFold(saved, strings.TrimSpace(code)) {
+		return ErrCodeMismatch
+	}
+	if err := s.codes.DeleteCode(ctx, "verify", email); err != nil {
+		logger.WarnContext(ctx, "删除已用邮箱验证码失败", "email", email, logger.Err(err))
+	}
+
+	u, err := s.users.FindByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("查询用户失败: %w", err)
+	}
+	if u.EmailVerified {
+		return nil
+	}
+	if err := s.users.SetEmailVerified(ctx, u.UUID, true); err != nil {
+		return fmt.Errorf("更新邮箱验证状态失败: %w", err)
+	}
+
+	if s.audit != nil {
+		s.audit.Record(ctx, audit.Entry{
+			UserUUID:   u.UUID.String(),
+			Action:     model.AuditActionEmailVerifySuccess,
+			Resource:   model.AuditResourceAuth,
+			ResourceID: u.UUID.String(),
+		})
+	}
+	return nil
+}
+
+// LoginWithCode 邮箱验证码登录（免密）。
+//
+// 校验通过后签发双令牌；若账号开启 2FA，则仅返回 mfa_ticket（需再调用 VerifyMFALogin）。
+func (s *AuthService) LoginWithCode(ctx context.Context, email, code string, dev dto.Device) (*LoginResult, error) {
+	email = normalizeEmail(email)
+	if email == "" {
+		return nil, fmt.Errorf("邮箱不能为空")
+	}
+
+	saved, err := s.codes.GetCode(ctx, "login", email)
+	if err != nil {
+		return nil, fmt.Errorf("读取邮箱验证码失败: %w", err)
+	}
+	if saved == "" {
+		return nil, ErrCodeNotSent
+	}
+	if !strings.EqualFold(saved, strings.TrimSpace(code)) {
+		return nil, ErrCodeMismatch
+	}
+	// 校验通过立即删除，防止重复使用
+	if err := s.codes.DeleteCode(ctx, "login", email); err != nil {
+		logger.WarnContext(ctx, "删除已用邮箱验证码失败", "email", email, logger.Err(err))
+	}
+
+	u, err := s.users.FindByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("查询用户失败: %w", err)
+	}
+
+	// 重置失败计数（验证码登录视为成功认证）
+	if u.LoginFailCount != 0 || u.LockedUntil != nil {
+		if err := s.users.ResetLoginFails(ctx, u.UUID); err != nil {
+			logger.WarnContext(ctx, "重置登录失败计数失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
+		}
+	}
+
+	if s.audit != nil {
+		s.audit.Record(ctx, audit.Entry{
+			UserUUID:   u.UUID.String(),
+			Action:     model.AuditActionEmailLoginCode,
+			Resource:   model.AuditResourceAuth,
+			ResourceID: u.UUID.String(),
+			IP:         dev.IP,
+			UserAgent:  dev.UserAgent,
+		})
+	}
+
+	// 开启 2FA：返回票据，等待第二步
+	if u.MFAEnabled {
+		ticket, err := s.tm.GenerateMFATicket(u.UUID.String(), uuid.NewString())
+		if err != nil {
+			return nil, fmt.Errorf("签发 MFA 票据失败: %w", err)
+		}
+		return &LoginResult{User: u, RequiresMFA: true, MFATicket: ticket}, nil
+	}
+
+	tokens, err := s.issueTokens(ctx, u.UUID.String(), dev)
+	if err != nil {
+		return nil, err
+	}
+	return &LoginResult{TokenPair: tokens, User: u}, nil
 }
 
 // UpdateProfile 更新用户个人信息（昵称 / 头像 / 简介）。
