@@ -21,6 +21,14 @@ var messages = map[Code]map[Lang]string{
 		LangZH: "success",
 		LangEN: "success",
 	},
+	CodeCreated: {
+		LangZH: "创建成功",
+		LangEN: "created",
+	},
+	CodeAccepted: {
+		LangZH: "请求已接受",
+		LangEN: "accepted",
+	},
 
 	CodeParamInvalid: {
 		LangZH: "参数校验失败",
@@ -94,6 +102,14 @@ var messages = map[Code]map[Lang]string{
 	CodeMissingDevice: {
 		LangZH: "缺少设备标识",
 		LangEN: "missing device identifier",
+	},
+	CodeAccountLocked: {
+		LangZH: "账号已被锁定，请稍后再试",
+		LangEN: "account locked, please retry later",
+	},
+	CodeAccountDisabled: {
+		LangZH: "账号已冻结或注销",
+		LangEN: "account disabled or deleted",
 	},
 }
 
