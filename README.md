@@ -101,7 +101,7 @@ The repository is a **Monorepo** — all code lives in a single Git repository. 
 - **Catch-up verify**: legacy unverified accounts can call `VerifyEmail` (`scene=verify`) to mark verified.
 - **Passwordless login**: `LoginWithCode` (`scene=login`) issues dual tokens without a password; compatible with 2FA (returns `mfa_ticket` when enabled).
 - Verification codes are scene-isolated in Redis with a resend cooldown.
-- Per-module API docs: [`docs/cn/develop/api/`](docs/cn/develop/api/)
+- Per-module API docs: [`docs/cn/api/`](docs/cn/api/)
 
 ---
 
@@ -270,11 +270,11 @@ make docker      # build Docker images (context = repo root)
 
 ## 📡 API Reference
 
-按模块分文档维护，详细路由与字段说明见 [`docs/cn/develop/api/`](docs/cn/develop/api/)：
+按模块分文档维护，详细路由与字段说明见 [`docs/cn/api/`](docs/cn/api/)：
 
-- **[user-service](docs/cn/develop/api/user-service.md)** — 用户与认证核心（gRPC `:5002`）：账号、双令牌、邮箱验证码、2FA、RBAC、审计、OAuth。
-- **[api-gateway](docs/cn/develop/api/api-gateway.md)** — 统一 HTTP 入口（`:5001`）：完整路由表、认证/错误映射、CORS 与 Cookie 策略。
-- **[crawl4ai-service](docs/cn/develop/api/crawl4ai-service.md)** — 数据采集（`:5003`）：`Health` / `Crawl` / `Extract`（HTTP + gRPC）。
+- **[user-service](docs/cn/api/user-service.md)** — 用户与认证核心（gRPC `:5002`）：账号、双令牌、邮箱验证码、2FA、RBAC、审计、OAuth。
+- **[api-gateway](docs/cn/api/api-gateway.md)** — 统一 HTTP 入口（`:5001`）：完整路由表、认证/错误映射、CORS 与 Cookie 策略。
+- **[crawl4ai-service](docs/cn/api/crawl4ai-service.md)** — 数据采集（`:5003`）：`Health` / `Crawl` / `Extract`（HTTP + gRPC）。
 
 各服务均提供 Swagger（网关在 `/swagger/index.html`，crawl4ai-service 在 `/docs`）。
 
