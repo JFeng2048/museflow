@@ -28,6 +28,68 @@ service UserService {
 
   // ValidateToken 校验 access token（供网关鉴权中间件使用，含黑名单检查）
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+
+  // ---- 用户管理 ----
+
+  // UpdateProfile 更新用户个人信息（昵称 / 头像 / 简介）
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+
+  // ChangePassword 修改密码（需验证旧密码，成功后清理权限缓存）
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+
+  // GetUserByUUID 根据 UUID 查询用户（供其他服务调用）
+  rpc GetUserByUUID(GetUserByUUIDRequest) returns (GetUserByUUIDResponse);
+
+  // ---- 权限（供网关调用）----
+
+  // GetUserPermissions 获取用户权限编码列表（缓存优先，未命中查库后回填）
+  rpc GetUserPermissions(GetUserPermissionsRequest) returns (GetUserPermissionsResponse);
+
+  // CheckPermission 校验用户是否拥有指定权限
+  rpc CheckPermission(CheckPermissionRequest) returns (CheckPermissionResponse);
+
+  // ClearUserCache 清理用户权限缓存（管理员或权限变更后调用）
+  rpc ClearUserCache(ClearUserCacheRequest) returns (ClearUserCacheResponse);
+
+  // ---- 会话管理 ----
+
+  // ListSessions 查看当前用户的活跃会话列表
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+
+  // RevokeSession 强制下线指定会话（自身或管理员）
+  rpc RevokeSession(RevokeSessionRequest) returns (RevokeSessionResponse);
+
+  // ---- 管理后台（需 admin 权限，由网关校验）----
+
+  // ListUsers 用户列表（分页、筛选、排序）
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+
+  // GetUserDetail 用户详情（含角色列表）
+  rpc GetUserDetail(GetUserDetailRequest) returns (GetUserDetailResponse);
+
+  // UpdateUserStatus 冻结 / 解冻 / 注销用户
+  rpc UpdateUserStatus(UpdateUserStatusRequest) returns (UpdateUserStatusResponse);
+
+  // AssignRole 为用户分配角色（分配后清理该用户权限缓存）
+  rpc AssignRole(AssignRoleRequest) returns (AssignRoleResponse);
+
+  // ListRoles 角色列表
+  rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+
+  // CreateRole 创建角色
+  rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+
+  // UpdateRole 编辑角色（编辑后清理相关用户权限缓存）
+  rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+
+  // DeleteRole 删除角色（删除后清理相关用户权限缓存）
+  rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+
+  // ListPermissions 权限列表
+  rpc ListPermissions(ListPermissionsRequest) returns (ListPermissionsResponse);
+
+  // SetRolePermissions 为角色分配权限（分配后清理相关用户权限缓存）
+  rpc SetRolePermissions(SetRolePermissionsRequest) returns (SetRolePermissionsResponse);
 }
 
 // UserInfo 对外暴露的用户信息，使用 uuid 作为对外标识，不暴露自增 id。
@@ -113,4 +175,219 @@ message ValidateTokenRequest {
 message ValidateTokenResponse {
   bool valid = 1;
   string uuid = 2;                 // 校验通过时返回用户 uuid
+}
+
+// ==================== 用户管理 ====================
+
+message UpdateProfileRequest {
+  string uuid = 1;                 // 用户 uuid（网关从 token 解析）
+  string nickname = 2;             // 昵称，留空表示不修改
+  string avatar_url = 3;           // 头像 URL，留空表示不修改
+  string bio = 4;                  // 个人简介，留空表示不修改
+}
+
+message UpdateProfileResponse {
+  UserInfo user = 1;
+}
+
+message ChangePasswordRequest {
+  string uuid = 1;
+  string old_password = 2;         // 旧密码，用于校验
+  string new_password = 3;         // 新密码，服务端 bcrypt 加密
+}
+
+message ChangePasswordResponse {
+  bool success = 1;
+}
+
+message GetUserByUUIDRequest {
+  string uuid = 1;
+}
+
+message GetUserByUUIDResponse {
+  UserInfo user = 1;
+}
+
+// ==================== 权限 ====================
+
+message GetUserPermissionsRequest {
+  string uuid = 1;
+}
+
+message GetUserPermissionsResponse {
+  repeated string permissions = 1; // 权限编码列表，如 ["user:read","novel:write"]
+}
+
+message CheckPermissionRequest {
+  string uuid = 1;
+  string permission = 2;           // 待校验的权限编码
+}
+
+message CheckPermissionResponse {
+  bool allowed = 1;
+}
+
+message ClearUserCacheRequest {
+  string uuid = 1;
+}
+
+message ClearUserCacheResponse {
+  bool success = 1;
+}
+
+// ==================== 会话管理 ====================
+
+// SessionInfo 单个登录会话（设备）信息。
+message SessionInfo {
+  string token_id = 1;             // 会话标识，用于强制下线
+  string device_id = 2;
+  string device_name = 3;
+  int64 login_time = 4;            // 登录时间（Unix 秒）
+  int64 last_refresh_time = 5;     // 最后刷新时间（Unix 秒）
+}
+
+message ListSessionsRequest {
+  string uuid = 1;
+}
+
+message ListSessionsResponse {
+  repeated SessionInfo sessions = 1;
+}
+
+message RevokeSessionRequest {
+  string uuid = 1;                 // 目标用户 uuid
+  string token_id = 2;             // 待吊销的会话标识
+}
+
+message RevokeSessionResponse {
+  bool success = 1;
+}
+
+// ==================== 管理后台 ====================
+
+// Pagination 分页参数。
+message Pagination {
+  int32 page = 1;                  // 页码，从 1 开始
+  int32 page_size = 2;             // 每页条数
+}
+
+message ListUsersRequest {
+  Pagination pagination = 1;
+  string keyword = 2;              // 按邮箱 / 昵称模糊搜索，留空不过滤
+  int32 status = 3;                // 按状态过滤，0 表示不过滤
+  string order_by = 4;             // 排序字段，如 created_at
+  bool desc = 5;                   // 是否倒序
+}
+
+// AdminUserItem 管理后台用户列表项（含角色编码）。
+message AdminUserItem {
+  UserInfo user = 1;
+  repeated string roles = 2;       // 角色编码列表
+  int64 updated_at = 3;            // 最后更新时间（Unix 秒）
+}
+
+message ListUsersResponse {
+  repeated AdminUserItem users = 1;
+  int64 total = 2;                 // 总条数
+}
+
+message GetUserDetailRequest {
+  string uuid = 1;
+}
+
+message GetUserDetailResponse {
+  AdminUserItem user = 1;
+  repeated string permissions = 2; // 用户最终权限编码列表
+}
+
+message UpdateUserStatusRequest {
+  string uuid = 1;
+  int32 status = 2;                // 1=正常, 2=冻结, 3=已注销, 4=待审核
+}
+
+message UpdateUserStatusResponse {
+  bool success = 1;
+}
+
+message AssignRoleRequest {
+  string target_uuid = 1;          // 被分配角色的用户
+  string role_code = 2;            // 角色编码
+  string operator_uuid = 3;        // 操作人 uuid（审计用）
+}
+
+message AssignRoleResponse {
+  bool success = 1;
+}
+
+// RoleInfo 角色信息。
+message RoleInfo {
+  int32 id = 1;
+  string code = 2;
+  string name = 3;
+  string description = 4;
+  bool is_system = 5;              // 系统内置角色不可改 / 删
+  int64 created_at = 6;
+}
+
+message ListRolesRequest {
+  bool only_system = 1;            // true 时仅返回系统角色
+}
+
+message ListRolesResponse {
+  repeated RoleInfo roles = 1;
+}
+
+message CreateRoleRequest {
+  string code = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message CreateRoleResponse {
+  RoleInfo role = 1;
+}
+
+message UpdateRoleRequest {
+  int32 id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message UpdateRoleResponse {
+  bool success = 1;
+}
+
+message DeleteRoleRequest {
+  int32 id = 1;
+}
+
+message DeleteRoleResponse {
+  bool success = 1;
+}
+
+// PermissionInfo 权限信息。
+message PermissionInfo {
+  int32 id = 1;
+  string code = 2;
+  string name = 3;
+  string resource = 4;
+  string action = 5;
+  string description = 6;
+}
+
+message ListPermissionsRequest {
+  string resource = 1;             // 按资源类型过滤，留空不过滤
+}
+
+message ListPermissionsResponse {
+  repeated PermissionInfo permissions = 1;
+}
+
+message SetRolePermissionsRequest {
+  int32 role_id = 1;
+  repeated string permission_codes = 2; // 覆盖式设置
+}
+
+message SetRolePermissionsResponse {
+  bool success = 1;
 }
