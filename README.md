@@ -83,6 +83,8 @@ The repository is a **Monorepo** — all code lives in a single Git repository. 
 | `pkg/errcode` | Unified error codes & i18n responses | Go stdlib | — |
 | `pkg/logger` | Structured logger (slog + lumberjack) | Go slog / lumberjack | — |
 | `proto/user` | Shared gRPC contract (user.proto + generated code) | protobuf | — |
+| `proto/crawl` | Shared gRPC contract for crawl/extract (crawl.proto + generated code) | protobuf | — |
+| `services/crawl4ai-service` | Data-crawling service (Python, HTTP + gRPC dual interface) | Crawl4AI / FastAPI / gRPC | 5003 |
 | `database/user_svc.sql` | User DB schema (sequences, triggers, schema namespace) | PostgreSQL DDL | — |
 
 ### Dual-Token Authentication (overview)
@@ -92,6 +94,14 @@ The repository is a **Monorepo** — all code lives in a single Git repository. 
 - **logout**: remove refresh allow-list entry + write access token `jti` to Redis deny-list (TTL = remaining lifetime), auto-cleaned on expiry
 - **device fingerprint**: `sha256(deviceId + User-Agent + IP)` to prevent cross-device refresh-token theft
 - Full design: [`docs/cn/develop/双令牌认证系统设计文档.md`](docs/cn/develop/双令牌认证系统设计文档.md)
+
+### Email verification & passwordless login (overview)
+
+- **Register requires an email code**: before `Register`, call `SendVerifyCode` with `scene=register`, then submit the code; on success the account is marked `email_verified`.
+- **Catch-up verify**: legacy unverified accounts can call `VerifyEmail` (`scene=verify`) to mark verified.
+- **Passwordless login**: `LoginWithCode` (`scene=login`) issues dual tokens without a password; compatible with 2FA (returns `mfa_ticket` when enabled).
+- Verification codes are scene-isolated in Redis with a resend cooldown.
+- Per-module API docs: [`docs/cn/develop/api/`](docs/cn/develop/api/)
 
 ---
 
@@ -255,15 +265,27 @@ make docker      # build Docker images (context = repo root)
 
 | Method | Path | Auth | Function |
 | :--- | :--- | :--- | :--- |
-| POST | `/api/v1/auth/register` | No | User registration (email) |
-| POST | `/api/v1/auth/login` | No | Login (issues dual tokens) |
-| POST | `/api/v1/auth/refresh` | No (Cookie) | Refresh access token |
-| POST | `/api/v1/auth/logout` | Yes | Logout (revoke current device) |
-| GET  | `/api/v1/user/profile` | Yes | Get current user profile |
-| GET  | `/health` | No | Health check |
-| GET  | `/swagger/index.html` | No | Swagger docs |
+| POST | `/api/v1/auth/register` | No | 注册（需邮箱验证码 `code`） |
+| POST | `/api/v1/auth/login` | No | 密码登录（签发双令牌，可能触发 2FA） |
+| POST | `/api/v1/auth/refresh` | No (Cookie) | 刷新 access token |
+| POST | `/api/v1/auth/logout` | No (Cookie) | 登出并吊销当前设备令牌 |
+| POST | `/api/v1/auth/change-password` | Yes | 修改密码 |
+| POST | `/api/v1/auth/email/send-code` | No | 发送邮箱验证码（register/verify/login） |
+| POST | `/api/v1/auth/email/verify` | No | 校验邮箱（补验证，标记已验证） |
+| POST | `/api/v1/auth/login/code` | No | 邮箱验证码免密登录 |
+| POST | `/api/v1/auth/mfa/enable` | Yes | 开启两步验证（TOTP） |
+| POST | `/api/v1/auth/mfa/verify` | Yes | 校验 TOTP / 恢复码 |
+| POST | `/api/v1/auth/mfa/disable` | Yes | 关闭两步验证 |
+| GET  | `/api/v1/auth/mfa/recovery-codes` | Yes | 获取一次性恢复码 |
+| POST | `/api/v1/auth/password/reset-code` | No | 发送密码重置验证码 |
+| POST | `/api/v1/auth/password/reset` | No | 验证码重置密码 |
+| GET  | `/api/v1/auth/sessions` | Yes | 会话列表 |
+| DELETE | `/api/v1/auth/sessions/:id` | Yes | 吊销指定会话 |
+| GET  | `/api/v1/user/profile` | Yes | 获取当前用户资料 |
+| GET  | `/health` | No | 健康检查 |
+| GET  | `/swagger/index.html` | No | Swagger 文档 |
 
-Full request/response definitions: see the Swagger docs.
+Full request/response definitions: see the Swagger docs. Per-module API overviews: [`docs/cn/develop/api/`](docs/cn/develop/api/).
 
 ---
 
