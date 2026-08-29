@@ -30,7 +30,7 @@ type OAuth struct {
 }
 
 // TableName 指定带 schema 的表名。
-func (OAuth) TableName() string { return "user_svc.oauths" }
+func (OAuth) TableName() string { return "user_svc.oauth" }
 
 // 第三方平台常量，与 oauth.provider 字段对应。
 const (

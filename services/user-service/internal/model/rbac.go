@@ -22,7 +22,7 @@ type Role struct {
 }
 
 // TableName 指定带 schema 的表名。
-func (Role) TableName() string { return "user_svc.roles" }
+func (Role) TableName() string { return "user_svc.role" }
 
 // Permission 权限定义表，对应 user_svc.permission。
 type Permission struct {
@@ -37,7 +37,7 @@ type Permission struct {
 }
 
 // TableName 指定带 schema 的表名。
-func (Permission) TableName() string { return "user_svc.permissions" }
+func (Permission) TableName() string { return "user_svc.permission" }
 
 // RolePermission 角色-权限关联表，对应 user_svc.role_permission。
 type RolePermission struct {
@@ -47,9 +47,9 @@ type RolePermission struct {
 }
 
 // TableName 指定带 schema 的表名。
-func (RolePermission) TableName() string { return "user_svc.role_permissions" }
+func (RolePermission) TableName() string { return "user_svc.role_permission" }
 
-// UserRole 用户-角色关联表，对应 user_svc.user_roles。
+// UserRole 用户-角色关联表，对应 user_svc.user_role。
 type UserRole struct {
 	UserUUID uuid.UUID `gorm:"column:user_uuid;type:uuid;primaryKey"`
 	RoleID   int16     `gorm:"column:role_id;primaryKey"`
@@ -58,4 +58,4 @@ type UserRole struct {
 }
 
 // TableName 指定带 schema 的表名。
-func (UserRole) TableName() string { return "user_svc.user_roles" }
+func (UserRole) TableName() string { return "user_svc.user_role" }

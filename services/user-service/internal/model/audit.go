@@ -24,7 +24,7 @@ type AuditLog struct {
 }
 
 // TableName 指定带 schema 的表名。
-func (AuditLog) TableName() string { return "user_svc.audit_logs" }
+func (AuditLog) TableName() string { return "user_svc.audit_log" }
 
 // 审计操作类型常量，与 audit_log.action 字段对应。
 const (

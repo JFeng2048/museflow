@@ -58,10 +58,10 @@ func NewRBACRepository(db *gorm.DB) RBACRepository {
 func (r *rbacRepository) GetUserPermissionCodes(ctx context.Context, userUUID uuid.UUID) ([]string, error) {
 	var codes []string
 	err := r.db.WithContext(ctx).
-		Table("user_svc.user_roles ur").
+		Table("user_svc.user_role ur").
 		Select("p.code").
-		Joins("JOIN user_svc.role_permissions rp ON rp.role_id = ur.role_id").
-		Joins("JOIN user_svc.permissions p ON p.id = rp.permission_id").
+		Joins("JOIN user_svc.role_permission rp ON rp.role_id = ur.role_id").
+		Joins("JOIN user_svc.permission p ON p.id = rp.permission_id").
 		Where("ur.user_uuid = ?", userUUID).
 		Pluck("p.code", &codes).Error
 	if err != nil {
@@ -118,9 +118,9 @@ func (r *rbacRepository) ListPermissions(ctx context.Context) ([]model.Permissio
 func (r *rbacRepository) GetRolePermissions(ctx context.Context, roleID int16) ([]string, error) {
 	var codes []string
 	err := r.db.WithContext(ctx).
-		Table("user_svc.role_permissions rp").
+		Table("user_svc.role_permission rp").
 		Select("p.code").
-		Joins("JOIN user_svc.permissions p ON p.id = rp.permission_id").
+		Joins("JOIN user_svc.permission p ON p.id = rp.permission_id").
 		Where("rp.role_id = ?", roleID).
 		Pluck("p.code", &codes).Error
 	if err != nil {
@@ -236,9 +236,9 @@ func (r *rbacRepository) ListRoleUserUUIDs(ctx context.Context, roleID int16) ([
 func (r *rbacRepository) GetUserRoleCodes(ctx context.Context, userUUID uuid.UUID) ([]string, error) {
 	var codes []string
 	err := r.db.WithContext(ctx).
-		Table("user_svc.user_roles ur").
+		Table("user_svc.user_role ur").
 		Select("r.code").
-		Joins("JOIN user_svc.roles r ON r.id = ur.role_id").
+		Joins("JOIN user_svc.role r ON r.id = ur.role_id").
 		Where("ur.user_uuid = ?", userUUID).
 		Pluck("r.code", &codes).Error
 	if err != nil {

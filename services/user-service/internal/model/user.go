@@ -19,7 +19,7 @@ const (
 	StatusPendinAdt int16 = 4 // 待审核
 )
 
-// User 用户主表，对应 user_svc.users。
+// User 用户主表，对应 user_svc.user。
 //
 // 字段说明：
 //   - ID 为自增主键，仅内部使用，不对外暴露；
@@ -60,7 +60,7 @@ type User struct {
 
 // TableName 指定带 schema 的表名；schema 由 database/user_svc.sql 固定创建为 user_svc。
 func (User) TableName() string {
-	return "user_svc.users"
+	return "user_svc.user"
 }
 
 // IsActive 判断账号是否处于正常状态。
