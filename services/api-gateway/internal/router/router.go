@@ -1,7 +1,8 @@
 // Package router 负责 api-gateway 的路由注册。
 //
-// 约定：每个业务域的路由单独一个文件维护（auth_router.go / user_router.go /
-// admin_router.go），本文件只做总装，避免在单文件里堆砌全部路由。
+// 约定：按 API 版本分目录维护（当前只有 v1/），每个版本目录下有一个集中注册的
+// 文件（v1/v1_router.go）负责注册该版本的全部路由；本文件只做全局总装，
+// 如健康检查、Swagger 与版本路由组的挂载。
 package router
 
 import (
@@ -14,17 +15,9 @@ import (
 	_ "github.com/museflow/api-gateway/docs" // 注册 Swagger 文档
 	"github.com/museflow/api-gateway/internal/client"
 	"github.com/museflow/api-gateway/internal/config"
-	"github.com/museflow/api-gateway/internal/handler"
 	"github.com/museflow/api-gateway/internal/middleware"
+	"github.com/museflow/api-gateway/internal/router/v1"
 )
-
-// handlers 聚合各业务域的处理器，便于在路由注册函数间传递。
-type handlers struct {
-	auth       *handler.AuthHandler
-	user       *handler.UserHandler
-	userManage *handler.UserManageHandler
-	admin      *handler.AdminHandler
-}
 
 // Setup 创建 Gin 引擎并注册所有路由。
 func Setup(cfg *config.Config, userClient *client.UserClient) *gin.Engine {
@@ -40,20 +33,8 @@ func Setup(cfg *config.Config, userClient *client.UserClient) *gin.Engine {
 	// Swagger 文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	h := &handlers{
-		auth:       handler.NewAuthHandler(userClient, cfg),
-		user:       handler.NewUserHandler(userClient),
-		userManage: handler.NewUserManageHandler(userClient),
-		admin:      handler.NewAdminHandler(userClient),
-	}
-
-	// 鉴权中间件：解析 access token 并从 user-service 校验（含黑名单）
-	auth := middleware.Auth(userClient)
-
-	v1 := r.Group("/api/v1")
-	registerAuthRoutes(v1, h, auth)
-	registerUserRoutes(v1, h, auth)
-	registerAdminRoutes(v1, h, userClient, auth)
+	// 各版本 API 路由
+	v1.Register(r.Group("/api/v1"), cfg, userClient)
 
 	return r
 }

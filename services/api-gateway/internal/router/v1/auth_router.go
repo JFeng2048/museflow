@@ -1,4 +1,4 @@
-package router
+package v1
 
 import (
 	"github.com/gin-gonic/gin"
@@ -8,15 +8,15 @@ import (
 //
 // 注册与登录无需认证；refresh 走 HttpOnly Cookie 校验，不需要 access token；
 // logout 需要 access token。
-func registerAuthRoutes(v1 *gin.RouterGroup, h *handlers, auth gin.HandlerFunc) {
-	group := v1.Group("/auth")
+func registerAuthRoutes(r *gin.RouterGroup, h *Handlers, auth gin.HandlerFunc) {
+	group := r.Group("/auth")
 	{
 		// 无需认证
-		group.POST("/register", h.auth.Register)
-		group.POST("/login", h.auth.Login)
+		group.POST("/register", h.Auth.Register)
+		group.POST("/login", h.Auth.Login)
 		// 走 Cookie 校验，不需要 access token
-		group.POST("/refresh", h.auth.Refresh)
+		group.POST("/refresh", h.Auth.Refresh)
 		// 需要 access token
-		group.POST("/logout", auth, h.auth.Logout)
+		group.POST("/logout", auth, h.Auth.Logout)
 	}
 }
