@@ -72,11 +72,7 @@ func main() {
 	adminService := admin.NewService(userRepo, rbacService, auditService)
 	userHandler := handler.NewUserHandler(authService, adminService)
 
-	// 预置角色 / 权限（库为空时插入），失败仅告警不阻断启动
-	if err := rbacService.EnsureSeeded(context.Background()); err != nil {
-		logger.Warn("预置 RBAC 数据失败", logger.Err(err))
-	}
-
+	// 角色与权限数据由数据库维护（database/user_svc.sql），代码不做种子写入
 	grpcServer := grpc.NewServer()
 	userpb.RegisterUserServiceServer(grpcServer, userHandler)
 

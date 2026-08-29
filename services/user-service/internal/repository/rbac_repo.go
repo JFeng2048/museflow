@@ -31,8 +31,6 @@ type RBACRepository interface {
 	GetRolePermissions(ctx context.Context, roleID int16) ([]string, error)
 	// SetRolePermissions 覆盖设置某角色的权限（先删后插）。
 	SetRolePermissions(ctx context.Context, roleID int16, permCodes []string) error
-	// CreatePermission 创建权限（种子数据使用）。
-	CreatePermission(ctx context.Context, perm *model.Permission) error
 	// CreateRole 创建角色。
 	CreateRole(ctx context.Context, role *model.Role) error
 	// UpdateRole 更新角色基本信息（名称/描述），系统角色不可改 code。
@@ -156,13 +154,25 @@ func (r *rbacRepository) SetRolePermissions(ctx context.Context, roleID int16, p
 	})
 }
 
-// CreatePermission 创建权限。
-func (r *rbacRepository) CreatePermission(ctx context.Context, perm *model.Permission) error {
-	return r.db.WithContext(ctx).Create(perm).Error
-}
-
 // CreateRole 创建角色。
+//
+// 注意：user_svc.role.id 为普通 int2，未绑定自增序列（见 database/user_svc.sql），
+// 因此这里在 id 为零值时取当前最大 id + 1，避免手动新建角色时主键冲突。
 func (r *rbacRepository) CreateRole(ctx context.Context, role *model.Role) error {
+	if role.ID == 0 {
+		var maxID *int16
+		if err := r.db.WithContext(ctx).
+			Model(&model.Role{}).
+			Select("MAX(id)").
+			Scan(&maxID).Error; err != nil {
+			return err
+		}
+		if maxID != nil {
+			role.ID = *maxID + 1
+		} else {
+			role.ID = 1
+		}
+	}
 	return r.db.WithContext(ctx).Create(role).Error
 }
 

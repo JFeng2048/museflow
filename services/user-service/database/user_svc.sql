@@ -239,7 +239,7 @@ CREATE TABLE "user_svc"."role" (
 )
 ;
 COMMENT ON COLUMN "user_svc"."role"."id" IS '角色ID';
-COMMENT ON COLUMN "user_svc"."role"."code" IS '角色编码: super_admin/admin/editor/viewer/user';
+COMMENT ON COLUMN "user_svc"."role"."code" IS '角色编码: super_admin/admin/user';
 COMMENT ON COLUMN "user_svc"."role"."name" IS '角色名称';
 COMMENT ON COLUMN "user_svc"."role"."description" IS '角色描述';
 COMMENT ON COLUMN "user_svc"."role"."is_system" IS '是否系统内置角色';
@@ -250,9 +250,7 @@ COMMENT ON TABLE "user_svc"."role" IS '角色定义表';
 -- ----------------------------
 INSERT INTO "user_svc"."role" VALUES (1, 'super_admin', '超级管理员', '拥有全部系统权限', 't', '2026-08-29 14:06:00.78449', '2026-08-29 14:06:00.78449');
 INSERT INTO "user_svc"."role" VALUES (2, 'admin', '管理员', '管理用户和内容', 't', '2026-08-29 14:06:00.78449', '2026-08-29 14:06:00.78449');
-INSERT INTO "user_svc"."role" VALUES (3, 'editor', '编辑', '审核和编辑内容', 't', '2026-08-29 14:06:00.78449', '2026-08-29 14:06:00.78449');
-INSERT INTO "user_svc"."role" VALUES (4, 'viewer', '查看者', '仅查看权限', 't', '2026-08-29 14:06:00.78449', '2026-08-29 14:06:00.78449');
-INSERT INTO "user_svc"."role" VALUES (5, 'user', '普通用户', '可创作和发布', 't', '2026-08-29 14:06:00.78449', '2026-08-29 14:06:00.78449');
+INSERT INTO "user_svc"."role" VALUES (3, 'user', '普通用户', '可创作和发布', 't', '2026-08-29 14:06:00.78449', '2026-08-29 14:06:00.78449');
 
 -- ----------------------------
 -- Table structure for role_permission
@@ -289,14 +287,14 @@ INSERT INTO "user_svc"."role_permission" VALUES (1, 14, '2026-08-29 14:06:00.787
 INSERT INTO "user_svc"."role_permission" VALUES (1, 15, '2026-08-29 14:06:00.787515');
 INSERT INTO "user_svc"."role_permission" VALUES (1, 16, '2026-08-29 14:06:00.787515');
 INSERT INTO "user_svc"."role_permission" VALUES (1, 17, '2026-08-29 14:06:00.787515');
-INSERT INTO "user_svc"."role_permission" VALUES (5, 5, '2026-08-29 14:06:00.788852');
-INSERT INTO "user_svc"."role_permission" VALUES (5, 6, '2026-08-29 14:06:00.788852');
-INSERT INTO "user_svc"."role_permission" VALUES (5, 8, '2026-08-29 14:06:00.788852');
-INSERT INTO "user_svc"."role_permission" VALUES (5, 10, '2026-08-29 14:06:00.788852');
-INSERT INTO "user_svc"."role_permission" VALUES (5, 11, '2026-08-29 14:06:00.788852');
-INSERT INTO "user_svc"."role_permission" VALUES (5, 12, '2026-08-29 14:06:00.788852');
-INSERT INTO "user_svc"."role_permission" VALUES (5, 13, '2026-08-29 14:06:00.788852');
-INSERT INTO "user_svc"."role_permission" VALUES (5, 16, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (3, 5, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (3, 6, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (3, 8, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (3, 10, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (3, 11, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (3, 12, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (3, 13, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (3, 16, '2026-08-29 14:06:00.788852');
 
 -- ----------------------------
 -- Table structure for session
@@ -399,7 +397,7 @@ COMMENT ON TABLE "user_svc"."user_role" IS '用户-角色关联表';
 -- Records of user_role
 -- ----------------------------
 INSERT INTO "user_svc"."user_role" VALUES ('d1a2b3c4-1234-5678-90ab-cdef12345678', 1, NULL, '2026-08-29 14:06:00.792642');
-INSERT INTO "user_svc"."user_role" VALUES ('e2b3c4d5-2345-6789-01bc-def234567890', 5, NULL, '2026-08-29 14:06:00.794102');
+INSERT INTO "user_svc"."user_role" VALUES ('e2b3c4d5-2345-6789-01bc-def234567890', 3, NULL, '2026-08-29 14:06:00.794102');
 
 -- ----------------------------
 -- Function structure for trigger_set_updated_at

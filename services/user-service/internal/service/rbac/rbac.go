@@ -26,6 +26,20 @@ var (
 	ErrPermissionNotFound = repository.ErrPermissionNotFound
 )
 
+// 内置角色编码。
+//
+// 角色与权限数据一律由数据库维护（见 services/user-service/database/user_svc.sql），
+// 代码内不做任何种子写入，仅保留「注册默认角色」等必要的角色编码常量。
+// 需要新增角色或调整权限时，直接在数据库中维护，或通过管理后台接口创建。
+const (
+	// RoleSuperAdmin 超级管理员。
+	RoleSuperAdmin = "super_admin"
+	// RoleAdmin 管理员。
+	RoleAdmin = "admin"
+	// RoleUser 默认注册用户，注册与第三方登录自动授予该角色。
+	RoleUser = "user"
+)
+
 // Service RBAC 业务服务。
 type Service struct {
 	repo     repository.RBACRepository
