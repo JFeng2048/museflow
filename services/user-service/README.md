@@ -43,8 +43,8 @@ database/                    PostgreSQL DDL 与迁移脚本
 ### 关键设计
 
 - **双令牌认证**：access token（默认 1h，响应体返回） + refresh token（默认 30d，HttpOnly Cookie）。refresh 白名单存 Redis，登出即吊销；access 进入黑名单。
-- **两步验证（TOTP）**：基于 RFC 6238，开启后登录第一步返回 `mfa_ticket`，第二步用 TOTP/`VerifyEmailCode` 换取令牌；提供一次性恢复码。
-- **邮箱验证码**：场景化（register/verify/login/reset），Redis 键前缀隔离 + `SetNX` 重发冷却；注册校验通过后标记 `email_verified`。
+- **两步验证（TOTP）**：基于 RFC 6238，开启后登录第一步返回 `mfa_ticket`，第二步用 TOTP 换取令牌；提供一次性恢复码。
+- **邮箱验证码**：场景化（register/login/reset_password/change_email），Redis 键前缀隔离 + `SetNX` 重发冷却；注册校验通过后标记 `email_verified`；修改邮箱走 `change_email` 场景。
 - **邮箱免密登录**：`LoginWithCode` 复用双令牌签发，兼容 2FA。
 - **RBAC 缓存**：权限查询结果缓存至 Redis，TTL 与 refresh token 一致（7 天），降低库压力。
 - **防账号枚举**：密码/验证码登录对未知邮箱返回与错误凭证一致的统一错误。
@@ -90,7 +90,7 @@ go vet ./...
 
 ## 接口概览（gRPC）
 
-注册 `Register`、登录 `Login`、刷新 `RefreshToken`、登出 `Logout`、改密 `ChangePassword`、资料更新 `UpdateProfile`、双因子 `EnableMFA`/`VerifyMFA`/`DisableMFA`/`GenerateRecoveryCodes`/`RegenerateRecoveryCodes`、邮箱 `SendVerifyCode`/`VerifyEmail`/`LoginWithCode`、会话 `ListSessions`/`RevokeSession`、后台 `ListUsers`/`AssignRole` 等，完整契约见 `proto/user/user.proto`。
+注册 `Register`、登录 `Login`、刷新 `RefreshToken`、登出 `Logout`、改密 `ChangePassword`、资料更新 `UpdateProfile`、双因子 `EnableMFA`/`VerifyMFA`/`DisableMFA`/`GenerateRecoveryCodes`/`RegenerateRecoveryCodes`、邮箱 `SendVerifyCode`/`LoginWithCode`/`ChangeEmail`、会话 `ListSessions`/`RevokeSession`、后台 `ListUsers`/`AssignRole` 等，完整契约见 `proto/user/user.proto`。
 
 ## 测试
 

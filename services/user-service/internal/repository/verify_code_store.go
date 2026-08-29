@@ -16,12 +16,16 @@ const (
 	registerCodePrefix = "email:verify:code:"
 	// loginCodePrefix 验证码登录验证码：email:login:code:{email} -> 验证码
 	loginCodePrefix = "email:login:code:"
+	// changeEmailCodePrefix 修改邮箱验证码：email:change:code:{email} -> 验证码
+	changeEmailCodePrefix = "email:change:code:"
 	// resetCodeLimitPrefix 发送频率限制：pwd:reset:limit:{email} -> 1
 	resetCodeLimitPrefix = "pwd:reset:limit:"
 	// registerCodeLimitPrefix 注册验证码发送频率限制
 	registerCodeLimitPrefix = "email:verify:limit:"
 	// loginCodeLimitPrefix 验证码登录发送频率限制
 	loginCodeLimitPrefix = "email:login:limit:"
+	// changeEmailLimitPrefix 修改邮箱验证码发送频率限制
+	changeEmailLimitPrefix = "email:change:limit:"
 )
 
 // codePrefixForScene 根据场景返回验证码键前缀。
@@ -31,6 +35,8 @@ func codePrefixForScene(scene string) string {
 		return registerCodePrefix
 	case "login":
 		return loginCodePrefix
+	case "change_email":
+		return changeEmailCodePrefix
 	default:
 		return resetCodePrefix
 	}
@@ -43,6 +49,8 @@ func limitPrefixForScene(scene string) string {
 		return registerCodeLimitPrefix
 	case "login":
 		return loginCodeLimitPrefix
+	case "change_email":
+		return changeEmailLimitPrefix
 	default:
 		return resetCodeLimitPrefix
 	}

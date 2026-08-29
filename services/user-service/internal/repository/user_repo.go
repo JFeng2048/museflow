@@ -50,6 +50,8 @@ type UserRepository interface {
 	UpdateRecoveryCodes(ctx context.Context, id uuid.UUID, recoveryCodes []string) error
 	// SetEmailVerified 设置邮箱是否已验证。
 	SetEmailVerified(ctx context.Context, id uuid.UUID, verified bool) error
+	// UpdateEmail 修改账号邮箱（同时标记为已验证）。
+	UpdateEmail(ctx context.Context, id uuid.UUID, email string) error
 	// ListUsers 分页查询用户（支持关键字与状态过滤、排序）。
 	ListUsers(ctx context.Context, keyword string, status int16, orderBy string, desc bool, offset, limit int) ([]model.User, error)
 	// CountUsers 统计用户总数（与 ListUsers 过滤条件一致）。
@@ -245,6 +247,17 @@ func (r *userRepository) SetEmailVerified(ctx context.Context, id uuid.UUID, ver
 		Model(&model.User{}).
 		Where("uuid = ?", id).
 		Update("email_verified", verified).Error
+}
+
+// UpdateEmail 修改账号邮箱（同时标记为已验证）。
+func (r *userRepository) UpdateEmail(ctx context.Context, id uuid.UUID, email string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(map[string]interface{}{
+			"email":          email,
+			"email_verified": true,
+		}).Error
 }
 
 // ListUsers 分页查询用户，支持关键字（邮箱 / 昵称）与状态过滤。

@@ -31,6 +31,7 @@ var (
 	ErrAccountLocked      = errors.New("账号已锁定，请稍后再试")
 	ErrTokenInvalid       = errors.New("令牌无效或已失效")
 	ErrDeviceMismatch     = errors.New("设备校验失败")
+	ErrEmailAlreadyUsed   = errors.New("该邮箱已被其他账号使用，请换一个邮箱")
 )
 
 // bcrypt 最长只处理 72 字节，超长部分会被静默截断，这里显式拒绝以避免安全误解。
@@ -479,6 +480,10 @@ func emailPurpose(scene string) string {
 		return "注册 MuseFlow 账号"
 	case "login":
 		return "登录 MuseFlow 账号"
+	case "reset_password":
+		return "重置 MuseFlow 账号密码"
+	case "change_email":
+		return "修改 MuseFlow 账号邮箱"
 	default:
 		return "验证 MuseFlow 邮箱"
 	}
@@ -486,14 +491,14 @@ func emailPurpose(scene string) string {
 
 // SendVerifyCode 发送邮箱验证码。
 //
-// scene 取值：register（注册校验）/ login（验证码登录）/ verify（补验证邮箱）。
+// scene 取值：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）。
 // 重发冷却内返回 ErrResendTooSoon；邮件发送失败时降级为日志模式（便于联调）。
 func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) error {
 	email = normalizeEmail(email)
 	if email == "" {
 		return fmt.Errorf("邮箱不能为空")
 	}
-	if scene != "register" && scene != "login" && scene != "verify" {
+	if scene != "register" && scene != "login" && scene != "reset_password" && scene != "change_email" {
 		return fmt.Errorf("不支持的验证码场景: %s", scene)
 	}
 
@@ -516,7 +521,7 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) e
 	body := notify.VerifyCodeBody(emailPurpose(scene), code, s.emailCfg.CodeTTL)
 	if err := s.mailer.Send(email, "MuseFlow 邮箱验证码", body); err != nil {
 		// 降级：记录日志但不阻断流程，便于本地无 SMTP 联调
-		logger.WarnContext(ctx, "发送邮箱验证码失败，已降级为日志模式", "email", email, logger.Err(err))
+		logger.WarnContext(ctx, "邮箱验证码发送失败，已降级为日志模式（验证码已打印至下方日志，生产环境请配置 SMTP）", "email", email, logger.Err(err))
 	}
 
 	if s.audit != nil {
@@ -529,10 +534,42 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) e
 	return nil
 }
 
-// VerifyEmail 校验邮箱验证码并标记邮箱已验证（兼容历史未验证账号）。
-func (s *AuthService) VerifyEmail(ctx context.Context, email, code string) error {
-	email = normalizeEmail(email)
-	saved, err := s.codes.GetCode(ctx, "verify", email)
+// ChangeEmail 校验新邮箱验证码并将账号邮箱改为新邮箱。
+//
+// 用于已登录用户修改邮箱：先调用 SendVerifyCode{scene:"change_email"} 向新邮箱发码，
+// 再携带 new_email + code 调用本方法。校验通过后更新邮箱并标记为已验证。
+// 若 new_email 已被其他账号占用，返回 ErrEmailAlreadyUsed。
+func (s *AuthService) ChangeEmail(ctx context.Context, userUUID uuid.UUID, newEmail, code string) error {
+	newEmail = normalizeEmail(newEmail)
+	if newEmail == "" {
+		return fmt.Errorf("新邮箱不能为空")
+	}
+
+	// 防账号枚举：先确认当前用户存在
+	u, err := s.users.FindByUUID(ctx, userUUID)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("查询用户失败: %w", err)
+	}
+	// 新邮箱与当前邮箱相同则无需变更
+	if u.Email == newEmail {
+		if err := s.codes.DeleteCode(ctx, "change_email", newEmail); err != nil {
+			logger.WarnContext(ctx, "删除已用邮箱验证码失败", "email", newEmail, logger.Err(err))
+		}
+		return nil
+	}
+	// 新邮箱不可被其他账号占用
+	used, err := s.users.ExistsByEmail(ctx, newEmail)
+	if err != nil {
+		return fmt.Errorf("检查邮箱占用失败: %w", err)
+	}
+	if used {
+		return ErrEmailAlreadyUsed
+	}
+
+	saved, err := s.codes.GetCode(ctx, "change_email", newEmail)
 	if err != nil {
 		return fmt.Errorf("读取邮箱验证码失败: %w", err)
 	}
@@ -542,30 +579,21 @@ func (s *AuthService) VerifyEmail(ctx context.Context, email, code string) error
 	if !strings.EqualFold(saved, strings.TrimSpace(code)) {
 		return ErrCodeMismatch
 	}
-	if err := s.codes.DeleteCode(ctx, "verify", email); err != nil {
-		logger.WarnContext(ctx, "删除已用邮箱验证码失败", "email", email, logger.Err(err))
+	if err := s.codes.DeleteCode(ctx, "change_email", newEmail); err != nil {
+		logger.WarnContext(ctx, "删除已用邮箱验证码失败", "email", newEmail, logger.Err(err))
 	}
 
-	u, err := s.users.FindByEmail(ctx, email)
-	if err != nil {
-		if errors.Is(err, repository.ErrUserNotFound) {
-			return ErrUserNotFound
-		}
-		return fmt.Errorf("查询用户失败: %w", err)
-	}
-	if u.EmailVerified {
-		return nil
-	}
-	if err := s.users.SetEmailVerified(ctx, u.UUID, true); err != nil {
-		return fmt.Errorf("更新邮箱验证状态失败: %w", err)
+	if err := s.users.UpdateEmail(ctx, userUUID, newEmail); err != nil {
+		return fmt.Errorf("更新邮箱失败: %w", err)
 	}
 
 	if s.audit != nil {
 		s.audit.Record(ctx, audit.Entry{
-			UserUUID:   u.UUID.String(),
+			UserUUID:   userUUID.String(),
 			Action:     model.AuditActionEmailVerifySuccess,
 			Resource:   model.AuditResourceAuth,
-			ResourceID: u.UUID.String(),
+			ResourceID: userUUID.String(),
+			Detail:     "change_email",
 		})
 	}
 	return nil

@@ -43,15 +43,18 @@ func (h *UserHandler) ChangePassword(ctx context.Context, req *userpb.ChangePass
 	return &userpb.ChangePasswordResponse{Success: true}, nil
 }
 
-// SendResetCode 发送密码重置验证码。
-//
-// 邮箱不存在时返回成功（避免账号枚举），实际不下发验证码。
-func (h *UserHandler) SendResetCode(ctx context.Context, req *userpb.SendResetCodeRequest) (*userpb.SendResetCodeResponse, error) {
-	if err := h.auth.SendResetCode(ctx, req.GetEmail()); err != nil {
-		logger.WarnContext(ctx, "发送密码重置验证码失败", "email", req.GetEmail(), logger.Err(err))
-		return nil, mapResetError(err)
+// ChangeEmail 处理修改邮箱请求（需登录）。
+func (h *UserHandler) ChangeEmail(ctx context.Context, req *userpb.ChangeEmailRequest) (*userpb.ChangeEmailResponse, error) {
+	id, err := parseUUID(req.GetUuid())
+	if err != nil {
+		return nil, mapError(err)
 	}
-	return &userpb.SendResetCodeResponse{Success: true}, nil
+	if err := h.auth.ChangeEmail(ctx, id, req.GetNewEmail(), req.GetCode()); err != nil {
+		logger.WarnContext(ctx, "修改邮箱失败", logger.UserUUID(req.GetUuid()), logger.Err(err))
+		return nil, mapError(err)
+	}
+	logger.InfoContext(ctx, "修改邮箱成功", logger.UserUUID(req.GetUuid()))
+	return &userpb.ChangeEmailResponse{Success: true}, nil
 }
 
 // ResetPassword 校验验证码并重置密码。

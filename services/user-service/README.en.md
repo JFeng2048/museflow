@@ -43,8 +43,8 @@ database/                    PostgreSQL DDL and migration scripts
 ### Key Designs
 
 - **Dual tokens**: access token (default 1h, returned in body) + refresh token (default 30d, HttpOnly Cookie). Refresh tokens live in a Redis allow-list; logout revokes them and access tokens go to a deny-list.
-- **TOTP 2FA**: RFC 6238. After enabling, login step 1 returns an `mfa_ticket`; step 2 exchanges it for tokens via TOTP/`VerifyEmailCode`. One-time recovery codes are provided.
-- **Email verification codes**: scene-aware (register/verify/login/reset) with Redis key prefixes + `SetNX` resend cooldown; register marks `email_verified` on success.
+- **TOTP 2FA**: RFC 6238. After enabling, login step 1 returns an `mfa_ticket`; step 2 exchanges it for tokens via TOTP. One-time recovery codes are provided.
+- **Email verification codes**: scene-aware (register/login/reset_password/change_email) with Redis key prefixes + `SetNX` resend cooldown; register marks `email_verified` on success; change email uses the `change_email` scene.
 - **Passwordless email login**: `LoginWithCode` reuses dual-token issuance and is compatible with 2FA.
 - **RBAC cache**: permission lookups are cached in Redis with a TTL equal to the refresh-token lifetime (7 days) to cut DB load.
 - **Anti-enumeration**: password/code login returns a unified error for unknown emails identical to wrong credentials.
@@ -90,7 +90,7 @@ Database schema is maintained by `services/user-service/database/user_svc.sql` (
 
 ## API Overview (gRPC)
 
-`Register`, `Login`, `RefreshToken`, `Logout`, `ChangePassword`, `UpdateProfile`, 2FA (`EnableMFA`/`VerifyMFA`/`DisableMFA`/`GenerateRecoveryCodes`/`RegenerateRecoveryCodes`), email (`SendVerifyCode`/`VerifyEmail`/`LoginWithCode`), sessions (`ListSessions`/`RevokeSession`), admin (`ListUsers`/`AssignRole`), etc. Full contract in `proto/user/user.proto`.
+`Register`, `Login`, `RefreshToken`, `Logout`, `ChangePassword`, `UpdateProfile`, 2FA (`EnableMFA`/`VerifyMFA`/`DisableMFA`/`GenerateRecoveryCodes`/`RegenerateRecoveryCodes`), email (`SendVerifyCode`/`LoginWithCode`/`ChangeEmail`), sessions (`ListSessions`/`RevokeSession`), admin (`ListUsers`/`AssignRole`), etc. Full contract in `proto/user/user.proto`.
 
 ## Testing
 

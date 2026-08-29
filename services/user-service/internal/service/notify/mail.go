@@ -79,7 +79,7 @@ func (s *smtpSender) Send(to, subject, body string) error {
 type logSender struct{}
 
 func (s *logSender) Send(to, subject, body string) error {
-	logger.Warn("邮件服务未配置（SMTP_HOST 为空），已降级为日志模式",
+	logger.Warn("邮件服务未配置（SMTP_HOST 为空），已降级为日志模式：验证码已打印至下方日志，请在生产环境配置 SMTP 以便正常发信",
 		"to", to, "subject", subject, "body", body)
 	return nil
 }
@@ -108,24 +108,32 @@ func ResetPasswordBody(code string, ttl time.Duration) string {
 		minutes = 1
 	}
 	return fmt.Sprintf(
-		"您正在重置 MuseFlow 账号密码。\n\n"+
+		"您好，\n\n"+
+			"我们收到了您重置 MuseFlow 账号密码的请求。请使用以下验证码完成验证：\n\n"+
 			"验证码：%s\n"+
 			"有效期：%d 分钟\n\n"+
-			"如果这不是您本人的操作，请忽略此邮件，您的密码不会发生变化。\n",
+			"为了保护您的账号安全，请勿将验证码透露给任何人。\n"+
+			"如果您没有发起此操作，请忽略本邮件，您的密码不会受到影响。\n\n"+
+			"祝您使用愉快，\n"+
+			"MuseFlow 团队",
 		code, minutes)
 }
 
-// VerifyCodeBody 构造邮箱验证码邮件正文（注册校验 / 验证码登录 / 补验证邮箱）。
-// purpose 用于区分场景，例如「注册账号」「登录账号」「验证邮箱」。
+// VerifyCodeBody 构造邮箱验证码邮件正文（注册校验 / 验证码登录 / 修改邮箱）。
+// purpose 用于区分场景，例如「注册 MuseFlow 账号」「登录 MuseFlow 账号」「修改 MuseFlow 账号邮箱」。
 func VerifyCodeBody(purpose, code string, ttl time.Duration) string {
 	minutes := int(ttl.Minutes())
 	if minutes < 1 {
 		minutes = 1
 	}
 	return fmt.Sprintf(
-		"您正在%s。\n\n"+
+		"您好，\n\n"+
+			"您正在进行%s。请使用以下验证码完成验证：\n\n"+
 			"验证码：%s\n"+
 			"有效期：%d 分钟\n\n"+
-			"如果这不是您本人的操作，请忽略此邮件。\n",
+			"为了保护您的账号安全，请勿将验证码透露给任何人。\n"+
+			"如果您没有发起此操作，请忽略本邮件。\n\n"+
+			"祝您使用愉快，\n"+
+			"MuseFlow 团队",
 		purpose, code, minutes)
 }

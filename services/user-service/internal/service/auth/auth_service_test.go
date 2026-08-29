@@ -176,6 +176,16 @@ func (r *fakeUserRepo) SetEmailVerified(_ context.Context, id uuid.UUID, verifie
 	return nil
 }
 
+func (r *fakeUserRepo) UpdateEmail(_ context.Context, id uuid.UUID, email string) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	u.Email = email
+	u.EmailVerified = true
+	return nil
+}
+
 // ---- 内存版 TokenStore ----
 
 type fakeTokenStore struct {
@@ -596,38 +606,52 @@ func TestSendVerifyCodeRejectsUnsupportedScene(t *testing.T) {
 	}
 }
 
-func TestVerifyEmailMarksAccountVerified(t *testing.T) {
+func TestChangeEmailUpdatesEmailAndVerifies(t *testing.T) {
 	svc, codes, _ := newResetTestService()
 	ctx := context.Background()
 
-	// 模拟历史未验证账号（注册流程已默认验证，这里直接落库一个未验证用户）
-	legacy := &model.User{
-		UUID:         uuid.New(),
-		Email:        "legacy@museflow.ai",
-		EmailVerified: false,
-		Nickname:     "legacy",
-		PasswordHash: new(string),
-	}
-	if err := svc.users.Create(ctx, legacy); err != nil {
-		t.Fatalf("创建未验证用户失败: %v", err)
-	}
+	// 准备一个已登录用户
+	u := registerOK(t, svc, codes, "old@museflow.ai", "oldpass1234", "n")
 
-	// 通过 verify 场景补验证
-	if err := svc.SendVerifyCode(ctx, "legacy@museflow.ai", "verify"); err != nil {
+	// 向新邮箱发送 change_email 场景验证码
+	if err := svc.SendVerifyCode(ctx, "new@museflow.ai", "change_email"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
-	code, _ := codes.GetCode(ctx, "verify", "legacy@museflow.ai")
-	if err := svc.VerifyEmail(ctx, "legacy@museflow.ai", code); err != nil {
-		t.Fatalf("验证邮箱失败: %v", err)
+	code, _ := codes.GetCode(ctx, "change_email", "new@museflow.ai")
+
+	// 校验通过后应更新邮箱并标记已验证
+	if err := svc.ChangeEmail(ctx, u.UUID, "new@museflow.ai", code); err != nil {
+		t.Fatalf("修改邮箱失败: %v", err)
 	}
-	got, _ := svc.users.FindByEmail(ctx, "legacy@museflow.ai")
+	got, _ := svc.users.FindByUUID(ctx, u.UUID)
+	if got.Email != "new@museflow.ai" {
+		t.Errorf("邮箱未更新，实际: %s", got.Email)
+	}
 	if !got.EmailVerified {
-		t.Error("邮箱验证后仍未标记已验证")
+		t.Error("修改邮箱后仍未标记已验证")
 	}
 
-	// 验证码一次性：重用应失败
-	if err := svc.VerifyEmail(ctx, "legacy@museflow.ai", code); !errors.Is(err, ErrCodeNotSent) {
+	// 验证码一次性：用同一验证码尝试改成第三个邮箱应失败（码已删除）
+	if err := svc.ChangeEmail(ctx, u.UUID, "third@museflow.ai", code); !errors.Is(err, ErrCodeNotSent) {
 		t.Errorf("验证码不应可重复使用，实际: %v", err)
+	}
+}
+
+func TestChangeEmailRejectsAlreadyUsedEmail(t *testing.T) {
+	svc, codes, _ := newResetTestService()
+	ctx := context.Background()
+
+	registerOK(t, svc, codes, "owner@museflow.ai", "oldpass1234", "n")
+	u := registerOK(t, svc, codes, "other@museflow.ai", "oldpass1234", "n")
+
+	if err := svc.SendVerifyCode(ctx, "owner@museflow.ai", "change_email"); err != nil {
+		t.Fatalf("发送验证码失败: %v", err)
+	}
+	code, _ := codes.GetCode(ctx, "change_email", "owner@museflow.ai")
+
+	// 试图把 other 的邮箱改成已被 owner 占用的邮箱 -> 拒绝
+	if err := svc.ChangeEmail(ctx, u.UUID, "owner@museflow.ai", code); !errors.Is(err, ErrEmailAlreadyUsed) {
+		t.Errorf("占用邮箱应被拒绝，实际: %v", err)
 	}
 }
 

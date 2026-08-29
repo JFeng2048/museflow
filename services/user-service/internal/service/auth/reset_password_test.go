@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
@@ -87,50 +86,12 @@ func newResetTestService() (*AuthService, *fakeCodeStore, *stubMailer) {
 
 // ---- 用例 ----
 
-func TestSendResetCodeStoresCodeAndSendsMail(t *testing.T) {
-	svc, store, mailer := newResetTestService()
-	ctx := context.Background()
-
-	registerOK(t, svc, store, "reset@museflow.ai", "oldpass1234", "n")
-
-	if err := svc.SendResetCode(ctx, "reset@museflow.ai"); err != nil {
-		t.Fatalf("发送验证码失败: %v", err)
-	}
-
-	code, _ := store.GetCode(ctx, "reset_password", "reset@museflow.ai")
-	if len(code) != 6 {
-		t.Errorf("应生成 6 位验证码，实际 %q", code)
-	}
-	if mailer.sentTo != "reset@museflow.ai" {
-		t.Errorf("收件人错误: %s", mailer.sentTo)
-	}
-	if !strings.Contains(mailer.sentBody, code) {
-		t.Errorf("邮件正文应包含验证码 %s，实际: %s", code, mailer.sentBody)
-	}
-}
-
-func TestSendResetCodeSilentlyIgnoresUnknownEmail(t *testing.T) {
-	svc, store, mailer := newResetTestService()
-	ctx := context.Background()
-
-	// 未注册的邮箱：对外返回成功（避免账号枚举），但不生成验证码
-	if err := svc.SendResetCode(ctx, "nobody@museflow.ai"); err != nil {
-		t.Fatalf("未注册邮箱应静默成功，实际: %v", err)
-	}
-	if code, _ := store.GetCode(ctx, "reset_password", "nobody@museflow.ai"); code != "" {
-		t.Errorf("未注册邮箱不应生成验证码，实际: %q", code)
-	}
-	if mailer.sentTo != "" {
-		t.Errorf("未注册邮箱不应发送邮件，实际发给: %s", mailer.sentTo)
-	}
-}
-
 func TestResetPasswordRejectsWrongCode(t *testing.T) {
 	svc, store, _ := newResetTestService()
 	ctx := context.Background()
 
 	registerOK(t, svc, store, "reset2@museflow.ai", "oldpass1234", "n")
-	if err := svc.SendResetCode(ctx, "reset2@museflow.ai"); err != nil {
+	if err := svc.SendVerifyCode(ctx, "reset2@museflow.ai", "reset_password"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
 	// 取出正确验证码后改写为错误值
@@ -160,7 +121,7 @@ func TestResetPasswordConsumesCodeAndAllowsNewLogin(t *testing.T) {
 	ctx := context.Background()
 
 	registerOK(t, svc, store, "reset4@museflow.ai", "oldpass1234", "n")
-	if err := svc.SendResetCode(ctx, "reset4@museflow.ai"); err != nil {
+	if err := svc.SendVerifyCode(ctx, "reset4@museflow.ai", "reset_password"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
 	code, _ := store.GetCode(ctx, "reset_password", "reset4@museflow.ai")
@@ -183,8 +144,7 @@ func TestResetPasswordConsumesCodeAndAllowsNewLogin(t *testing.T) {
 	}
 }
 
-func TestSendResetCodeEnforcesResendCooldown(t *testing.T) {
-	svc, _, _ := newResetTestService()
+func TestSendVerifyCodeEnforcesResendCooldown(t *testing.T) {
 	ctx := context.Background()
 
 	// 单独构造一个带冷却的服务，避免影响其他用例
@@ -197,15 +157,10 @@ func TestSendResetCodeEnforcesResendCooldown(t *testing.T) {
 		testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
 	)
 
-	codes.codes["register:cooldown@museflow.ai"] = testRegisterCode
-	if _, err := withCD.Register(ctx, "cooldown@museflow.ai", "oldpass1234", "n", testRegisterCode); err != nil {
-		t.Fatalf("注册失败: %v", err)
-	}
-	if err := withCD.SendResetCode(ctx, "cooldown@museflow.ai"); err != nil {
+	if err := withCD.SendVerifyCode(ctx, "cooldown@museflow.ai", "reset_password"); err != nil {
 		t.Fatalf("首次发送失败: %v", err)
 	}
-	if err := withCD.SendResetCode(ctx, "cooldown@museflow.ai"); !errors.Is(err, ErrResendTooSoon) {
+	if err := withCD.SendVerifyCode(ctx, "cooldown@museflow.ai", "reset_password"); !errors.Is(err, ErrResendTooSoon) {
 		t.Errorf("冷却期内重复发送应被拒绝，实际: %v", err)
 	}
-	_ = svc
 }

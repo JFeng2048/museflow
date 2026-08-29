@@ -106,14 +106,6 @@ func (h *UserHandler) SendVerifyCode(ctx context.Context, req *userpb.SendVerify
 	return &userpb.SendVerifyCodeResponse{}, nil
 }
 
-// VerifyEmail 校验邮箱验证码并标记已验证。
-func (h *UserHandler) VerifyEmail(ctx context.Context, req *userpb.VerifyEmailRequest) (*userpb.VerifyEmailResponse, error) {
-	if err := h.auth.VerifyEmail(ctx, req.GetEmail(), req.GetCode()); err != nil {
-		return nil, mapError(err)
-	}
-	return &userpb.VerifyEmailResponse{}, nil
-}
-
 // LoginWithCode 邮箱验证码登录（免密）。
 func (h *UserHandler) LoginWithCode(ctx context.Context, req *userpb.LoginWithCodeRequest) (*userpb.LoginResponse, error) {
 	logger.InfoContext(ctx, "收到邮箱验证码登录请求", "email", req.GetEmail())
@@ -238,7 +230,7 @@ func toUserInfo(u *model.User) *userpb.UserInfo {
 // mapError 将业务错误映射为 gRPC status，便于网关转换为 HTTP 状态码。
 func mapError(err error) error {
 	switch {
-	case errors.Is(err, auth.ErrEmailExists):
+	case errors.Is(err, auth.ErrEmailExists), errors.Is(err, auth.ErrEmailAlreadyUsed):
 		return status.Error(codes.AlreadyExists, err.Error())
 	case errors.Is(err, auth.ErrInvalidCredentials):
 		return status.Error(codes.Unauthenticated, err.Error())
