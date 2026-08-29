@@ -78,6 +78,19 @@ func (s *Service) ClearUserCache(ctx context.Context, userUUID uuid.UUID) error 
 	return s.store.ClearUserPermissions(ctx, userUUID.String())
 }
 
+// GetUserRoleCodes 返回用户拥有的角色编码列表。
+func (s *Service) GetUserRoleCodes(ctx context.Context, userUUID uuid.UUID) ([]string, error) {
+	return s.repo.GetUserRoleCodes(ctx, userUUID)
+}
+
+// RemoveUserRole 移除用户角色并清理其权限缓存。
+func (s *Service) RemoveUserRole(ctx context.Context, userUUID uuid.UUID, roleID int16) error {
+	if err := s.repo.RemoveUserRole(ctx, userUUID, roleID); err != nil {
+		return err
+	}
+	return s.ClearUserCache(ctx, userUUID)
+}
+
 // AssignRole 为用户分配角色，并清理其权限缓存（下次访问重新加载）。
 func (s *Service) AssignRole(ctx context.Context, userUUID uuid.UUID, roleCode string, grantedBy uuid.UUID) error {
 	if err := s.repo.AssignRole(ctx, userUUID, roleCode, grantedBy); err != nil {

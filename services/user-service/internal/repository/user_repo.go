@@ -33,6 +33,16 @@ type UserRepository interface {
 	IncrementLoginFails(ctx context.Context, email string) (*model.User, error)
 	// ResetLoginFails 重置登录失败计数与锁定时间（登录成功时调用）。
 	ResetLoginFails(ctx context.Context, id uuid.UUID) error
+	// UpdateProfile 更新昵称 / 头像 / 简介（仅更新非空字段）。
+	UpdateProfile(ctx context.Context, id uuid.UUID, nickname, avatarURL, bio string) error
+	// UpdatePasswordHash 更新密码哈希。
+	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string) error
+	// UpdateStatus 更新账号状态（冻结 / 解冻 / 注销）。
+	UpdateStatus(ctx context.Context, id uuid.UUID, status int16) error
+	// ListUsers 分页查询用户（支持关键字与状态过滤、排序）。
+	ListUsers(ctx context.Context, keyword string, status int16, orderBy string, desc bool, offset, limit int) ([]model.User, error)
+	// CountUsers 统计用户总数（与 ListUsers 过滤条件一致）。
+	CountUsers(ctx context.Context, keyword string, status int16) (int64, error)
 }
 
 type userRepository struct {
@@ -140,4 +150,95 @@ func (r *userRepository) ResetLoginFails(ctx context.Context, id uuid.UUID) erro
 			"login_fail_count": 0,
 			"locked_until":     nil,
 		}).Error
+}
+
+// UpdateProfile 更新昵称 / 头像 / 简介，仅更新非空字段。
+func (r *userRepository) UpdateProfile(ctx context.Context, id uuid.UUID, nickname, avatarURL, bio string) error {
+	updates := map[string]any{}
+	if nickname != "" {
+		updates["nickname"] = nickname
+	}
+	if avatarURL != "" {
+		updates["avatar_url"] = avatarURL
+	}
+	if bio != "" {
+		updates["bio"] = bio
+	}
+	if len(updates) == 0 {
+		return nil
+	}
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(updates).Error
+}
+
+// UpdatePasswordHash 更新密码哈希。
+func (r *userRepository) UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(map[string]any{"password_hash": hash}).Error
+}
+
+// UpdateStatus 更新账号状态。
+func (r *userRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status int16) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(map[string]any{"status": status}).Error
+}
+
+// ListUsers 分页查询用户，支持关键字（邮箱 / 昵称）与状态过滤。
+func (r *userRepository) ListUsers(ctx context.Context, keyword string, status int16, orderBy string, desc bool, offset, limit int) ([]model.User, error) {
+	q := r.db.WithContext(ctx).Model(&model.User{})
+	q = applyUserFilters(q, keyword, status)
+
+	// 排序字段白名单，避免 SQL 注入
+	col, ok := userSortColumns[orderBy]
+	if !ok {
+		col = "created_at"
+	}
+	order := col + " ASC"
+	if desc {
+		order = col + " DESC"
+	}
+
+	var users []model.User
+	if err := q.Order(order).Offset(offset).Limit(limit).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+// CountUsers 统计符合过滤条件的用户总数。
+func (r *userRepository) CountUsers(ctx context.Context, keyword string, status int16) (int64, error) {
+	var total int64
+	q := r.db.WithContext(ctx).Model(&model.User{})
+	q = applyUserFilters(q, keyword, status)
+	if err := q.Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+// userSortColumns 允许的排序字段白名单（前端传值 -> 数据库列名）。
+var userSortColumns = map[string]string{
+	"created_at": "created_at",
+	"updated_at": "updated_at",
+	"email":      "email",
+	"nickname":   "nickname",
+	"status":     "status",
+	"":           "created_at",
+}
+
+func applyUserFilters(q *gorm.DB, keyword string, status int16) *gorm.DB {
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		q = q.Where("email ILIKE ? OR nickname ILIKE ?", like, like)
+	}
+	if status > 0 {
+		q = q.Where("status = ?", status)
+	}
+	return q
 }

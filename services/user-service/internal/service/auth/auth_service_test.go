@@ -64,6 +64,11 @@ func (r *fakeUserRepo) IncrementLoginFails(_ context.Context, email string) (*mo
 		return nil, repository.ErrUserNotFound
 	}
 	u.LoginFailCount++
+	// 与真实仓储一致：达到 5 次即锁定 15 分钟
+	if u.LoginFailCount >= 5 {
+		lu := time.Now().Add(15 * time.Minute)
+		u.LockedUntil = &lu
+	}
 	return u, nil
 }
 
@@ -73,6 +78,53 @@ func (r *fakeUserRepo) ResetLoginFails(_ context.Context, id uuid.UUID) error {
 		u.LockedUntil = nil
 	}
 	return nil
+}
+
+func (r *fakeUserRepo) UpdateProfile(_ context.Context, id uuid.UUID, nickname, avatarURL, bio string) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	if nickname != "" {
+		u.Nickname = nickname
+	}
+	if avatarURL != "" {
+		u.AvatarURL = &avatarURL
+	}
+	if bio != "" {
+		u.Bio = &bio
+	}
+	return nil
+}
+
+func (r *fakeUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash string) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	u.PasswordHash = &hash
+	return nil
+}
+
+func (r *fakeUserRepo) UpdateStatus(_ context.Context, id uuid.UUID, status int16) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	u.Status = status
+	return nil
+}
+
+func (r *fakeUserRepo) ListUsers(_ context.Context, _ string, _ int16, _ string, _ bool, _, _ int) ([]model.User, error) {
+	out := make([]model.User, 0, len(r.byUUID))
+	for _, u := range r.byUUID {
+		out = append(out, *u)
+	}
+	return out, nil
+}
+
+func (r *fakeUserRepo) CountUsers(_ context.Context, _ string, _ int16) (int64, error) {
+	return int64(len(r.byUUID)), nil
 }
 
 // ---- 内存版 TokenStore ----
@@ -146,6 +198,10 @@ func (s *fakeTokenStore) SetUserPermissions(_ context.Context, userID string, _ 
 
 func (s *fakeTokenStore) ClearUserPermissions(_ context.Context, userID string) error {
 	return nil
+}
+
+func (s *fakeTokenStore) ListUserTokens(_ context.Context, userID string) ([]repository.TokenMeta, error) {
+	return s.userTokens[userID], nil
 }
 
 // ---- 测试辅助 ----
@@ -338,5 +394,111 @@ func TestExpiredAccessTokenIsRejected(t *testing.T) {
 
 	if _, err := svc.ValidateAccess(context.Background(), tokenStr); !errors.Is(err, ErrTokenInvalid) {
 		t.Errorf("过期令牌未被拒绝: %v", err)
+	}
+}
+
+func TestUpdateProfileChangesProvidedFieldsOnly(t *testing.T) {
+	svc, _ := newTestService()
+	ctx := context.Background()
+
+	u, err := svc.Register(ctx, "profile@museflow.ai", "pw12345678", "原始昵称")
+	if err != nil {
+		t.Fatalf("注册失败: %v", err)
+	}
+
+	// 只传昵称，头像与简介应保持为空（不覆盖）
+	got, err := svc.UpdateProfile(ctx, u.UUID.String(), "新昵称", "", "")
+	if err != nil {
+		t.Fatalf("更新资料失败: %v", err)
+	}
+	if got.Nickname != "新昵称" {
+		t.Errorf("昵称未更新: %s", got.Nickname)
+	}
+	if got.AvatarURL != nil {
+		t.Errorf("头像不应被空值覆盖: %v", got.AvatarURL)
+	}
+}
+
+func TestChangePasswordRequiresCorrectOldPassword(t *testing.T) {
+	svc, _ := newTestService()
+	ctx := context.Background()
+
+	u, err := svc.Register(ctx, "pwd@museflow.ai", "oldpass1234", "n")
+	if err != nil {
+		t.Fatalf("注册失败: %v", err)
+	}
+
+	// 旧密码错误 -> 拒绝
+	if err := svc.ChangePassword(ctx, u.UUID.String(), "wrong-old", "newpass5678"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("旧密码错误未被拒绝: %v", err)
+	}
+
+	// 旧密码正确 -> 修改成功，新密码可登录
+	if err := svc.ChangePassword(ctx, u.UUID.String(), "oldpass1234", "newpass5678"); err != nil {
+		t.Fatalf("修改密码失败: %v", err)
+	}
+	if _, _, err := svc.Login(ctx, "pwd@museflow.ai", "newpass5678", testDevice()); err != nil {
+		t.Errorf("新密码无法登录: %v", err)
+	}
+	// 旧密码应失效
+	if _, _, err := svc.Login(ctx, "pwd@museflow.ai", "oldpass1234", testDevice()); !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("旧密码仍可登录: %v", err)
+	}
+}
+
+func TestLoginLocksAccountAfterMaxFailures(t *testing.T) {
+	repo := newFakeUserRepo()
+	store := newFakeTokenStore()
+	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour)
+	svc := NewAuthService(repo, store, tm, nil, bcrypt.MinCost)
+	ctx := context.Background()
+
+	if _, err := svc.Register(ctx, "lock@museflow.ai", "pw12345678", "n"); err != nil {
+		t.Fatalf("注册失败: %v", err)
+	}
+
+	// 连续失败（repository 层阈值为 5 次）
+	for i := 0; i < 5; i++ {
+		if _, _, err := svc.Login(ctx, "lock@museflow.ai", "bad-password", testDevice()); !errors.Is(err, ErrInvalidCredentials) {
+			t.Fatalf("第 %d 次登录失败应返回凭证错误，实际: %v", i+1, err)
+		}
+	}
+
+	// 达到阈值后锁定：即使密码正确也应拒绝
+	if _, _, err := svc.Login(ctx, "lock@museflow.ai", "pw12345678", testDevice()); err == nil {
+		t.Errorf("账号锁定后仍可登录")
+	}
+}
+
+func TestListSessionsReturnsActiveDevices(t *testing.T) {
+	svc, _ := newTestService()
+	ctx := context.Background()
+
+	u, err := svc.Register(ctx, "sess@museflow.ai", "pw12345678", "n")
+	if err != nil {
+		t.Fatalf("注册失败: %v", err)
+	}
+	if _, _, err := svc.Login(ctx, "sess@museflow.ai", "pw12345678", testDevice()); err != nil {
+		t.Fatalf("登录失败: %v", err)
+	}
+
+	sessions, err := svc.ListSessions(ctx, u.UUID.String())
+	if err != nil {
+		t.Fatalf("查询会话失败: %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("期望 1 个会话，实际 %d", len(sessions))
+	}
+	if sessions[0].DeviceID != testDevice().DeviceID {
+		t.Errorf("会话设备 ID 不匹配: %s", sessions[0].DeviceID)
+	}
+
+	// 吊销后可再次登录（会话清空）
+	if err := svc.RevokeSession(ctx, u.UUID.String(), sessions[0].TokenID); err != nil {
+		t.Fatalf("吊销会话失败: %v", err)
+	}
+	left, _ := svc.ListSessions(ctx, u.UUID.String())
+	if len(left) != 0 {
+		t.Errorf("吊销后仍残留会话: %d", len(left))
 	}
 }

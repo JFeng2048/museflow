@@ -13,6 +13,7 @@ import (
 	userpb "github.com/museflow/proto/user"
 	"github.com/museflow/pkg/logger"
 	"github.com/museflow/user-service/internal/model"
+	"github.com/museflow/user-service/internal/service/admin"
 	"github.com/museflow/user-service/internal/service/auth"
 	"github.com/museflow/user-service/internal/service/dto"
 )
@@ -20,12 +21,13 @@ import (
 // UserHandler gRPC 处理器。
 type UserHandler struct {
 	userpb.UnimplementedUserServiceServer
-	auth *auth.AuthService
+	auth  *auth.AuthService
+	admin *admin.Service
 }
 
 // NewUserHandler 构造 gRPC 处理器。
-func NewUserHandler(a *auth.AuthService) *UserHandler {
-	return &UserHandler{auth: a}
+func NewUserHandler(a *auth.AuthService, adm *admin.Service) *UserHandler {
+	return &UserHandler{auth: a, admin: adm}
 }
 
 // Register 用户注册。

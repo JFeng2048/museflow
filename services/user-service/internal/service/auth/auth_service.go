@@ -329,6 +329,74 @@ func (s *AuthService) GetProfile(ctx context.Context, userUUID string) (*model.U
 	return u, nil
 }
 
+// UpdateProfile 更新用户个人信息（昵称 / 头像 / 简介）。
+func (s *AuthService) UpdateProfile(ctx context.Context, userUUID, nickname, avatarURL, bio string) (*model.User, error) {
+	id, err := uuid.Parse(userUUID)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+	if err := s.users.UpdateProfile(ctx, id, nickname, avatarURL, bio); err != nil {
+		return nil, fmt.Errorf("更新用户信息失败: %w", err)
+	}
+	return s.users.FindByUUID(ctx, id)
+}
+
+// ChangePassword 修改密码：校验旧密码后写入新密码哈希，并清理权限缓存。
+// 改密后清理缓存可确保下次访问按最新权限生效。
+func (s *AuthService) ChangePassword(ctx context.Context, userUUID, oldPassword, newPassword string) error {
+	id, err := uuid.Parse(userUUID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+	if len(newPassword) > maxPasswordBytes {
+		return fmt.Errorf("密码长度不能超过 %d 字节", maxPasswordBytes)
+	}
+
+	u, err := s.users.FindByUUID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("查询用户失败: %w", err)
+	}
+	if u.PasswordHash == nil || *u.PasswordHash == "" {
+		return ErrInvalidCredentials
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(*u.PasswordHash), []byte(oldPassword)); err != nil {
+		return ErrInvalidCredentials
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), s.bcryptCost)
+	if err != nil {
+		return fmt.Errorf("密码加密失败: %w", err)
+	}
+	if err := s.users.UpdatePasswordHash(ctx, id, string(hash)); err != nil {
+		return fmt.Errorf("更新密码失败: %w", err)
+	}
+
+	// 改密后清理权限缓存
+	if err := s.ClearUserCache(ctx, userUUID); err != nil {
+		logger.WarnContext(ctx, "改密后清理权限缓存失败", logger.UserUUID(userUUID), logger.Err(err))
+	}
+	return nil
+}
+
+// ListSessions 返回用户当前活跃会话列表。
+func (s *AuthService) ListSessions(ctx context.Context, userUUID string) ([]repository.TokenMeta, error) {
+	return s.tokens.ListUserTokens(ctx, userUUID)
+}
+
+// RevokeSession 吊销指定会话：删除 refresh 白名单并移除会话记录。
+func (s *AuthService) RevokeSession(ctx context.Context, userUUID, tokenID string) error {
+	if err := s.tokens.DeleteRefreshValid(ctx, tokenID); err != nil {
+		return fmt.Errorf("吊销刷新令牌失败: %w", err)
+	}
+	if err := s.tokens.RemoveUserToken(ctx, userUUID, tokenID); err != nil {
+		logger.WarnContext(ctx, "移除会话记录失败", logger.UserUUID(userUUID), logger.Err(err))
+	}
+	return nil
+}
+
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
 }

@@ -41,6 +41,10 @@ type RBACRepository interface {
 	DeleteRole(ctx context.Context, roleID int16) error
 	// ListRoleUserUUIDs 返回拥有指定角色的全部用户 UUID（用于权限变更后批量清缓存）。
 	ListRoleUserUUIDs(ctx context.Context, roleID int16) ([]uuid.UUID, error)
+	// GetUserRoleCodes 返回用户拥有的角色编码列表。
+	GetUserRoleCodes(ctx context.Context, userUUID uuid.UUID) ([]string, error)
+	// RemoveUserRole 移除用户的指定角色。
+	RemoveUserRole(ctx context.Context, userUUID uuid.UUID, roleID int16) error
 }
 
 type rbacRepository struct {
@@ -216,4 +220,26 @@ func (r *rbacRepository) ListRoleUserUUIDs(ctx context.Context, roleID int16) ([
 		return nil, err
 	}
 	return ids, nil
+}
+
+// GetUserRoleCodes 返回用户拥有的角色编码列表。
+func (r *rbacRepository) GetUserRoleCodes(ctx context.Context, userUUID uuid.UUID) ([]string, error) {
+	var codes []string
+	err := r.db.WithContext(ctx).
+		Table("user_svc.user_roles ur").
+		Select("r.code").
+		Joins("JOIN user_svc.roles r ON r.id = ur.role_id").
+		Where("ur.user_uuid = ?", userUUID).
+		Pluck("r.code", &codes).Error
+	if err != nil {
+		return nil, err
+	}
+	return codes, nil
+}
+
+// RemoveUserRole 移除用户的指定角色。
+func (r *rbacRepository) RemoveUserRole(ctx context.Context, userUUID uuid.UUID, roleID int16) error {
+	return r.db.WithContext(ctx).
+		Where("user_uuid = ? AND role_id = ?", userUUID, roleID).
+		Delete(&model.UserRole{}).Error
 }

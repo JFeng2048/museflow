@@ -50,6 +50,8 @@ type TokenStore interface {
 	RemoveUserToken(ctx context.Context, userID, tokenID string) error
 	// TouchUserToken 更新指定 tokenID 的最后刷新时间
 	TouchUserToken(ctx context.Context, userID, tokenID string, ttl time.Duration) error
+	// ListUserTokens 返回用户当前活跃会话列表
+	ListUserTokens(ctx context.Context, userID string) ([]TokenMeta, error)
 
 	// GetUserPermissions 读取用户权限缓存（perm:user:{userID}），未命中返回空切片。
 	// 注意：缓存不可用（Redis 故障）时返回 (nil, nil) 交由上层降级查库。
@@ -164,6 +166,11 @@ func (s *redisTokenStore) TouchUserToken(ctx context.Context, userID, tokenID st
 	}
 
 	return s.saveUserTokens(ctx, userID, metas, ttl)
+}
+
+// ListUserTokens 返回用户当前活跃会话列表。
+func (s *redisTokenStore) ListUserTokens(ctx context.Context, userID string) ([]TokenMeta, error) {
+	return s.loadUserTokens(ctx, userID)
 }
 
 func (s *redisTokenStore) loadUserTokens(ctx context.Context, userID string) ([]TokenMeta, error) {
