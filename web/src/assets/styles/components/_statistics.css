@@ -8,19 +8,19 @@
 .stats-eyebrow {
   margin: 0;
   font-size: 13px;
-  color: var(--brand, #5b8def);
+  color: var(--c-amber-deep);
   letter-spacing: 0.04em;
 }
 .stats-title {
   margin: 4px 0 2px;
   font-size: 27px;
   font-weight: 650;
-  color: var(--ink, #2a2620);
+  color: var(--c-ink);
 }
 .stats-sub {
   margin: 0;
   font-size: 14px;
-  color: var(--ink-muted, #8b8478);
+  color: var(--c-ink-muted);
 }
 .stat-card {
   display: flex;
@@ -28,9 +28,9 @@
   gap: 14px;
   padding: 18px 18px;
   border-radius: 16px;
-  background: var(--paper, #fff);
-  border: 1px solid var(--line, #ece7df);
-  box-shadow: 0 1px 2px rgba(40, 34, 24, 0.04);
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  box-shadow: var(--shadow-sm);
 }
 .stat-icon {
   width: 42px;
@@ -42,11 +42,13 @@
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   font-size: 21px;
+  /* 在深色主题下，混色透明可能过暗，叠加一层当前主题的软色让它更明显 */
+  outline: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
 }
 .stat-value {
   font-size: 24px;
   font-weight: 640;
-  color: var(--ink, #2a2620);
+  color: var(--c-ink);
 }
 .stats-row {
   display: grid;
@@ -67,11 +69,11 @@
   align-items: center;
   gap: 7px;
   font-weight: 620;
-  color: var(--ink, #2a2620);
+  color: var(--c-ink);
 }
 .panel-icon {
   font-size: 17px;
-  color: var(--brand, #5b8def);
+  color: var(--c-accent-blue);
 }
 .dist {
   display: flex;
@@ -84,7 +86,7 @@
   align-items: center;
   gap: 8px;
   font-size: 13.5px;
-  color: var(--ink, #2a2620);
+  color: var(--c-ink);
 }
 .dist-dot {
   width: 9px;
@@ -93,14 +95,14 @@
 }
 .dist-pct {
   margin-left: auto;
-  color: var(--ink-muted, #8b8478);
+  color: var(--c-ink-muted);
   font-variant-numeric: tabular-nums;
 }
 .dist-bar {
   margin-top: 6px;
   height: 8px;
   border-radius: 99px;
-  background: var(--warm-2, #f4efe7);
+  background: var(--c-warm-2);
   overflow: hidden;
 }
 .dist-fill {
@@ -134,7 +136,7 @@
   width: 60%;
   min-height: 4px;
   border-radius: 8px 8px 4px 4px;
-  background: linear-gradient(180deg, var(--brand, #5b8def), color-mix(in srgb, var(--brand, #5b8def) 55%, #fff));
+  background: linear-gradient(180deg, var(--c-accent-blue), color-mix(in srgb, var(--c-accent-blue) 55%, #fff));
   transition: height 0.5s ease;
   display: flex;
   justify-content: center;
@@ -143,11 +145,16 @@
   position: absolute;
   top: -18px;
   font-size: 11px;
-  color: var(--ink-muted, #8b8478);
+  color: var(--c-ink-muted);
   white-space: nowrap;
 }
 .week-label {
   margin-top: 8px;
   font-size: 12px;
-  color: var(--ink-muted, #8b8478);
+  color: var(--c-ink-muted);
+}
+
+/* 空状态图标调色：用主 accent * 0.5 透明度乘以 currentColor */
+.dist-empty {
+  color: var(--c-stat-empty);
 }

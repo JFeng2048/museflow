@@ -70,7 +70,7 @@ const week = computed(() => {
 
     <n-grid cols="2 640:3 960:5" :x-gap="14" :y-gap="14" responsive="screen">
       <n-gi v-for="it in kpi" :key="it.key">
-        <div class="stat-card" :style="{ '--accent': it.accent }">
+        <div class="stat-card" :style="{ '--accent': `var(${it.accentVar})` }">
           <div class="stat-icon">
             <n-icon :component="it.icon" />
           </div>
@@ -89,12 +89,12 @@ const week = computed(() => {
         <div v-if="statusSum" class="dist">
           <div v-for="it in dist" :key="it.key" class="dist-row">
             <div class="dist-top">
-              <span class="dist-dot" :style="{ background: it.color }" />
+              <span class="dist-dot" :style="{ background: `var(${it.colorVar})` }" />
               <span class="dist-label">{{ t(it.labelKey) }}</span>
               <span class="dist-pct">{{ it.pct }}%</span>
             </div>
             <div class="dist-bar">
-              <div class="dist-fill" :style="{ width: it.pct + '%', background: it.color }" />
+              <div class="dist-fill" :style="{ width: it.pct + '%', background: `var(${it.colorVar})` }" />
             </div>
           </div>
         </div>
