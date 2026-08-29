@@ -66,4 +66,17 @@ export default {
   avatarPickerPresets: '推荐符号',
   avatarPickerColors: '纯色',
   avatarPickerReset: '使用缩写',
+  password: {
+    title: '修改密码',
+    desc: '登录后如需更换密码，请在此处操作',
+    old: '当前密码',
+    oldPlaceholder: '请输入当前密码',
+    new: '新密码',
+    newPlaceholder: '至少 6 位',
+    confirm: '确认新密码',
+    confirmPlaceholder: '请再次输入新密码',
+    submit: '更新密码',
+    changed: '密码已更新',
+    failed: '密码更新失败，请检查当前密码',
+  },
 }

@@ -31,6 +31,7 @@ export default {
     name: 'MuseFlow',
     slogan: '你的私人书房，慢慢写，好好写。',
     save: '已保存',
+    mockTip: '当前为演示数据模式，接口返回本地兜底数据，未接入真实后端。',
   },
   status: {
     writing: '写作中',

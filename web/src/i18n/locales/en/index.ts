@@ -15,6 +15,7 @@ import dashboard from './dashboard'
 import stats from './stats'
 import admin from './admin'
 import identity from './identity'
+import security from './security'
 
 /**
  * 命名空间聚合：t('dashboard.eyebrow') → en.dashboard.eyebrow。
@@ -41,4 +42,5 @@ export default {
   stats,
   admin,
   identity,
+  security,
 }

@@ -8,14 +8,15 @@ export const LANG_KEY = 'mf.lang'
 export type AppLocale = 'zh' | 'en'
 export const SUPPORTED_LOCALES: AppLocale[] = ['zh', 'en']
 
-/** 读取用户语言偏好：优先 localStorage，其次浏览器语言，默认中文。 */
+/** 读取用户语言偏好：优先 localStorage，其次浏览器语言，兜底英文。 */
 export function detectLocale(): AppLocale {
   const saved = localStorage.getItem(LANG_KEY)
   if (saved === 'zh' || saved === 'en') return saved
 
   const nav = navigator.language?.toLowerCase() ?? ''
-  if (nav.startsWith('en')) return 'en'
-  return 'zh'
+  if (nav.startsWith('zh')) return 'zh'
+  // 其它任意浏览器语言（en / ja / ko / fr …）都兜底为英文，避免无意义语言显示。
+  return 'en'
 }
 
 /** 将语言偏好持久化并应用到 <html lang> 与 i18n 实例。 */
@@ -31,7 +32,7 @@ const initialLocale = detectLocale()
 const i18n: any = createI18n({
   legacy: false,
   locale: initialLocale,
-  fallbackLocale: 'zh',
+  fallbackLocale: 'en',
   messages,
 })
 

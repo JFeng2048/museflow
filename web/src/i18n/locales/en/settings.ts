@@ -66,4 +66,17 @@ export default {
   avatarPickerPresets: 'Symbols',
   avatarPickerColors: 'Solid colors',
   avatarPickerReset: 'Initials',
+  password: {
+    title: 'Change Password',
+    desc: 'Update your password here after signing in',
+    old: 'Current password',
+    oldPlaceholder: 'Enter your current password',
+    new: 'New password',
+    newPlaceholder: 'At least 6 characters',
+    confirm: 'Confirm new password',
+    confirmPlaceholder: 'Re-enter the new password',
+    submit: 'Update password',
+    changed: 'Password updated',
+    failed: 'Failed to update. Check your current password.',
+  },
 }
