@@ -346,6 +346,9 @@ CREATE TABLE "user_svc"."user" (
   "last_login_platform" varchar(50) COLLATE "pg_catalog"."default",
   "login_fail_count" int4 NOT NULL DEFAULT 0,
   "locked_until" timestamp(6),
+  "mfa_enabled" bool NOT NULL DEFAULT false,
+  "mfa_secret" varchar(100) COLLATE "pg_catalog"."default",
+  "mfa_recovery_codes" text[],
   "created_at" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updated_at" timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
@@ -366,6 +369,9 @@ COMMENT ON COLUMN "user_svc"."user"."last_login_ip" IS '最后登录IP';
 COMMENT ON COLUMN "user_svc"."user"."last_login_platform" IS '最后登录平台: web/ios/android';
 COMMENT ON COLUMN "user_svc"."user"."login_fail_count" IS '连续登录失败次数';
 COMMENT ON COLUMN "user_svc"."user"."locked_until" IS '账号锁定截止时间';
+COMMENT ON COLUMN "user_svc"."user"."mfa_enabled" IS '是否已启用双因素认证(TOTP)';
+COMMENT ON COLUMN "user_svc"."user"."mfa_secret" IS 'TOTP 密钥(明文)，仅服务端可见，启用前为空';
+COMMENT ON COLUMN "user_svc"."user"."mfa_recovery_codes" IS '恢复码数组，单次使用，始终保持 8 个';
 COMMENT ON COLUMN "user_svc"."user"."created_at" IS '注册时间';
 COMMENT ON COLUMN "user_svc"."user"."updated_at" IS '最后更新时间';
 COMMENT ON TABLE "user_svc"."user" IS '用户主表';

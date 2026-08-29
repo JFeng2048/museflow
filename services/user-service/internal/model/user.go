@@ -37,7 +37,7 @@ type User struct {
 	AvatarURL *string `gorm:"column:avatar_url;size:500"`
 	Bio       *string `gorm:"column:bio"`
 
-	// MFA 相关字段：本期不实现校验逻辑，仅保留映射。
+	// MFA 相关字段：双因素认证（TOTP）。
 	MFAEnabled       bool           `gorm:"column:mfa_enabled;not null;default:false"`
 	MFASecret        *string        `gorm:"column:mfa_secret;size:100"`
 	MFARecoveryCodes pq.StringArray `gorm:"column:mfa_recovery_codes;type:text[]"`
@@ -50,7 +50,7 @@ type User struct {
 	LastLoginIP       *string    `gorm:"column:last_login_ip;type:inet"`
 	LastLoginPlatform *string    `gorm:"column:last_login_platform;size:50"`
 
-	// 登录失败计数与锁定时间：本期不参与登录流程，仅保留字段映射。
+	// 登录失败计数与锁定时间：用于连续失败锁定策略。
 	LoginFailCount int32      `gorm:"column:login_fail_count;not null;default:0"`
 	LockedUntil    *time.Time `gorm:"column:locked_until"`
 
