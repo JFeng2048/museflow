@@ -1,56 +1,109 @@
 ﻿<script setup lang="ts">
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
 import {
-  CreateOutline,
-  HomeOutline,
-  PeopleOutline,
-  FlashOutline,
   MailOutline,
-  LockClosedOutline,
+  LogoGithub,
+  LogoWechat,
   PersonOutline,
   ShieldCheckmarkOutline,
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/system/user'
-import { login as loginApi } from '@/api/system/auth'
+import { useUiStore } from '@/stores/ui'
+import {
+  login as loginApi,
+  loginWithCode,
+  verifyMfaLogin,
+  sendCode,
+  MOCK_CODE,
+} from '@/api/system/auth'
+import type { AuthResult } from '@/types/system/auth'
 import IdentityPicker from '@/components/common/IdentityPicker.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const userStore = useUserStore()
+const ui = useUiStore()
 
-const email = ref('demo@museflow.com')
-const password = ref('museflow@museflow.com')
+// 由 AuthLayout 提供的模式切换（翻转用，不重挂路由）
+const setAuthMode = inject<(m: 'login' | 'register') => void>('setAuthMode')
+
+/* Demo 演示账号：仅在 mock 模式下预填，方便演示与截图。生产环境不会执行到。 */
+const tab = ref<'password' | 'code'>('password')
+const email = ref(ui.mockMode ? 'demo@museflow.com' : '')
+const password = ref(ui.mockMode ? 'museflow@museflow.com' : '')
+const code = ref('')
 const loading = ref(false)
+
+function fillDemo(role: 'writer' | 'admin') {
+  email.value = role === 'admin' ? 'admin@museflow.com' : 'demo@museflow.com'
+  password.value = 'museflow@museflow.com'
+  message.success(t('auth.demoFilled'))
+}
 
 // 管理员登录后，先选择进入哪个视图。
 const showIdentity = ref(false)
 
+// 2FA 二次验证中间态
+const showMfa = ref(false)
+const mfaTicket = ref('')
+const mfaCode = ref('')
+const mfaLoading = ref(false)
+const useRecovery = ref(false)
+
+async function finishLogin(result: AuthResult) {
+  userStore.setAuth(result.token, result.user)
+  message.success(t('auth.loginSuccess'))
+  if (result.user.role === 'admin') {
+    showIdentity.value = true
+  } else {
+    userStore.enterUser()
+    router.replace('/novels')
+  }
+}
+
 async function onSubmit() {
-  if (!email.value || !password.value) {
+  if (!email.value || (tab.value === 'password' && !password.value) || (tab.value === 'code' && !code.value)) {
     message.warning(t('auth.fillBoth'))
     return
   }
   loading.value = true
   try {
-    const result = await loginApi({ username: email.value, password: password.value })
-    userStore.setAuth(result.token, result.user)
-    message.success(t('auth.loginSuccess'))
-    if (result.user.role === 'admin') {
-      // 管理员：弹出身份选择，再决定落地页。
-      showIdentity.value = true
-    } else {
-      userStore.enterUser()
-      router.replace('/novels')
+    const result =
+      tab.value === 'password'
+        ? await loginApi({ username: email.value, password: password.value })
+        : await loginWithCode({ email: email.value, code: code.value })
+    if (result.requiresMfa && result.mfaTicket) {
+      mfaTicket.value = result.mfaTicket
+      showMfa.value = true
+      return
     }
+    await finishLogin(result)
   } catch {
     message.error(t('auth.loginFailed'))
   } finally {
     loading.value = false
+  }
+}
+
+async function onSubmitMfa() {
+  if (!mfaCode.value) {
+    message.warning(t('auth.fillBoth'))
+    return
+  }
+  mfaLoading.value = true
+  try {
+    const result = await verifyMfaLogin(mfaTicket.value, mfaCode.value)
+    showMfa.value = false
+    await finishLogin(result)
+  } catch {
+    message.error(t('auth.mfaInvalid'))
+  } finally {
+    mfaLoading.value = false
   }
 }
 
@@ -65,78 +118,141 @@ function chooseIdentity(view: 'user' | 'admin') {
   }
 }
 
-function fillDemo(role: 'writer' | 'admin') {
-  email.value = role === 'admin' ? 'admin@museflow.com' : 'demo@museflow.com'
-  password.value = 'museflow@museflow.com'
-}
-</script>
+const countDown = ref(0)
+let timer: ReturnType<typeof setInterval> | undefined
+async function   onSendCode() {
+  if (!email.value) {
+    message.warning(t('auth.fillBoth'))
+    return
+  }
+  await sendCode({ email: email.value, scene: 'login' })
+  message.success(t('auth.codeSent'))
+  code.value = MOCK_CODE
+  countDown.value = 60
+  timer = setInterval(() => {
+    countDown.value--
+    if (countDown.value <= 0 && timer) clearInterval(timer)
+  }, 1000)
+  }
+
+  function onWechat() {
+  message.info(t('auth.socialDevTip'))
+  }
+  function onGithub() {
+  message.info(t('auth.socialDevTip'))
+  }
+  </script>
 
 <template>
-  <div class="auth-page">
-    <!-- 左侧品牌区 -->
-    <aside class="auth-brand">
-      <div class="auth-brand-inner">
-        <div class="auth-logo">
-          <n-icon :component="CreateOutline" class="text-[26px]" />
-          <span>MuseFlow</span>
-        </div>
-        <h1 class="auth-slogan">{{ t('auth.brandSlogan') }}</h1>
-        <p class="auth-pitch">{{ t('auth.brandPitch') }}</p>
-        <ul class="auth-promises">
-          <li><n-icon :component="HomeOutline" class="text-[16px]" /> {{ t('auth.promise1') }}</li>
-          <li><n-icon :component="PeopleOutline" class="text-[16px]" /> {{ t('auth.promise2') }}</li>
-          <li><n-icon :component="FlashOutline" class="text-[16px]" /> {{ t('auth.promise3') }}</li>
-        </ul>
-        <p class="auth-whisper">{{ t('auth.brandWhisper') }}</p>
+  <!-- 卡片本体（被 AuthLayout 的 .auth-flip-wrap 包住，rotateY 应用在 wrap 上） -->
+  <div class="auth-form-card">
+    <h2>{{ t('auth.loginTitle') }}</h2>
+    <p class="auth-sub">{{ t('auth.loginSub') }}</p>
+
+    <form @submit.prevent="onSubmit">
+      <label class="auth-field">
+        <span class="auth-lbl"><n-icon :component="MailOutline" class="text-[14px]" /> {{ t('auth.email') }}</span>
+        <input v-model="email" type="email" :placeholder="t('auth.emailPlaceholder')" autocomplete="email" />
+      </label>
+
+      <!-- 登录方式切换：内联到字段上方，作为「小分段控件」。
+           选中态用底部细线表达，避免任何会跟主按钮抢视觉权的样式。 -->
+      <div class="auth-method" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="auth-method-tab"
+          :class="{ active: tab === 'password' }"
+          :aria-selected="tab === 'password'"
+          @click="tab = 'password'"
+        >
+          {{ t('auth.password') }}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="auth-method-tab"
+          :class="{ active: tab === 'code' }"
+          :aria-selected="tab === 'code'"
+          @click="tab = 'code'"
+        >
+          {{ t('auth.codeLogin') }}
+        </button>
       </div>
-    </aside>
 
-    <!-- 右侧表单 -->
-    <main class="auth-form-side">
-      <div class="auth-form-card">
-        <h2>{{ t('auth.loginTitle') }}</h2>
-        <p class="auth-sub">{{ t('auth.loginSub') }}</p>
+      <!-- 字段本身不需要再重复「密码 / 验证码」标签：
+           上方的分段控件已经告诉用户当前在哪种登录方式，这里只留 placeholder。 -->
+      <label v-if="tab === 'password'" class="auth-field auth-field-tight">
+        <input v-model="password" type="password" :placeholder="t('auth.passwordPlaceholder')" autocomplete="current-password" />
+      </label>
 
-        <form @submit.prevent="onSubmit">
-          <label class="auth-field">
-            <span class="auth-lbl"><n-icon :component="MailOutline" class="text-[14px]" /> {{ t('auth.email') }}</span>
-            <input v-model="email" type="email" :placeholder="t('auth.emailPlaceholder')" autocomplete="email" />
-          </label>
-          <label class="auth-field">
-            <span class="auth-lbl"><n-icon :component="LockClosedOutline" class="text-[14px]" /> {{ t('auth.password') }}</span>
-            <input v-model="password" type="password" :placeholder="t('auth.passwordPlaceholder')" autocomplete="current-password" />
-          </label>
-
-          <button class="auth-primary" :disabled="loading" type="submit">
-            {{ loading ? t('auth.loggingIn') : t('auth.loginBtn') }}
+      <label v-else class="auth-field auth-field-tight">
+        <div class="auth-code-row">
+          <input v-model="code" :placeholder="t('auth.codePlaceholder')" autocomplete="one-time-code" />
+          <button class="auth-code-btn" type="button" :disabled="countDown > 0" @click="onSendCode">
+            {{ countDown > 0 ? t('auth.resendIn', { s: countDown }) : t('auth.sendCode') }}
           </button>
-          </form>
+        </div>
+      </label>
 
-          <div class="auth-demo">
-            <span class="auth-demo-lbl">{{ t('auth.demoAccounts') }}</span>
-            <button class="auth-demo-chip" type="button" @click="fillDemo('writer')">
-              <n-icon :component="PersonOutline" /> {{ t('auth.demoWriter') }}
-            </button>
-            <button class="auth-demo-chip" type="button" @click="fillDemo('admin')">
-              <n-icon :component="ShieldCheckmarkOutline" /> {{ t('auth.demoAdmin') }}
-            </button>
-          </div>
+      <button class="auth-primary" :disabled="loading" type="submit">
+        {{ loading ? t('auth.loggingIn') : t('auth.loginBtn') }}
+      </button>
+    </form>
 
-          <p class="auth-switch">
-            {{ t('auth.noAccount') }}
-            <RouterLink to="/register">{{ t('auth.toRegister') }}</RouterLink>
-          </p>
+    <p class="auth-secondary">
+      <span class="auth-secondary-q">{{ t('auth.noAccount') }}</span>
+      <button class="auth-secondary-link" type="button" @click="setAuthMode?.('register')">
+        {{ t('auth.toRegister') }}
+      </button>
+    </p>
 
-          <div class="auth-social">
-            <span>{{ t('auth.social') }}</span>
-            <button class="auth-ghost" type="button">{{ t('auth.socialWechat') }}</button>
-            <button class="auth-ghost" type="button">{{ t('auth.socialGithub') }}</button>
-          </div>
-          </div>
-          <p class="auth-foot">{{ t('auth.agree') }}</p>
-          </main>
-
-          <!-- 管理员身份选择 -->
-          <IdentityPicker v-model:show="showIdentity" @choose="chooseIdentity" />
+    <div class="auth-social">
+      <span class="auth-social-lbl">{{ t('auth.social') }}</span>
+      <button class="auth-social-ico" type="button" :title="t('auth.socialWechat')" @click="onWechat">
+        <n-icon :component="LogoWechat" />
+      </button>
+      <button class="auth-social-ico" type="button" :title="t('auth.socialGithub')" @click="onGithub">
+        <n-icon :component="LogoGithub" />
+      </button>
     </div>
-  </template>
+
+    <!-- Mock 模式提示 + 一键填入：仅演示环境出现，作为页内可见的入口 -->
+    <div v-if="ui.mockMode" class="auth-demo-helper">
+      <span class="auth-demo-lbl">{{ t('auth.demoHelper') }}</span>
+      <button class="auth-demo-chip" type="button" @click="fillDemo('writer')">
+        <n-icon :component="PersonOutline" /> {{ t('auth.demoWriter') }}
+      </button>
+      <button class="auth-demo-chip" type="button" @click="fillDemo('admin')">
+        <n-icon :component="ShieldCheckmarkOutline" /> {{ t('auth.demoAdmin') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- 弹窗通过 Teleport 送到 body，避开 .auth-flip-wrap 的 transform 新包含块，
+       保证 position: fixed 始终以视口为参照居中。 -->
+  <Teleport to="body">
+    <IdentityPicker v-model:show="showIdentity" @choose="chooseIdentity" />
+
+    <div v-if="showMfa" class="mfa-mask" @click.self="showMfa = false">
+      <div class="mfa-card">
+        <h3>{{ t('auth.mfaTitle') }}</h3>
+        <p class="mfa-sub">{{ t('auth.mfaSubtitle') }}</p>
+        <label v-if="!useRecovery" class="auth-field">
+          <span class="auth-lbl">{{ t('auth.mfaCode') }}</span>
+          <input v-model="mfaCode" :placeholder="t('auth.codePlaceholder')" autocomplete="one-time-code" />
+        </label>
+        <label v-else class="auth-field">
+          <span class="auth-lbl">{{ t('auth.recoveryCode') }}</span>
+          <input v-model="mfaCode" placeholder="XXXXXXXX" />
+        </label>
+        <button class="auth-link-btn" type="button" @click="useRecovery = !useRecovery">
+          {{ useRecovery ? t('auth.mfaCode') : t('auth.useRecovery') }}
+        </button>
+        <button class="auth-primary" :disabled="mfaLoading" type="button" @click="onSubmitMfa">
+          {{ mfaLoading ? t('auth.loggingIn') : t('auth.mfaVerify') }}
+        </button>
+      </div>
+    </div>
+  </Teleport>
+</template>

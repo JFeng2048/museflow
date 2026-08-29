@@ -31,6 +31,10 @@ export interface User {
   bindings?: UserBindings
   /** 角色；缺省按写作者处理（兼容未显式标注的旧 mock 用户）。 */
   role?: UserRole
+  /** 是否开启两步验证（2FA）。 */
+  mfaEnabled?: boolean
+  /** 邮箱是否已验证。 */
+  emailVerified?: boolean
 }
 
 export interface LoginPayload {
@@ -43,4 +47,67 @@ export interface RegisterPayload {
   email: string
   password: string
   confirmPassword: string
+  /** 注册用的邮箱验证码。 */
+  code?: string
+}
+
+/** 验证码场景：注册校验 / 免密登录 / 补验证邮箱。 */
+export type CodeScene = 'register' | 'login' | 'verify'
+
+export interface SendCodePayload {
+  email: string
+  scene: CodeScene
+}
+
+export interface LoginWithCodePayload {
+  email: string
+  code: string
+}
+
+/** 登录/注册返回结果，新增 2FA 中间态字段。 */
+export interface AuthResult {
+  token: string
+  user: User
+  /** 账号开启 2FA 时需要二次验证，本次不返回有效令牌。 */
+  requiresMfa?: boolean
+  /** 2FA 中间票据，用于 VerifyMFALogin。 */
+  mfaTicket?: string
+}
+
+/** TOTP 设置信息：密钥 + 二维码绑定地址。 */
+export interface MFASetup {
+  /** base32 共享密钥。 */
+  secret: string
+  /** otpauth:// 绑定地址，供前端生成二维码。 */
+  otpauthUrl: string
+}
+
+/** 2FA 状态。 */
+export interface MFAStatus {
+  enabled: boolean
+  /** 剩余可用的恢复码数量。 */
+  remainingRecoveryCodes: number
+}
+
+/** 单个活跃会话（设备）。 */
+export interface SessionInfo {
+  /** 会话标识，用于强制下线。 */
+  tokenId: string
+  deviceId: string
+  deviceName: string
+  /** 登录时间 ISO 字符串。 */
+  loginAt: string
+  /** 最后刷新时间 ISO 字符串。 */
+  lastRefreshAt: string
+}
+
+export interface ChangePasswordPayload {
+  oldPassword: string
+  newPassword: string
+}
+
+export interface ResetPasswordPayload {
+  email: string
+  code: string
+  newPassword: string
 }
