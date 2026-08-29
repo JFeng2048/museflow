@@ -1,5 +1,5 @@
-// Package dto 集中定义 api-gateway HTTP 层的请求/响应结构，供 Swagger 生成文档。
-package dto
+// Package authdto 定义认证相关接口（注册 / 登录 / 刷新 / 登出）的 HTTP 请求结构。
+package authdto
 
 // RegisterRequest 注册请求。
 type RegisterRequest struct {

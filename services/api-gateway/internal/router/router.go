@@ -1,4 +1,7 @@
 // Package router 负责 api-gateway 的路由注册。
+//
+// 约定：每个业务域的路由单独一个文件维护（auth_router.go / user_router.go /
+// admin_router.go），本文件只做总装，避免在单文件里堆砌全部路由。
 package router
 
 import (
@@ -15,6 +18,14 @@ import (
 	"github.com/museflow/api-gateway/internal/middleware"
 )
 
+// handlers 聚合各业务域的处理器，便于在路由注册函数间传递。
+type handlers struct {
+	auth       *handler.AuthHandler
+	user       *handler.UserHandler
+	userManage *handler.UserManageHandler
+	admin      *handler.AdminHandler
+}
+
 // Setup 创建 Gin 引擎并注册所有路由。
 func Setup(cfg *config.Config, userClient *client.UserClient) *gin.Engine {
 	r := gin.New()
@@ -29,61 +40,20 @@ func Setup(cfg *config.Config, userClient *client.UserClient) *gin.Engine {
 	// Swagger 文档
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	authHandler := handler.NewAuthHandler(userClient, cfg)
-	userHandler := handler.NewUserHandler(userClient)
-	userManageHandler := handler.NewUserManageHandler(userClient)
-	adminHandler := handler.NewAdminHandler(userClient)
+	h := &handlers{
+		auth:       handler.NewAuthHandler(userClient, cfg),
+		user:       handler.NewUserHandler(userClient),
+		userManage: handler.NewUserManageHandler(userClient),
+		admin:      handler.NewAdminHandler(userClient),
+	}
 
 	// 鉴权中间件：解析 access token 并从 user-service 校验（含黑名单）
 	auth := middleware.Auth(userClient)
 
 	v1 := r.Group("/api/v1")
-	{
-		authGroup := v1.Group("/auth")
-		{
-			// 无需认证
-			authGroup.POST("/register", authHandler.Register)
-			authGroup.POST("/login", authHandler.Login)
-			// 走 Cookie 校验，不需要 access token
-			authGroup.POST("/refresh", authHandler.Refresh)
-			// 需要 access token
-			authGroup.POST("/logout", auth, authHandler.Logout)
-		}
-
-		// 用户自助接口：只需登录
-		userGroup := v1.Group("/user", auth)
-		{
-			userGroup.GET("/profile", userHandler.Profile)
-			userGroup.PUT("/profile", userManageHandler.UpdateProfile)
-			userGroup.PUT("/password", userManageHandler.ChangePassword)
-			userGroup.GET("/permissions", userManageHandler.MyPermissions)
-
-			userGroup.GET("/sessions", userManageHandler.ListSessions)
-			userGroup.DELETE("/sessions/:token", userManageHandler.RevokeSession)
-
-			userGroup.GET("/oauth", userManageHandler.ListOAuthBindings)
-			userGroup.DELETE("/oauth/:provider", userManageHandler.UnbindOAuth)
-		}
-
-		// 管理后台接口：需登录 + user:admin 权限
-		adminGroup := v1.Group("/admin", auth, middleware.RequirePermission(userClient, "user:admin"))
-		{
-			adminGroup.GET("/users", adminHandler.ListUsers)
-			adminGroup.GET("/users/:uuid", adminHandler.GetUserDetail)
-			adminGroup.PUT("/users/:uuid/status", adminHandler.UpdateUserStatus)
-			adminGroup.PUT("/users/:uuid/role", adminHandler.AssignRole)
-
-			adminGroup.GET("/roles", adminHandler.ListRoles)
-			adminGroup.POST("/roles", adminHandler.CreateRole)
-			adminGroup.PUT("/roles/:id", adminHandler.UpdateRole)
-			adminGroup.DELETE("/roles/:id", adminHandler.DeleteRole)
-			adminGroup.PUT("/roles/:id/permissions", adminHandler.SetRolePermissions)
-
-			adminGroup.GET("/permissions", adminHandler.ListPermissions)
-
-			adminGroup.GET("/audit-logs", adminHandler.ListAuditLogs)
-		}
-	}
+	registerAuthRoutes(v1, h, auth)
+	registerUserRoutes(v1, h, auth)
+	registerAdminRoutes(v1, h, userClient, auth)
 
 	return r
 }

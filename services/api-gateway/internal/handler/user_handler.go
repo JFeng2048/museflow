@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/museflow/api-gateway/internal/client"
-	"github.com/museflow/api-gateway/internal/dto"
+	userdto "github.com/museflow/api-gateway/internal/dto/user_dto"
 	"github.com/museflow/api-gateway/internal/middleware"
 	"github.com/museflow/pkg/errcode"
 	userpb "github.com/museflow/proto/user"
@@ -31,7 +31,7 @@ func NewUserHandler(users *client.UserClient) *UserHandler {
 //	@Tags			用户
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{object}	errcode.Response{data=dto.UserInfo}	"获取成功"
+//	@Success		200	{object}	errcode.Response{data=userdto.UserInfo}	"获取成功"
 //	@Failure		401	{object}	errcode.Response			"未认证或令牌已失效"
 //	@Failure		404	{object}	errcode.Response			"用户不存在"
 //	@Router			/user/profile [get]
@@ -53,11 +53,11 @@ func (h *UserHandler) Profile(c *gin.Context) {
 }
 
 // toUserInfo 将 proto 用户消息转换为 HTTP 响应结构。
-func toUserInfo(u *userpb.UserInfo) dto.UserInfo {
+func toUserInfo(u *userpb.UserInfo) userdto.UserInfo {
 	if u == nil {
-		return dto.UserInfo{}
+		return userdto.UserInfo{}
 	}
-	return dto.UserInfo{
+	return userdto.UserInfo{
 		UUID:          u.GetUuid(),
 		Email:         u.GetEmail(),
 		Phone:         u.GetPhone(),

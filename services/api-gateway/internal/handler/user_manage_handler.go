@@ -7,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/museflow/api-gateway/internal/client"
-	"github.com/museflow/api-gateway/internal/dto"
+	userdto "github.com/museflow/api-gateway/internal/dto/user_dto"
 	"github.com/museflow/api-gateway/internal/middleware"
 	"github.com/museflow/pkg/errcode"
 	"github.com/museflow/pkg/logger"
@@ -32,13 +32,13 @@ func NewUserManageHandler(users *client.UserClient) *UserManageHandler {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			body	body		dto.UpdateProfileRequest	true	"更新信息"
-//	@Success		200		{object}	errcode.Response{data=dto.UserInfo}	"更新成功"
+//	@Param			body	body		userdto.UpdateProfileRequest	true	"更新信息"
+//	@Success		200		{object}	errcode.Response{data=userdto.UserInfo}	"更新成功"
 //	@Failure		400		{object}	errcode.Response			"参数校验失败"
 //	@Failure		401		{object}	errcode.Response			"未认证"
 //	@Router			/user/profile [put]
 func (h *UserManageHandler) UpdateProfile(c *gin.Context) {
-	var req dto.UpdateProfileRequest
+	var req userdto.UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -67,13 +67,13 @@ func (h *UserManageHandler) UpdateProfile(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			body	body		dto.ChangePasswordRequest	true	"新旧密码"
+//	@Param			body	body		userdto.ChangePasswordRequest	true	"新旧密码"
 //	@Success		200		{object}	errcode.Response	"修改成功"
 //	@Failure		400		{object}	errcode.Response	"参数校验失败"
 //	@Failure		401		{object}	errcode.Response	"旧密码错误"
 //	@Router			/user/password [put]
 func (h *UserManageHandler) ChangePassword(c *gin.Context) {
-	var req dto.ChangePasswordRequest
+	var req userdto.ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -100,7 +100,7 @@ func (h *UserManageHandler) ChangePassword(c *gin.Context) {
 //	@Tags			用户
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{object}	errcode.Response{data=dto.SessionList}	"获取成功"
+//	@Success		200	{object}	errcode.Response{data=userdto.SessionList}	"获取成功"
 //	@Failure		401	{object}	errcode.Response			"未认证"
 //	@Router			/user/sessions [get]
 func (h *UserManageHandler) ListSessions(c *gin.Context) {
@@ -111,9 +111,9 @@ func (h *UserManageHandler) ListSessions(c *gin.Context) {
 		return
 	}
 
-	sessions := make([]dto.SessionInfo, 0, len(resp.GetSessions()))
+	sessions := make([]userdto.SessionInfo, 0, len(resp.GetSessions()))
 	for _, s := range resp.GetSessions() {
-		sessions = append(sessions, dto.SessionInfo{
+		sessions = append(sessions, userdto.SessionInfo{
 			TokenID:         s.GetTokenId(),
 			DeviceID:        s.GetDeviceId(),
 			DeviceName:      s.GetDeviceName(),
@@ -122,7 +122,7 @@ func (h *UserManageHandler) ListSessions(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.SessionList{Sessions: sessions}))
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, userdto.SessionList{Sessions: sessions}))
 }
 
 // RevokeSession 强制下线指定会话
@@ -163,7 +163,7 @@ func (h *UserManageHandler) RevokeSession(c *gin.Context) {
 //	@Tags			用户
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{object}	errcode.Response{data=dto.PermissionListData}	"获取成功"
+//	@Success		200	{object}	errcode.Response{data=userdto.PermissionListData}	"获取成功"
 //	@Failure		401	{object}	errcode.Response				"未认证"
 //	@Router			/user/permissions [get]
 func (h *UserManageHandler) MyPermissions(c *gin.Context) {
@@ -173,7 +173,7 @@ func (h *UserManageHandler) MyPermissions(c *gin.Context) {
 		writeGRPCError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.PermissionListData{Permissions: resp.GetPermissions()}))
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, userdto.PermissionListData{Permissions: resp.GetPermissions()}))
 }
 
 // ListOAuthBindings 列出已绑定的第三方账号
@@ -182,7 +182,7 @@ func (h *UserManageHandler) MyPermissions(c *gin.Context) {
 //	@Tags			用户
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{object}	errcode.Response{data=dto.OAuthBindingList}	"获取成功"
+//	@Success		200	{object}	errcode.Response{data=userdto.OAuthBindingList}	"获取成功"
 //	@Failure		401	{object}	errcode.Response				"未认证"
 //	@Router			/user/oauth [get]
 func (h *UserManageHandler) ListOAuthBindings(c *gin.Context) {
@@ -193,9 +193,9 @@ func (h *UserManageHandler) ListOAuthBindings(c *gin.Context) {
 		return
 	}
 
-	bindings := make([]dto.OAuthBinding, 0, len(resp.GetBindings()))
+	bindings := make([]userdto.OAuthBinding, 0, len(resp.GetBindings()))
 	for _, b := range resp.GetBindings() {
-		bindings = append(bindings, dto.OAuthBinding{
+		bindings = append(bindings, userdto.OAuthBinding{
 			Provider:         b.GetProvider(),
 			ProviderUserID:   b.GetProviderUserId(),
 			ProviderEmail:    b.GetProviderEmail(),
@@ -206,7 +206,7 @@ func (h *UserManageHandler) ListOAuthBindings(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.OAuthBindingList{Bindings: bindings}))
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, userdto.OAuthBindingList{Bindings: bindings}))
 }
 
 // UnbindOAuth 解绑第三方账号

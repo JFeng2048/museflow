@@ -10,7 +10,9 @@ import (
 
 	"github.com/museflow/api-gateway/internal/client"
 	"github.com/museflow/api-gateway/internal/config"
-	"github.com/museflow/api-gateway/internal/dto"
+	authdto "github.com/museflow/api-gateway/internal/dto/auth_dto"
+	// userdto 仅用于 Swagger 注解中的类型引用（用户信息由 user_dto 定义）
+	_ "github.com/museflow/api-gateway/internal/dto/user_dto"
 	"github.com/museflow/api-gateway/internal/middleware"
 	"github.com/museflow/pkg/errcode"
 	"github.com/museflow/pkg/logger"
@@ -41,14 +43,14 @@ func NewAuthHandler(users *client.UserClient, cfg *config.Config) *AuthHandler {
 //	@Tags			认证
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		dto.RegisterRequest	true	"注册信息"
-//	@Success		200		{object}	errcode.Response{data=dto.UserInfo}	"注册成功"
+//	@Param			body	body		authdto.RegisterRequest	true	"注册信息"
+//	@Success		200		{object}	errcode.Response{data=userdto.UserInfo}	"注册成功"
 //	@Failure		400		{object}	errcode.Response			"参数校验失败"
 //	@Failure		409		{object}	errcode.Response			"邮箱已被注册"
 //	@Failure		500		{object}	errcode.Response			"服务内部错误"
 //	@Router			/auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
-	var req dto.RegisterRequest
+	var req authdto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -76,14 +78,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 //	@Tags			认证
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		dto.LoginRequest	true	"登录信息"
-//	@Success		200		{object}	errcode.Response{data=dto.LoginData}	"登录成功"
+//	@Param			body	body		authdto.LoginRequest	true	"登录信息"
+//	@Success		200		{object}	errcode.Response{data=authdto.LoginData}	"登录成功"
 //	@Failure		400		{object}	errcode.Response				"参数校验失败"
 //	@Failure		401		{object}	errcode.Response				"邮箱或密码错误"
 //	@Failure		500		{object}	errcode.Response				"服务内部错误"
 //	@Router			/auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req dto.LoginRequest
+	var req authdto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -113,7 +115,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	h.setCookie(c, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
 	h.setCookie(c, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.LoginData{
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginData{
 		AccessToken: resp.GetAccessToken(),
 		TokenType:   "Bearer",
 		ExpiresIn:   resp.GetExpiresIn(),
@@ -127,7 +129,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 //	@Description	从 Cookie 读取 refresh token 换取新的 access token，refresh token 本身不轮换
 //	@Tags			认证
 //	@Produce		json
-//	@Success		200	{object}	errcode.Response{data=dto.RefreshData}	"刷新成功"
+//	@Success		200	{object}	errcode.Response{data=authdto.RefreshData}	"刷新成功"
 //	@Failure		401	{object}	errcode.Response				"刷新令牌无效或已过期"
 //	@Failure		403	{object}	errcode.Response				"设备校验失败"
 //	@Router			/auth/refresh [post]
@@ -160,7 +162,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.RefreshData{
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.RefreshData{
 		AccessToken: resp.GetAccessToken(),
 		TokenType:   "Bearer",
 		ExpiresIn:   resp.GetExpiresIn(),

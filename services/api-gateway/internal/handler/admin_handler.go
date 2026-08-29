@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/museflow/api-gateway/internal/client"
-	"github.com/museflow/api-gateway/internal/dto"
+	admindto "github.com/museflow/api-gateway/internal/dto/admin_dto"
 	"github.com/museflow/api-gateway/internal/middleware"
 	"github.com/museflow/pkg/errcode"
 	userpb "github.com/museflow/proto/user"
@@ -39,7 +39,7 @@ func NewAdminHandler(users *client.UserClient) *AdminHandler {
 //	@Param			status		query		int		false	"状态：1=正常 2=冻结 3=已注销 4=待审核"
 //	@Param			order_by	query		string	false	"排序字段：created_at/updated_at/email/nickname/status"
 //	@Param			desc		query		bool	false	"是否倒序"
-//	@Success		200			{object}	errcode.Response{data=dto.UserList}	"查询成功"
+//	@Success		200			{object}	errcode.Response{data=admindto.UserList}	"查询成功"
 //	@Failure		401			{object}	errcode.Response			"未认证"
 //	@Failure		403			{object}	errcode.Response			"无权限"
 //	@Router			/admin/users [get]
@@ -59,16 +59,16 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 	}
 	_ = offset // 分页由 proto 的 Pagination 传递
 
-	users := make([]dto.AdminUserItem, 0, len(resp.GetUsers()))
+	users := make([]admindto.AdminUserItem, 0, len(resp.GetUsers()))
 	for _, u := range resp.GetUsers() {
-		users = append(users, dto.AdminUserItem{
+		users = append(users, admindto.AdminUserItem{
 			User:      toUserInfo(u.GetUser()),
 			Roles:     u.GetRoles(),
 			UpdatedAt: u.GetUpdatedAt(),
 		})
 	}
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.UserList{
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, admindto.UserList{
 		Users:    users,
 		Total:    resp.GetTotal(),
 		Page:     page,
@@ -84,7 +84,7 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			uuid	path		string	true	"用户 UUID"
-//	@Success		200		{object}	errcode.Response{data=dto.UserDetail}	"查询成功"
+//	@Success		200		{object}	errcode.Response{data=admindto.UserDetail}	"查询成功"
 //	@Failure		401		{object}	errcode.Response			"未认证"
 //	@Failure		403		{object}	errcode.Response			"无权限"
 //	@Failure		404		{object}	errcode.Response			"用户不存在"
@@ -97,8 +97,8 @@ func (h *AdminHandler) GetUserDetail(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.UserDetail{
-		User: dto.AdminUserItem{
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, admindto.UserDetail{
+		User: admindto.AdminUserItem{
 			User:      toUserInfo(resp.GetUser().GetUser()),
 			Roles:     resp.GetUser().GetRoles(),
 			UpdatedAt: resp.GetUser().GetUpdatedAt(),
@@ -116,13 +116,13 @@ func (h *AdminHandler) GetUserDetail(c *gin.Context) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			uuid	path		string						true	"用户 UUID"
-//	@Param			body	body		dto.UpdateUserStatusRequest	true	"目标状态"
+//	@Param			body	body		admindto.UpdateUserStatusRequest	true	"目标状态"
 //	@Success		200		{object}	errcode.Response	"操作成功"
 //	@Failure		400		{object}	errcode.Response	"参数校验失败"
 //	@Failure		403		{object}	errcode.Response	"无权限"
 //	@Router			/admin/users/{uuid}/status [put]
 func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
-	var req dto.UpdateUserStatusRequest
+	var req admindto.UpdateUserStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -148,13 +148,13 @@ func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			uuid	path		string					true	"目标用户 UUID"
-//	@Param			body	body		dto.AssignRoleRequest	true	"角色编码"
+//	@Param			body	body		admindto.AssignRoleRequest	true	"角色编码"
 //	@Success		200		{object}	errcode.Response	"分配成功"
 //	@Failure		403		{object}	errcode.Response	"无权限"
 //	@Failure		404		{object}	errcode.Response	"角色不存在"
 //	@Router			/admin/users/{uuid}/role [put]
 func (h *AdminHandler) AssignRole(c *gin.Context) {
-	var req dto.AssignRoleRequest
+	var req admindto.AssignRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -178,7 +178,7 @@ func (h *AdminHandler) AssignRole(c *gin.Context) {
 //	@Tags			管理后台
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Success		200	{object}	errcode.Response{data=dto.RoleList}	"查询成功"
+//	@Success		200	{object}	errcode.Response{data=admindto.RoleList}	"查询成功"
 //	@Failure		403	{object}	errcode.Response			"无权限"
 //	@Router			/admin/roles [get]
 func (h *AdminHandler) ListRoles(c *gin.Context) {
@@ -188,9 +188,9 @@ func (h *AdminHandler) ListRoles(c *gin.Context) {
 		return
 	}
 
-	roles := make([]dto.RoleInfo, 0, len(resp.GetRoles()))
+	roles := make([]admindto.RoleInfo, 0, len(resp.GetRoles()))
 	for _, r := range resp.GetRoles() {
-		roles = append(roles, dto.RoleInfo{
+		roles = append(roles, admindto.RoleInfo{
 			ID:          r.GetId(),
 			Code:        r.GetCode(),
 			Name:        r.GetName(),
@@ -200,7 +200,7 @@ func (h *AdminHandler) ListRoles(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.RoleList{Roles: roles}))
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, admindto.RoleList{Roles: roles}))
 }
 
 // CreateRole 创建角色
@@ -210,13 +210,13 @@ func (h *AdminHandler) ListRoles(c *gin.Context) {
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			body	body		dto.CreateRoleRequest	true	"角色信息"
-//	@Success		200		{object}	errcode.Response{data=dto.RoleInfo}	"创建成功"
+//	@Param			body	body		admindto.CreateRoleRequest	true	"角色信息"
+//	@Success		200		{object}	errcode.Response{data=admindto.RoleInfo}	"创建成功"
 //	@Failure		403		{object}	errcode.Response			"无权限"
 //	@Failure		409		{object}	errcode.Response			"角色编码已存在"
 //	@Router			/admin/roles [post]
 func (h *AdminHandler) CreateRole(c *gin.Context) {
-	var req dto.CreateRoleRequest
+	var req admindto.CreateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -233,7 +233,7 @@ func (h *AdminHandler) CreateRole(c *gin.Context) {
 	}
 
 	r := resp.GetRole()
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.RoleInfo{
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, admindto.RoleInfo{
 		ID:          r.GetId(),
 		Code:        r.GetCode(),
 		Name:        r.GetName(),
@@ -252,7 +252,7 @@ func (h *AdminHandler) CreateRole(c *gin.Context) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			id		path		int						true	"角色 ID"
-//	@Param			body	body		dto.UpdateRoleRequest	true	"角色信息"
+//	@Param			body	body		admindto.UpdateRoleRequest	true	"角色信息"
 //	@Success		200		{object}	errcode.Response	"更新成功"
 //	@Failure		403		{object}	errcode.Response	"无权限或系统角色不可改"
 //	@Failure		404		{object}	errcode.Response	"角色不存在"
@@ -263,7 +263,7 @@ func (h *AdminHandler) UpdateRole(c *gin.Context) {
 		return
 	}
 
-	var req dto.UpdateRoleRequest
+	var req admindto.UpdateRoleRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -314,7 +314,7 @@ func (h *AdminHandler) DeleteRole(c *gin.Context) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			resource	query		string	false	"按资源类型过滤，如 user / novel"
-//	@Success		200			{object}	errcode.Response{data=dto.PermissionList}	"查询成功"
+//	@Success		200			{object}	errcode.Response{data=admindto.PermissionList}	"查询成功"
 //	@Failure		403			{object}	errcode.Response			"无权限"
 //	@Router			/admin/permissions [get]
 func (h *AdminHandler) ListPermissions(c *gin.Context) {
@@ -326,9 +326,9 @@ func (h *AdminHandler) ListPermissions(c *gin.Context) {
 		return
 	}
 
-	perms := make([]dto.PermissionInfo, 0, len(resp.GetPermissions()))
+	perms := make([]admindto.PermissionInfo, 0, len(resp.GetPermissions()))
 	for _, p := range resp.GetPermissions() {
-		perms = append(perms, dto.PermissionInfo{
+		perms = append(perms, admindto.PermissionInfo{
 			ID:          p.GetId(),
 			Code:        p.GetCode(),
 			Name:        p.GetName(),
@@ -338,7 +338,7 @@ func (h *AdminHandler) ListPermissions(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.PermissionList{Permissions: perms}))
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, admindto.PermissionList{Permissions: perms}))
 }
 
 // SetRolePermissions 为角色分配权限
@@ -350,7 +350,7 @@ func (h *AdminHandler) ListPermissions(c *gin.Context) {
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			id		path		int								true	"角色 ID"
-//	@Param			body	body		dto.SetRolePermissionsRequest	true	"权限编码列表"
+//	@Param			body	body		admindto.SetRolePermissionsRequest	true	"权限编码列表"
 //	@Success		200		{object}	errcode.Response	"分配成功"
 //	@Failure		403		{object}	errcode.Response	"无权限"
 //	@Failure		404		{object}	errcode.Response	"权限编码不存在"
@@ -361,7 +361,7 @@ func (h *AdminHandler) SetRolePermissions(c *gin.Context) {
 		return
 	}
 
-	var req dto.SetRolePermissionsRequest
+	var req admindto.SetRolePermissionsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
 		return
@@ -391,7 +391,7 @@ func (h *AdminHandler) SetRolePermissions(c *gin.Context) {
 //	@Param			action		query		string	false	"按操作类型过滤，如 login / change_password"
 //	@Param			from		query		int		false	"起始时间（Unix 秒）"
 //	@Param			to			query		int		false	"结束时间（Unix 秒）"
-//	@Success		200			{object}	errcode.Response{data=dto.AuditLogList}	"查询成功"
+//	@Success		200			{object}	errcode.Response{data=admindto.AuditLogList}	"查询成功"
 //	@Failure		403			{object}	errcode.Response			"无权限"
 //	@Router			/admin/audit-logs [get]
 func (h *AdminHandler) ListAuditLogs(c *gin.Context) {
@@ -409,9 +409,9 @@ func (h *AdminHandler) ListAuditLogs(c *gin.Context) {
 		return
 	}
 
-	logs := make([]dto.AuditLogItem, 0, len(resp.GetLogs()))
+	logs := make([]admindto.AuditLogItem, 0, len(resp.GetLogs()))
 	for _, l := range resp.GetLogs() {
-		logs = append(logs, dto.AuditLogItem{
+		logs = append(logs, admindto.AuditLogItem{
 			ID:         l.GetId(),
 			UserUUID:   l.GetUserUuid(),
 			Action:     l.GetAction(),
@@ -424,7 +424,7 @@ func (h *AdminHandler) ListAuditLogs(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, dto.AuditLogList{
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, admindto.AuditLogList{
 		Logs:     logs,
 		Total:    resp.GetTotal(),
 		Page:     page,
