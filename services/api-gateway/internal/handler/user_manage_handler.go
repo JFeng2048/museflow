@@ -8,6 +8,7 @@ import (
 
 	"github.com/museflow/api-gateway/internal/client"
 	userdto "github.com/museflow/api-gateway/internal/dto/user_dto"
+	authdto "github.com/museflow/api-gateway/internal/dto/auth_dto"
 	"github.com/museflow/api-gateway/internal/middleware"
 	"github.com/museflow/pkg/errcode"
 	"github.com/museflow/pkg/logger"
@@ -28,7 +29,7 @@ func NewUserManageHandler(users *client.UserClient) *UserManageHandler {
 //
 //	@Summary		更新当前用户信息
 //	@Description	更新昵称 / 头像 / 简介，传入空字符串的字段不做修改
-//	@Tags			用户
+//	@Tags			user-用户
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -63,7 +64,7 @@ func (h *UserManageHandler) UpdateProfile(c *gin.Context) {
 //
 //	@Summary		修改当前用户密码
 //	@Description	校验旧密码后设置新密码，成功后清理该用户的权限缓存
-//	@Tags			用户
+//	@Tags			user-用户
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -93,11 +94,49 @@ func (h *UserManageHandler) ChangePassword(c *gin.Context) {
 	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
 }
 
+// ChangeEmail 修改邮箱
+//
+//	@Summary		修改邮箱
+//	@Description	校验新邮箱的 change_email 场景验证码后，将当前账号邮箱改为新邮箱并标记为已验证；需登录后调用
+//	@Tags			user-用户
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		authdto.ChangeEmailRequest	true	"新邮箱与验证码"
+//	@Success		200		{object}	errcode.Response	"修改成功"
+//	@Failure		400		{object}	errcode.Response	"验证码错误或新邮箱已被占用"
+//	@Failure		401		{object}	errcode.Response	"未认证"
+//	@Router			/user/email/change [post]
+func (h *UserManageHandler) ChangeEmail(c *gin.Context) {
+	uid := middleware.CurrentUserUUID(c)
+	if uid == "" {
+		c.JSON(http.StatusUnauthorized, errcode.ErrorGin(c, errcode.CodeUnauthorized))
+		return
+	}
+	var req authdto.ChangeEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
+		return
+	}
+
+	if _, err := h.users.Service().ChangeEmail(c.Request.Context(), &userpb.ChangeEmailRequest{
+		Uuid:     uid,
+		NewEmail: req.NewEmail,
+		Code:     req.Code,
+	}); err != nil {
+		writeGRPCError(c, err)
+		return
+	}
+
+	logger.InfoContext(c.Request.Context(), "网关修改邮箱成功", logger.UserUUID(uid))
+	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
+}
+
 // ListSessions 查看当前用户的活跃会话
 //
 //	@Summary		获取当前用户会话列表
 //	@Description	返回当前账号的登录设备与登录时间，可据此强制下线指定设备
-//	@Tags			用户
+//	@Tags			user-用户
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	errcode.Response{data=userdto.SessionList}	"获取成功"
@@ -129,7 +168,7 @@ func (h *UserManageHandler) ListSessions(c *gin.Context) {
 //
 //	@Summary		强制下线指定会话
 //	@Description	吊销指定设备的刷新令牌，使其 access token 到期后无法续期
-//	@Tags			用户
+//	@Tags			user-用户
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			token	path		string	true	"会话标识"
@@ -160,7 +199,7 @@ func (h *UserManageHandler) RevokeSession(c *gin.Context) {
 //
 //	@Summary		获取当前用户权限
 //	@Description	返回当前用户拥有的全部权限编码，供前端做菜单与按钮级控制
-//	@Tags			用户
+//	@Tags			user-用户
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	errcode.Response{data=userdto.PermissionListData}	"获取成功"
@@ -179,7 +218,7 @@ func (h *UserManageHandler) MyPermissions(c *gin.Context) {
 // ListOAuthBindings 列出已绑定的第三方账号
 //
 //	@Summary		第三方账号绑定列表
-//	@Tags			用户
+//	@Tags			user-用户
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	errcode.Response{data=userdto.OAuthBindingList}	"获取成功"
@@ -212,7 +251,7 @@ func (h *UserManageHandler) ListOAuthBindings(c *gin.Context) {
 // UnbindOAuth 解绑第三方账号
 //
 //	@Summary		解绑第三方账号
-//	@Tags			用户
+//	@Tags			user-用户
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			provider	path		string	true	"平台标识，如 github"

@@ -14,6 +14,7 @@ func registerUserRoutes(r *gin.RouterGroup, h *Handlers, auth gin.HandlerFunc) {
 		group.GET("/profile", h.User.Profile)
 		group.PUT("/profile", h.UserManage.UpdateProfile)
 		group.PUT("/password", h.UserManage.ChangePassword)
+		group.POST("/email/change", h.UserManage.ChangeEmail)
 
 		// 权限
 		group.GET("/permissions", h.UserManage.MyPermissions)

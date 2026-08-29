@@ -17,6 +17,7 @@ import (
 // Handlers 聚合各业务域的处理器，便于在各域路由注册函数间传递。
 type Handlers struct {
 	Auth       *handler.AuthHandler
+	Common     *handler.CommonHandler
 	User       *handler.UserHandler
 	UserManage *handler.UserManageHandler
 	Admin      *handler.AdminHandler
@@ -26,6 +27,7 @@ type Handlers struct {
 func NewHandlers(cfg *config.Config, userClient *client.UserClient) *Handlers {
 	return &Handlers{
 		Auth:       handler.NewAuthHandler(userClient, cfg),
+		Common:     handler.NewCommonHandler(userClient, cfg),
 		User:       handler.NewUserHandler(userClient),
 		UserManage: handler.NewUserManageHandler(userClient),
 		Admin:      handler.NewAdminHandler(userClient),
@@ -41,6 +43,7 @@ func Register(r *gin.RouterGroup, cfg *config.Config, userClient *client.UserCli
 	auth := middleware.Auth(userClient)
 
 	registerAuthRoutes(r, h, auth)
+	registerCommonRoutes(r, h)
 	registerUserRoutes(r, h, auth)
 	registerAdminRoutes(r, h, userClient, auth)
 }

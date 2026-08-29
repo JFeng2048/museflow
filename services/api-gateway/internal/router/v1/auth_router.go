@@ -6,7 +6,8 @@ import (
 
 // registerAuthRoutes 注册认证相关路由（/api/v1/auth）。
 //
-// 注册与登录无需认证；refresh 走 HttpOnly Cookie 校验，不需要 access token；
+// 注册与登录无需认证；reset（密码重置）无需认证；
+// 发送验证码与刷新令牌归入 /common（见 registerCommonRoutes）；
 // logout 需要 access token。
 func registerAuthRoutes(r *gin.RouterGroup, h *Handlers, auth gin.HandlerFunc) {
 	group := r.Group("/auth")
@@ -14,14 +15,9 @@ func registerAuthRoutes(r *gin.RouterGroup, h *Handlers, auth gin.HandlerFunc) {
 		// 无需认证
 		group.POST("/register", h.Auth.Register)
 		group.POST("/login", h.Auth.Login)
-		// 走 Cookie 校验，不需要 access token
-		group.POST("/refresh", h.Auth.Refresh)
 		// 密码重置（邮箱验证码），无需认证
-		group.POST("/password/reset-code", h.Auth.SendResetCode)
 		group.POST("/password/reset", h.Auth.ResetPassword)
-		// 邮箱验证码（注册校验 / 补验证 / 免密登录），无需认证
-		group.POST("/email/send-code", h.Auth.SendVerifyCode)
-		group.POST("/email/verify", h.Auth.VerifyEmail)
+		// 邮箱验证码登录（免密），无需认证
 		group.POST("/login/code", h.Auth.LoginWithCode)
 		// 需要 access token
 		group.POST("/logout", auth, h.Auth.Logout)

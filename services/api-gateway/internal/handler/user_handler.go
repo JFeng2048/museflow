@@ -28,7 +28,7 @@ func NewUserHandler(users *client.UserClient) *UserHandler {
 //
 //	@Summary		获取当前用户信息
 //	@Description	根据 access token 中的用户标识返回当前登录用户的详细信息
-//	@Tags			用户
+//	@Tags			user-用户
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	errcode.Response{data=userdto.UserInfo}	"获取成功"

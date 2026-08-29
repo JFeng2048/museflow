@@ -5,8 +5,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/museflow/api-gateway/internal/client"
 	"github.com/museflow/api-gateway/internal/config"
@@ -40,7 +38,7 @@ func NewAuthHandler(users *client.UserClient, cfg *config.Config) *AuthHandler {
 //
 //	@Summary		用户注册
 //	@Description	使用邮箱和密码注册新用户，密码以 bcrypt 加密存储
-//	@Tags			认证
+//	@Tags			auth-认证
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		authdto.RegisterRequest	true	"注册信息"
@@ -76,7 +74,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 //
 //	@Summary		用户登录
 //	@Description	邮箱密码登录，成功后返回 access token（body）并将 refresh token 写入 HttpOnly Cookie
-//	@Tags			认证
+//	@Tags			auth-认证
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		authdto.LoginRequest	true	"登录信息"
@@ -113,8 +111,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// refresh token 走 HttpOnly Cookie 防 XSS；device_id 需被 JS 读取故不设 HttpOnly
-	h.setCookie(c, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
-	h.setCookie(c, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
+	setCookie(c, h.cfg, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
+	setCookie(c, h.cfg, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
 
 	// 账号开启 2FA 时，不下发令牌，返回票据与用户基本信息
 	if resp.GetRequiresMfa() {
@@ -127,8 +125,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	h.setCookie(c, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
-	h.setCookie(c, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
+	setCookie(c, h.cfg, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
+	setCookie(c, h.cfg, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
 
 	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginResponseData{
 		AccessToken: resp.GetAccessToken(),
@@ -142,7 +140,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 //
 //	@Summary		2FA 登录二次验证
 //	@Description	使用登录时获取的 mfa_ticket 与 TOTP 验证码完成登录，成功后签发双令牌
-//	@Tags			认证
+//	@Tags			auth-认证
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		authdto.VerifyMFALoginRequest	true	"票据与验证码"
@@ -174,8 +172,8 @@ func (h *AuthHandler) VerifyMFALogin(c *gin.Context) {
 		return
 	}
 
-	h.setCookie(c, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
-	h.setCookie(c, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
+	setCookie(c, h.cfg, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
+	setCookie(c, h.cfg, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
 
 	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginResponseData{
 		AccessToken: resp.GetAccessToken(),
@@ -189,7 +187,7 @@ func (h *AuthHandler) VerifyMFALogin(c *gin.Context) {
 //
 //	@Summary		生成 2FA 密钥
 //	@Description	生成 TOTP 密钥与 otpauth URL（尚未启用）；需登录后调用，下一步用 VerifyMFA 启用
-//	@Tags			双因素认证
+//	@Tags			auth-双因素认证
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -218,7 +216,7 @@ func (h *AuthHandler) SetupMFA(c *gin.Context) {
 //
 //	@Summary		启用 2FA
 //	@Description	验证 TOTP 验证码后启用双因素认证，返回 8 个恢复码；需登录后调用
-//	@Tags			双因素认证
+//	@Tags			auth-双因素认证
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -253,7 +251,7 @@ func (h *AuthHandler) VerifyMFA(c *gin.Context) {
 //
 //	@Summary		关闭 2FA
 //	@Description	验证 TOTP 验证码后关闭双因素认证；需登录后调用
-//	@Tags			双因素认证
+//	@Tags			auth-双因素认证
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -285,7 +283,7 @@ func (h *AuthHandler) DisableMFA(c *gin.Context) {
 //
 //	@Summary		重新生成恢复码
 //	@Description	验证 TOTP 验证码后重新生成 8 个恢复码；需登录后调用
-//	@Tags			双因素认证
+//	@Tags			auth-双因素认证
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -320,7 +318,7 @@ func (h *AuthHandler) RegenerateRecoveryCodes(c *gin.Context) {
 //
 //	@Summary		查询 2FA 状态
 //	@Description	返回是否已启用 2FA 及剩余恢复码数量；需登录后调用
-//	@Tags			双因素认证
+//	@Tags			auth-双因素认证
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200		{object}	errcode.Response{data=authdto.MFAStatusData}	"查询成功"
@@ -344,57 +342,11 @@ func (h *AuthHandler) GetMFAStatus(c *gin.Context) {
 	}))
 }
 
-// Refresh 刷新访问令牌
-//
-//	@Summary		刷新访问令牌
-//	@Description	从 Cookie 读取 refresh token 换取新的 access token，refresh token 本身不轮换
-//	@Tags			认证
-//	@Produce		json
-//	@Success		200	{object}	errcode.Response{data=authdto.RefreshData}	"刷新成功"
-//	@Failure		401	{object}	errcode.Response				"刷新令牌无效或已过期"
-//	@Failure		403	{object}	errcode.Response				"设备校验失败"
-//	@Router			/auth/refresh [post]
-func (h *AuthHandler) Refresh(c *gin.Context) {
-	refreshToken, err := c.Cookie(refreshCookieName)
-	if err != nil || refreshToken == "" {
-		c.JSON(http.StatusUnauthorized, errcode.ErrorGin(c, errcode.CodeMissingRefresh))
-		return
-	}
-	deviceID, err := c.Cookie(deviceCookieName)
-	if err != nil || deviceID == "" {
-		c.JSON(http.StatusUnauthorized, errcode.ErrorGin(c, errcode.CodeMissingDevice))
-		return
-	}
-
-	resp, err := h.users.Service().Refresh(c.Request.Context(), &userpb.RefreshRequest{
-		RefreshToken: refreshToken,
-		Device: &userpb.DeviceContext{
-			DeviceId:  deviceID,
-			UserAgent: c.Request.UserAgent(),
-			Ip:        c.ClientIP(),
-		},
-	})
-	if err != nil {
-		// 刷新失败说明会话已不可用，清除 Cookie 避免客户端反复重试
-		if status.Code(err) == codes.Unauthenticated {
-			h.clearCookies(c)
-		}
-		writeGRPCError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.RefreshData{
-		AccessToken: resp.GetAccessToken(),
-		TokenType:   "Bearer",
-		ExpiresIn:   resp.GetExpiresIn(),
-	}))
-}
-
 // Logout 用户登出
 //
 //	@Summary		用户登出
 //	@Description	删除 Redis 中的 refresh token 白名单、将当前 access token 加入黑名单，并清除 Cookie
-//	@Tags			认证
+//	@Tags			auth-认证
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	errcode.Response		"登出成功"
@@ -414,35 +366,8 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 		return
 	}
 
-	h.clearCookies(c)
+	clearCookies(c, h.cfg)
 	logger.InfoContext(c.Request.Context(), "网关登出成功")
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
-}
-
-// SendResetCode 发送密码重置验证码
-//
-//	@Summary		发送密码重置验证码
-//	@Description	向邮箱发送 6 位数字验证码；为避免账号枚举，邮箱不存在时也返回成功
-//	@Tags			认证
-//	@Accept			json
-//	@Produce		json
-//	@Param			body	body		authdto.SendResetCodeRequest	true	"邮箱"
-//	@Success		200		{object}	errcode.Response	"发送成功"
-//	@Failure		400		{object}	errcode.Response	"参数校验失败"
-//	@Failure		429		{object}	errcode.Response	"发送过于频繁"
-//	@Router			/auth/password/reset-code [post]
-func (h *AuthHandler) SendResetCode(c *gin.Context) {
-	var req authdto.SendResetCodeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
-		return
-	}
-
-	if _, err := h.users.Service().SendResetCode(c.Request.Context(), &userpb.SendResetCodeRequest{Email: req.Email}); err != nil {
-		writeGRPCError(c, err)
-		return
-	}
-
 	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
 }
 
@@ -450,7 +375,7 @@ func (h *AuthHandler) SendResetCode(c *gin.Context) {
 //
 //	@Summary		通过邮箱验证码重置密码
 //	@Description	校验验证码后设置新密码；验证码一次性使用，重置后清理权限缓存
-//	@Tags			认证
+//	@Tags			auth-认证
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		authdto.ResetPasswordRequest	true	"邮箱、验证码与新密码"
@@ -477,70 +402,11 @@ func (h *AuthHandler) ResetPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
 }
 
-// SendVerifyCode 发送邮箱验证码
-//
-//	@Summary		发送邮箱验证码
-//	@Description	按场景发送邮箱验证码：register（注册校验）/ verify（补验证邮箱）/ login（验证码登录）；避免账号枚举，邮箱不存在时也返回成功
-//	@Tags			认证
-//	@Accept			json
-//	@Produce		json
-//	@Param			body	body		authdto.SendVerifyCodeRequest	true	"邮箱与场景"
-//	@Success		200		{object}	errcode.Response	"发送成功"
-//	@Failure		400		{object}	errcode.Response	"参数校验失败"
-//	@Failure		429		{object}	errcode.Response	"发送过于频繁"
-//	@Router			/auth/email/send-code [post]
-func (h *AuthHandler) SendVerifyCode(c *gin.Context) {
-	var req authdto.SendVerifyCodeRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
-		return
-	}
-
-	if _, err := h.users.Service().SendVerifyCode(c.Request.Context(), &userpb.SendVerifyCodeRequest{
-		Email: req.Email,
-		Scene: req.Scene,
-	}); err != nil {
-		writeGRPCError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
-}
-
-// VerifyEmail 校验邮箱验证码并标记已验证
-//
-//	@Summary		校验邮箱验证码
-//	@Description	校验 verify 场景的邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
-//	@Tags			认证
-//	@Accept			json
-//	@Produce		json
-//	@Param			body	body		authdto.VerifyEmailRequest	true	"邮箱与验证码"
-//	@Success		200		{object}	errcode.Response	"验证成功"
-//	@Failure		400		{object}	errcode.Response	"验证码错误"
-//	@Router			/auth/email/verify [post]
-func (h *AuthHandler) VerifyEmail(c *gin.Context) {
-	var req authdto.VerifyEmailRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, errcode.Fail(errcode.CodeParamInvalid, err.Error()))
-		return
-	}
-
-	if _, err := h.users.Service().VerifyEmail(c.Request.Context(), &userpb.VerifyEmailRequest{
-		Email: req.Email,
-		Code:  req.Code,
-	}); err != nil {
-		writeGRPCError(c, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, errcode.SuccessGin(c, nil))
-}
-
 // LoginWithCode 邮箱验证码登录（免密）
 //
 //	@Summary		邮箱验证码登录
 //	@Description	使用邮箱验证码免密登录，成功后签发双令牌；开启 2FA 时返回 mfa_ticket 需走 /auth/mfa/verify-login
-//	@Tags			认证
+//	@Tags			auth-认证
 //	@Accept			json
 //	@Produce		json
 //	@Param			body	body		authdto.LoginWithCodeRequest	true	"邮箱、验证码与设备名"
@@ -582,8 +448,8 @@ func (h *AuthHandler) LoginWithCode(c *gin.Context) {
 		return
 	}
 
-	h.setCookie(c, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
-	h.setCookie(c, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
+	setCookie(c, h.cfg, refreshCookieName, resp.GetRefreshToken(), int(resp.GetRefreshExpiresIn()), true)
+	setCookie(c, h.cfg, deviceCookieName, resp.GetDeviceId(), int(resp.GetRefreshExpiresIn()), false)
 
 	c.JSON(http.StatusOK, errcode.SuccessGin(c, authdto.LoginResponseData{
 		AccessToken: resp.GetAccessToken(),
@@ -594,23 +460,23 @@ func (h *AuthHandler) LoginWithCode(c *gin.Context) {
 }
 
 // setCookie 按配置写入 Cookie。
-func (h *AuthHandler) setCookie(c *gin.Context, name, value string, maxAge int, httpOnly bool) {
+func setCookie(c *gin.Context, cfg *config.Config, name, value string, maxAge int, httpOnly bool) {
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     name,
 		Value:    value,
 		Path:     "/",
-		Domain:   h.cfg.CookieDomain,
+		Domain:   cfg.CookieDomain,
 		MaxAge:   maxAge,
-		Secure:   h.cfg.CookieSecure,
+		Secure:   cfg.CookieSecure,
 		HttpOnly: httpOnly,
-		SameSite: parseSameSite(h.cfg.CookieSameSite),
+		SameSite: parseSameSite(cfg.CookieSameSite),
 	})
 }
 
 // clearCookies 清除双令牌相关 Cookie（MaxAge<0 表示立即删除）。
-func (h *AuthHandler) clearCookies(c *gin.Context) {
-	h.setCookie(c, refreshCookieName, "", -1, true)
-	h.setCookie(c, deviceCookieName, "", -1, false)
+func clearCookies(c *gin.Context, cfg *config.Config) {
+	setCookie(c, cfg, refreshCookieName, "", -1, true)
+	setCookie(c, cfg, deviceCookieName, "", -1, false)
 }
 
 func parseSameSite(v string) http.SameSite {

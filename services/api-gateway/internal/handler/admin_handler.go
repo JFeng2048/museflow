@@ -30,7 +30,7 @@ func NewAdminHandler(users *client.UserClient) *AdminHandler {
 //
 //	@Summary		用户列表
 //	@Description	分页查询用户，支持关键字（邮箱 / 昵称）与状态筛选、排序
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			page		query		int		false	"页码，默认 1"
@@ -80,7 +80,7 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 //
 //	@Summary		用户详情
 //	@Description	查看用户资料、角色与最终权限列表
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			uuid	path		string	true	"用户 UUID"
@@ -111,7 +111,7 @@ func (h *AdminHandler) GetUserDetail(c *gin.Context) {
 //
 //	@Summary		修改用户状态
 //	@Description	冻结或解冻用户；状态变更后会清理该用户的权限缓存
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -143,7 +143,7 @@ func (h *AdminHandler) UpdateUserStatus(c *gin.Context) {
 //
 //	@Summary		分配用户角色
 //	@Description	为用户分配角色，分配后自动清理该用户的权限缓存
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -175,7 +175,7 @@ func (h *AdminHandler) AssignRole(c *gin.Context) {
 // ListRoles 角色列表
 //
 //	@Summary		角色列表
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Success		200	{object}	errcode.Response{data=admindto.RoleList}	"查询成功"
@@ -206,7 +206,7 @@ func (h *AdminHandler) ListRoles(c *gin.Context) {
 // CreateRole 创建角色
 //
 //	@Summary		创建角色
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -247,7 +247,7 @@ func (h *AdminHandler) CreateRole(c *gin.Context) {
 //
 //	@Summary		编辑角色
 //	@Description	系统内置角色不可修改
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -285,7 +285,7 @@ func (h *AdminHandler) UpdateRole(c *gin.Context) {
 //
 //	@Summary		删除角色
 //	@Description	系统内置角色不可删除；删除后清理相关用户的权限缓存
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			id	path		int	true	"角色 ID"
@@ -310,7 +310,7 @@ func (h *AdminHandler) DeleteRole(c *gin.Context) {
 // ListPermissions 权限列表
 //
 //	@Summary		权限列表
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			resource	query		string	false	"按资源类型过滤，如 user / novel"
@@ -345,7 +345,7 @@ func (h *AdminHandler) ListPermissions(c *gin.Context) {
 //
 //	@Summary		为角色分配权限
 //	@Description	覆盖式设置角色的权限集合，变更后清理该角色下所有用户的权限缓存
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
@@ -382,7 +382,7 @@ func (h *AdminHandler) SetRolePermissions(c *gin.Context) {
 //
 //	@Summary		审计日志列表
 //	@Description	按操作人、操作类型、时间范围筛选，分页返回
-//	@Tags			管理后台
+//	@Tags			admin-管理后台
 //	@Produce		json
 //	@Security		BearerAuth
 //	@Param			page		query		int		false	"页码，默认 1"

@@ -18,11 +18,6 @@ type LoginRequest struct {
 	DeviceName string `json:"device_name" binding:"omitempty,max=100" example:"Chrome on Windows"`
 }
 
-// SendResetCodeRequest 发送密码重置验证码请求。
-type SendResetCodeRequest struct {
-	Email string `json:"email" binding:"required,email" example:"author@museflow.ai"`
-}
-
 // ResetPasswordRequest 重置密码请求。
 type ResetPasswordRequest struct {
 	Email       string `json:"email" binding:"required,email" example:"author@museflow.ai"`
@@ -57,16 +52,17 @@ type RegenerateRecoveryCodesRequest struct {
 }
 
 // SendVerifyCodeRequest 发送邮箱验证码请求。
-// Scene 取值：register（注册校验）/ verify（补验证邮箱）/ login（验证码登录）。
+// Scene 取值：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）。
 type SendVerifyCodeRequest struct {
 	Email string `json:"email" binding:"required,email" example:"author@museflow.ai"`
-	Scene string `json:"scene" binding:"required,oneof=register verify login" example:"register"`
+	Scene string `json:"scene" binding:"required,oneof=register login reset_password change_email" example:"register"`
 }
 
-// VerifyEmailRequest 校验邮箱验证码并标记已验证请求。
-type VerifyEmailRequest struct {
-	Email string `json:"email" binding:"required,email" example:"author@museflow.ai"`
-	Code  string `json:"code" binding:"required" example:"824913"`
+// ChangeEmailRequest 修改邮箱请求（需登录）。
+// 先调用 /common/email/send-code（scene=change_email）向新邮箱发码，再带新邮箱与验证码调用本接口。
+type ChangeEmailRequest struct {
+	NewEmail string `json:"new_email" binding:"required,email" example:"new@museflow.ai"`
+	Code     string `json:"code" binding:"required" example:"824913"`
 }
 
 // LoginWithCodeRequest 邮箱验证码登录（免密）请求。
