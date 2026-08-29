@@ -10,12 +10,14 @@ import {
   LockClosedOutline,
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/system/user'
+import { useUiStore } from '@/stores/ui'
 import { register as registerApi, sendCode, MOCK_CODE } from '@/api/system/auth'
 
 const { t } = useI18n()
 const router = useRouter()
 const message = useMessage()
 const userStore = useUserStore()
+const ui = useUiStore()
 
 // 由 AuthLayout 提供的模式切换（翻转用，不重挂路由）
 const setAuthMode = inject<(m: 'login' | 'register') => void>('setAuthMode')
@@ -33,6 +35,7 @@ const valid = computed(
 )
 
 const countDown = ref(0)
+const showMockCode = ref(false)
 let timer: ReturnType<typeof setInterval> | undefined
 async function onSendCode() {
   if (!email.value) {
@@ -40,8 +43,13 @@ async function onSendCode() {
     return
   }
   await sendCode({ email: email.value, scene: 'register' })
-  message.success(t('auth.codeSent'))
   code.value = MOCK_CODE
+  if (ui.mockMode) {
+    showMockCode.value = true
+    message.info(t('auth.mockCodeTip'), { duration: 6000 })
+  } else {
+    message.success(t('auth.codeSent'))
+  }
   countDown.value = 60
   timer = setInterval(() => {
     countDown.value--
@@ -112,6 +120,9 @@ async function onSubmit() {
       <!-- 邮箱验证码：第二步输入并校验 -->
       <label v-if="step === 'code'" class="auth-field">
         <span class="auth-lbl"><n-icon :component="LockClosedOutline" class="text-[14px]" /> {{ t('auth.emailCode') }}</span>
+        <div v-if="ui.mockMode && showMockCode" class="auth-mock-code">
+          {{ t('auth.mockCodeEnv') }} <b>{{ MOCK_CODE }}</b>
+        </div>
         <div class="auth-code-row">
           <input v-model="code" :placeholder="t('auth.codePlaceholder')" autocomplete="one-time-code" />
           <button class="auth-code-btn" type="button" :disabled="countDown > 0" @click="onSendCode">

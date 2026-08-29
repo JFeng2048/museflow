@@ -59,6 +59,8 @@ export default {
   codeSent: '验证码已发送',
   resendIn: '重新发送（{s}s）',
   mockCode: '演示验证码：123456',
+  mockCodeTip: '演示环境：验证码已自动填入，可直接登录（验证码 123456）',
+  mockCodeEnv: '演示环境，验证码已自动填入：',
   // 两步验证（2FA）
   mfaTitle: '两步验证',
   mfaSubtitle: '请输入身份验证器中的 6 位动态码，或使用恢复码',

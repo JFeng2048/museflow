@@ -97,6 +97,23 @@
   color: var(--c-amber-deep);
   background: var(--c-amber-soft);
 }
+
+/* Mock 模式验证码自动填入提示：醒目但不抢视觉，说明这是演示环境 */
+.auth-mock-code {
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  border: 1px dashed var(--c-amber);
+  border-radius: 10px;
+  background: var(--c-amber-soft);
+  color: var(--c-amber-deep);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.auth-mock-code b {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
 .auth-code-row {
   display: flex;
   gap: 8px;

@@ -59,6 +59,8 @@ export default {
   codeSent: 'Code sent',
   resendIn: 'Resend ({s}s)',
   mockCode: 'Demo code: 123456',
+  mockCodeTip: 'Demo mode: code auto-filled, you can sign in directly (code 123456)',
+  mockCodeEnv: 'Demo mode, code auto-filled: ',
   // 2FA
   mfaTitle: 'Two-factor authentication',
   mfaSubtitle: 'Enter the 6-digit code from your authenticator app, or use a recovery code',

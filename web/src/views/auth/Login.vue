@@ -119,6 +119,7 @@ function chooseIdentity(view: 'user' | 'admin') {
 }
 
 const countDown = ref(0)
+const showMockCode = ref(false)
 let timer: ReturnType<typeof setInterval> | undefined
 async function   onSendCode() {
   if (!email.value) {
@@ -126,8 +127,14 @@ async function   onSendCode() {
     return
   }
   await sendCode({ email: email.value, scene: 'login' })
-  message.success(t('auth.codeSent'))
   code.value = MOCK_CODE
+  if (ui.mockMode) {
+    // 演示环境：弹出提示并显示验证码，无需真实邮箱。
+    showMockCode.value = true
+    message.info(t('auth.mockCodeTip'), { duration: 6000 })
+  } else {
+    message.success(t('auth.codeSent'))
+  }
   countDown.value = 60
   timer = setInterval(() => {
     countDown.value--
@@ -187,6 +194,9 @@ async function   onSendCode() {
       </label>
 
       <label v-else class="auth-field auth-field-tight">
+        <div v-if="ui.mockMode && showMockCode" class="auth-mock-code">
+          {{ t('auth.mockCodeEnv') }} <b>{{ MOCK_CODE }}</b>
+        </div>
         <div class="auth-code-row">
           <input v-model="code" :placeholder="t('auth.codePlaceholder')" autocomplete="one-time-code" />
           <button class="auth-code-btn" type="button" :disabled="countDown > 0" @click="onSendCode">
