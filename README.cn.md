@@ -80,7 +80,9 @@
 | `pkg/errcode` | 统一错误码与多语言响应库 | Go 标准库 | — |
 | `pkg/logger` | 结构化日志库（slog + lumberjack） | Go slog / lumberjack | — |
 | `proto/user` | 共享 gRPC 契约（user.proto 及生成代码） | protobuf | — |
-| `database/user_svc.sql` | 用户库表结构（序列、触发器、schema 命名空间） | PostgreSQL DDL | — |
+| `proto/crawl` | 抓取/抽取共享 gRPC 契约（crawl.proto 及生成代码） | protobuf | — |
+| `services/crawl4ai-service` | 数据采集服务（Python，HTTP + gRPC 双接口） | Crawl4AI / FastAPI / gRPC | 5003 |
+| `services/user-service/database/user_svc.sql` | 用户库表结构（序列、触发器、schema 命名空间） | PostgreSQL DDL | — |
 
 ### 双令牌认证（概要）
 
@@ -103,29 +105,37 @@ MuseFlow/
 │   ├── errcode/                 # 统一错误码与多语言（中/英）响应
 │   └── logger/                  # 基于 slog + lumberjack 的日志器（含文件切割）
 ├── services/
-│   ├── user-service/            # 用户服务（gRPC，:5002）
+│   ├── user-service/            # 用户服务（Go，gRPC :5002）
 │   │   ├── cmd/server/main.go    # 服务入口：装配 config/repo/service/handler
 │   │   ├── .env.example          # 服务配置模板（已提交；.env 已被 gitignore）
 │   │   └── internal/
 │   │       ├── config/           # 配置加载（USER_ / DB_ / REDIS_ / JWT_SECRET / LOG_）
 │   │       ├── handler/          # gRPC 处理器（proto ↔ 业务层转换）
 │   │       ├── service/          # 业务逻辑层（按领域拆分子包）
-│   │       │   ├── auth/         #   认证业务（AuthService：注册/登录/刷新/登出/校验）
+│   │       │   ├── auth/         #   认证（注册/登录/刷新/登出/校验/邮箱验证码/2FA）
 │   │       │   ├── token/        #   JWT 管理（manager / claims / fingerprint）
+│   │       │   ├── rbac/         #   角色与权限（Redis 缓存）
+│   │       │   ├── oauth/        #   第三方账号关联
+│   │       │   ├── audit/        #   操作审计落库
+│   │       │   ├── notify/       #   邮件发送（SMTP，未配置则日志降级）
 │   │       │   └── dto/          #   Service 内部数据对象（Device / TokenPair）
-│   │       ├── repository/       # 数据访问（GORM 模型读写 + Redis 令牌存储）
-│   │       └── model/            # GORM 实体（user_svc.users）
-│   └── api-gateway/             # API 网关（HTTP，:5001）
-│       ├── .env.example          # 服务配置模板（已提交；.env 已被 gitignore）
-│       └── internal/
-│           ├── config/           # 配置加载（GATEWAY_ / REDIS_ / JWT_SECRET / LOG_）
-│           ├── router/           # Gin 路由装配
-│           ├── middleware/       # 中间件（CORS / 鉴权 / 访问日志 / 请求 ID）
-│           ├── handler/          # HTTP 处理器（dto ↔ proto 转换）
-│           ├── client/           # user-service gRPC 客户端
-│           └── dto/              # HTTP 层 DTO（请求/响应结构，供 Swagger 生成）
-├── database/
-│   └── user_svc.sql             # 用户库 DDL（schema 命名空间 user_svc + 序列/触发器）
+│   │       ├── repository/       # 数据访问（GORM 模型读写 + Redis 令牌/验证码存储）
+│   │       ├── model/            # GORM 实体（user_svc.users）
+│   │       └── database/         # 用户库 DDL（user_svc.sql + migrations/）
+│   ├── api-gateway/             # API 网关（Go，HTTP :5001）
+│   │   ├── .env.example          # 服务配置模板（已提交；.env 已被 gitignore）
+│   │   └── internal/
+│   │       ├── config/           # 配置加载（GATEWAY_ / REDIS_ / JWT_SECRET / LOG_）
+│   │       ├── router/           # Gin 路由装配
+│   │       ├── middleware/       # 中间件（CORS / 鉴权 / 访问日志 / 请求 ID）
+│   │       ├── handler/          # HTTP 处理器（dto ↔ proto 转换）
+│   │       ├── client/           # user-service gRPC 客户端
+│   │       └── dto/              # HTTP 层 DTO（请求/响应结构，供 Swagger 生成）
+│   └── crawl4ai-service/        # 数据采集服务（Python，HTTP + gRPC :5003）
+│       ├── src/                  # 业务模块（crawler / extractor / api / grpc_server）
+│       ├── pyproject.toml        # uv 依赖管理（基础 + [http] / [grpc] 分组）
+│       ├── docker/               # 多阶段 Dockerfile + compose
+│       └── README.md             # 服务 README（中文）+ README.en.md（英文）
 ├── deploy/                      # 部署相关（K8s / Redis 配置等）
 ├── services/crawl4ai-service/    # 数据采集服务（Python，HTTP + gRPC 双接口）
 ├── docs/                        # 设计文档（含双令牌认证系统设计文档）
@@ -161,10 +171,10 @@ make init        # 生成 go.work 并安装 protoc-gen-go / swag 等工具
 
 ```bash
 # 导入用户库表结构（含 schema、序列、触发器）
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f database/user_svc.sql
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f services/user-service/database/user_svc.sql
 ```
 
-> 服务端**不执行 AutoMigrate**，schema 由 `database/user_svc.sql` 统一管理。
+> 服务端**不执行 AutoMigrate**，schema 由 `services/user-service/database/user_svc.sql` 统一管理（字段变更见 `services/user-service/database/migrations/`）。
 
 ### 3. 配置环境变量（分层管理）
 

@@ -19,7 +19,7 @@ Monorepo with a Go Workspace (`go.work`) at the repo root. Each service and each
   - `internal/model` — GORM entity `User` (password nullable for SSO users).
 - `services/api-gateway/` — HTTP gateway (`:5001`, Gin):
   - `internal/config` (`GATEWAY_` + shared), `router`, `middleware` (CORS/auth/access-log/request-id), `handler` (dto ↔ proto), `client` (user-service gRPC client), `dto` (HTTP request/response structs for Swagger).
-- `database/user_svc.sql` — PostgreSQL DDL; creates schema `user_svc` and table `user_svc.users` (schema is fixed, not driven by config).
+- `services/user-service/database/user_svc.sql` — PostgreSQL DDL; creates schema `user_svc` and table `user_svc.users` (schema is fixed, not driven by config).
 - `web/` — Vue 3 + TS + Vite frontend.
 - `docs/cn/develop/双令牌认证系统设计文档.md` — dual-token auth design reference.
 - `.env` (gitignored) + `.env.example` (committed) — global config; each service dir has its own `.env.example` for overrides.

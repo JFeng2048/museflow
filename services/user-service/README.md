@@ -10,7 +10,7 @@ MuseFlow 的用户与认证核心微服务，基于 **gRPC + Go** 实现，监�
 | 通信 | gRPC + Protocol Buffers | `proto/user/user.proto` 定义契约 |
 | Web 框架 | — | 纯 gRPC 服务端，HTTP 由 api-gateway 承载 |
 | ORM | GORM | `gorm.io/driver/postgres`，连接池 50/10 |
-| 数据库 | PostgreSQL | schema 固定 `user_svc`，DDL 见 `database/user_svc.sql` |
+| 数据库 | PostgreSQL | schema 固定 `user_svc`，DDL 见 `services/user-service/database/user_svc.sql` |
 | 缓存 | Redis | refresh token 白/黑名单、邮箱验证码存储 |
 | 认证 | JWT + bcrypt | `token` 子包负责签发/校验，密码 bcrypt 哈希 |
 | 日志 | slog + lumberjack | 经 `pkg/logger` 统一封装（JSON 格式 + 滚动） |
@@ -86,7 +86,7 @@ go test ./...
 go vet ./...
 ```
 
-数据库 schema 由 `database/user_svc.sql` 维护（**不**走 GORM AutoMigrate）；字段变更见 `database/migrations/`。
+数据库 schema 由 `services/user-service/database/user_svc.sql` 维护（**不**走 GORM AutoMigrate）；字段变更见 `services/user-service/database/migrations/`。
 
 ## 接口概览（gRPC）
 

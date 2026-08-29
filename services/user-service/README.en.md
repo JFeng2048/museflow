@@ -10,7 +10,7 @@ The core user & authentication microservice of MuseFlow, built with **gRPC + Go*
 | Transport | gRPC + Protocol Buffers | Contract defined in `proto/user/user.proto` |
 | Web framework | — | Pure gRPC server; HTTP is handled by api-gateway |
 | ORM | GORM | `gorm.io/driver/postgres`, pool 50/10 |
-| Database | PostgreSQL | Fixed schema `user_svc`, DDL in `database/user_svc.sql` |
+| Database | PostgreSQL | Fixed schema `user_svc`, DDL in `services/user-service/database/user_svc.sql` |
 | Cache | Redis | refresh-token allow/deny lists, email verification codes |
 | Auth | JWT + bcrypt | `token` subpackage signs/verifies; bcrypt for passwords |
 | Logging | slog + lumberjack | Unified via `pkg/logger` (JSON + rotation) |
@@ -86,7 +86,7 @@ go test ./...
 go vet ./...
 ```
 
-Database schema is maintained by `database/user_svc.sql` (**not** GORM AutoMigrate); column changes live in `database/migrations/`.
+Database schema is maintained by `services/user-service/database/user_svc.sql` (**not** GORM AutoMigrate); column changes live in `services/user-service/database/migrations/`.
 
 ## API Overview (gRPC)
 

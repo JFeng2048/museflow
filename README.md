@@ -85,7 +85,7 @@ The repository is a **Monorepo** — all code lives in a single Git repository. 
 | `proto/user` | Shared gRPC contract (user.proto + generated code) | protobuf | — |
 | `proto/crawl` | Shared gRPC contract for crawl/extract (crawl.proto + generated code) | protobuf | — |
 | `services/crawl4ai-service` | Data-crawling service (Python, HTTP + gRPC dual interface) | Crawl4AI / FastAPI / gRPC | 5003 |
-| `database/user_svc.sql` | User DB schema (sequences, triggers, schema namespace) | PostgreSQL DDL | — |
+| `services/user-service/database/user_svc.sql` | User DB schema (sequences, triggers, schema namespace) | PostgreSQL DDL | — |
 
 ### Dual-Token Authentication (overview)
 
@@ -131,7 +131,8 @@ MuseFlow/
 │   │       │   ├── notify/       #   Email sending (SMTP, log fallback)
 │   │       │   └── dto/          #   Service-internal DTOs (Device / TokenPair)
 │   │       ├── repository/       # Data access (GORM models + Redis token/code store)
-│   │       └── model/            # GORM entities (user_svc.users)
+│   │       ├── model/            # GORM entities (user_svc.users)
+│   │       └── database/         # User DB DDL (user_svc.sql + migrations/)
 │   ├── api-gateway/             # API Gateway (Go, HTTP :5001)
 │   │   ├── .env.example          # Service config template (committed; .env gitignored)
 │   │   └── internal/
@@ -146,8 +147,6 @@ MuseFlow/
 │       ├── pyproject.toml        # uv-managed deps (base + [http] / [grpc] groups)
 │       ├── docker/               # Multi-stage Dockerfile + compose
 │       └── README.md             # Service README (zh) + README.en.md (en)
-├── database/
-│   └── user_svc.sql             # User DB DDL (schema namespace user_svc + sequences/triggers)
 ├── deploy/                      # Deployment assets (K8s / Redis config, etc.)
 ├── docs/                        # Design docs (incl. dual-token auth design, api/)
 ├── web/                         # Frontend (Vue 3 + TypeScript + Vite)
@@ -182,10 +181,10 @@ make init        # generate go.work and install protoc-gen-go / swag tooling
 
 ```bash
 # Import the user DB schema (schema, sequences, triggers)
-psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f database/user_svc.sql
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f services/user-service/database/user_svc.sql
 ```
 
-> The server does **not** run AutoMigrate; the schema is managed solely by `database/user_svc.sql`.
+> The server does **not** run AutoMigrate; the schema is managed solely by `services/user-service/database/user_svc.sql`.
 
 ### 3. Configure environment variables (layered)
 
