@@ -31,8 +31,10 @@ func Setup(cfg *config.Config, userClient *client.UserClient) *gin.Engine {
 
 	authHandler := handler.NewAuthHandler(userClient, cfg)
 	userHandler := handler.NewUserHandler(userClient)
+	userManageHandler := handler.NewUserManageHandler(userClient)
+	adminHandler := handler.NewAdminHandler(userClient)
 
-	// 鉴权中间件
+	// 鉴权中间件：解析 access token 并从 user-service 校验（含黑名单）
 	auth := middleware.Auth(userClient)
 
 	v1 := r.Group("/api/v1")
@@ -48,9 +50,38 @@ func Setup(cfg *config.Config, userClient *client.UserClient) *gin.Engine {
 			authGroup.POST("/logout", auth, authHandler.Logout)
 		}
 
+		// 用户自助接口：只需登录
 		userGroup := v1.Group("/user", auth)
 		{
 			userGroup.GET("/profile", userHandler.Profile)
+			userGroup.PUT("/profile", userManageHandler.UpdateProfile)
+			userGroup.PUT("/password", userManageHandler.ChangePassword)
+			userGroup.GET("/permissions", userManageHandler.MyPermissions)
+
+			userGroup.GET("/sessions", userManageHandler.ListSessions)
+			userGroup.DELETE("/sessions/:token", userManageHandler.RevokeSession)
+
+			userGroup.GET("/oauth", userManageHandler.ListOAuthBindings)
+			userGroup.DELETE("/oauth/:provider", userManageHandler.UnbindOAuth)
+		}
+
+		// 管理后台接口：需登录 + user:admin 权限
+		adminGroup := v1.Group("/admin", auth, middleware.RequirePermission(userClient, "user:admin"))
+		{
+			adminGroup.GET("/users", adminHandler.ListUsers)
+			adminGroup.GET("/users/:uuid", adminHandler.GetUserDetail)
+			adminGroup.PUT("/users/:uuid/status", adminHandler.UpdateUserStatus)
+			adminGroup.PUT("/users/:uuid/role", adminHandler.AssignRole)
+
+			adminGroup.GET("/roles", adminHandler.ListRoles)
+			adminGroup.POST("/roles", adminHandler.CreateRole)
+			adminGroup.PUT("/roles/:id", adminHandler.UpdateRole)
+			adminGroup.DELETE("/roles/:id", adminHandler.DeleteRole)
+			adminGroup.PUT("/roles/:id/permissions", adminHandler.SetRolePermissions)
+
+			adminGroup.GET("/permissions", adminHandler.ListPermissions)
+
+			adminGroup.GET("/audit-logs", adminHandler.ListAuditLogs)
 		}
 	}
 
