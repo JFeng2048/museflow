@@ -51,6 +51,9 @@ const MOCK_ACCOUNTS: (User & { password: string })[] = [
   },
 ]
 
+/** 运行时注册表：mock 模式下注册成功的账号，仅存于内存（演示会话内有效）。 */
+const MOCK_REGISTERED: (User & { password: string })[] = []
+
 /** 兜底用户（API 失败/未登录时），用于本地交互。 */
 const MOCK_USER: User = {
   id: 'u-1',
@@ -64,7 +67,9 @@ const MOCK_USER: User = {
 }
 
 function findAccount(email: string, password: string) {
-  return MOCK_ACCOUNTS.find((a) => a.email === email && a.password === password)
+  return [...MOCK_ACCOUNTS, ...MOCK_REGISTERED].find(
+    (a) => a.email === email && a.password === password,
+  )
 }
 
 export function login(payload: LoginPayload): Promise<AuthResult> {
@@ -93,7 +98,7 @@ export function loginWithCode(payload: LoginWithCodePayload): Promise<AuthResult
 }
 
 function mockLoginWithCode(payload: LoginWithCodePayload): Promise<AuthResult> {
-  const found = MOCK_ACCOUNTS.find((a) => a.email === payload.email)
+  const found = [...MOCK_ACCOUNTS, ...MOCK_REGISTERED].find((a) => a.email === payload.email)
   if (!found) {
     return Promise.reject(new Error('该邮箱尚未注册'))
   }
@@ -123,16 +128,21 @@ function mockRegister(payload: RegisterPayload): Promise<AuthResult> {
   if (payload.code !== MOCK_CODE) {
     return Promise.reject(new Error('验证码错误或已过期'))
   }
-  return Promise.resolve({
-    token: 'mock-token-demo',
-    user: {
-      ...MOCK_USER,
-      name: payload.name || payload.email.split('@')[0],
-      email: payload.email,
-      emailVerified: true,
-      mfaEnabled: false,
-    },
-  })
+  // 注册成功：写入内存注册表，使该账号在本次演示会话内可登录使用。
+  const registered: User & { password: string } = {
+    id: `u-${Date.now()}`,
+    name: payload.name || payload.email.split('@')[0],
+    email: payload.email,
+    bio: '',
+    createdAt: new Date().toISOString(),
+    role: 'writer',
+    mfaEnabled: false,
+    emailVerified: true,
+    password: payload.password,
+  }
+  MOCK_REGISTERED.push(registered)
+  const { password: _pw, ...user } = registered
+  return Promise.resolve({ token: `mock-token-${registered.id}`, user })
 }
 
 /** 发送邮箱验证码（注册 / 免密登录 / 补验证）。 */

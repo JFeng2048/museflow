@@ -7,6 +7,10 @@ const TOKEN_KEY = 'mf.token'
 const USER_KEY = 'mf.user'
 const VIEW_KEY = 'mf.view'
 
+/** 是否处于 Mock 模式：与 src/api/system/auth 保持一致。Mock 模式下登录态仅存于内存，
+ * 不写入 localStorage，刷新页面即清空，避免污染真实存储。 */
+const MOCK = String(import.meta.env.VITE_ENABLE_MOCK).toLowerCase() !== 'false'
+
 /** 兜底用户：API 失败/未登录时使用，确保页面始终有可显示的身份信息。 */
 const DEFAULT_USER: User = {
   id: 'u_demo',
@@ -31,8 +35,9 @@ function readStoredUser(): User {
 }
 
 export const useUserStore = defineStore('user', () => {
-  const token = ref<string>(localStorage.getItem(TOKEN_KEY) || '')
-  const user = ref<User>(readStoredUser())
+  // Mock 模式：登录态纯内存，初始即未登录；真实模式：从 localStorage 恢复。
+  const token = ref<string>(MOCK ? '' : localStorage.getItem(TOKEN_KEY) || '')
+  const user = ref<User>(MOCK ? { ...DEFAULT_USER } : readStoredUser())
   const profileLoaded = ref(false)
   // 当前激活视图：管理员可切换 user / admin；普通用户固定 user。
   const currentView = ref<ViewMode>(
@@ -97,6 +102,8 @@ export const useUserStore = defineStore('user', () => {
   }
 
   function persist() {
+    // Mock 模式不持久化，登录态仅存内存（刷新即清）。
+    if (MOCK) return
     if (token.value) localStorage.setItem(TOKEN_KEY, token.value)
     localStorage.setItem(USER_KEY, JSON.stringify(user.value))
     localStorage.setItem(VIEW_KEY, currentView.value)
@@ -112,6 +119,11 @@ export const useUserStore = defineStore('user', () => {
     if (!isLoggedIn.value) {
       user.value = { ...DEFAULT_USER }
       profileLoaded.value = false
+      return
+    }
+    // Mock 模式：登录时已拿到完整用户信息，无需再向真实接口拉取，避免被兜底用户覆盖。
+    if (MOCK) {
+      profileLoaded.value = true
       return
     }
     if (profileLoaded.value && !force) return
