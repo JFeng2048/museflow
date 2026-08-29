@@ -106,6 +106,45 @@ func (r *fakeUserRepo) UpdatePasswordHash(_ context.Context, id uuid.UUID, hash 
 	return nil
 }
 
+func (r *fakeUserRepo) SaveMFASecret(_ context.Context, id uuid.UUID, secret string) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	u.MFASecret = &secret
+	return nil
+}
+
+func (r *fakeUserRepo) EnableMFA(_ context.Context, id uuid.UUID, codes []string) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	u.MFAEnabled = true
+	u.MFARecoveryCodes = codes
+	return nil
+}
+
+func (r *fakeUserRepo) DisableMFA(_ context.Context, id uuid.UUID) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	u.MFAEnabled = false
+	u.MFASecret = nil
+	u.MFARecoveryCodes = nil
+	return nil
+}
+
+func (r *fakeUserRepo) UpdateRecoveryCodes(_ context.Context, id uuid.UUID, codes []string) error {
+	u, ok := r.byUUID[id.String()]
+	if !ok {
+		return repository.ErrUserNotFound
+	}
+	u.MFARecoveryCodes = codes
+	return nil
+}
+
 func (r *fakeUserRepo) UpdateStatus(_ context.Context, id uuid.UUID, status int16) error {
 	u, ok := r.byUUID[id.String()]
 	if !ok {
@@ -208,9 +247,9 @@ func (s *fakeTokenStore) ListUserTokens(_ context.Context, userID string) ([]rep
 
 func newTestService() (*AuthService, *fakeTokenStore) {
 	store := newFakeTokenStore()
-	tm := token.NewTokenManager("test-secret", time.Hour, 30*24*time.Hour)
+	tm := token.NewTokenManager("test-secret", time.Hour, 30*24*time.Hour, 5*time.Minute)
 	// bcrypt 使用最小成本加速测试（rbac / audit / oauth 传 nil：测试聚焦认证主流程）
-	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), bcrypt.MinCost)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), testMFAConfig(), bcrypt.MinCost)
 	return svc, store
 }
 
@@ -259,8 +298,8 @@ func TestLoginWrongPasswordAndUnknownEmailReturnSameError(t *testing.T) {
 		t.Fatalf("注册失败: %v", err)
 	}
 
-	_, _, errWrong := svc.Login(ctx, "a@b.com", "wrong-password", testDevice())
-	_, _, errUnknown := svc.Login(ctx, "nobody@b.com", "whatever", testDevice())
+	_, errWrong := svc.Login(ctx, "a@b.com", "wrong-password", testDevice())
+	_, errUnknown := svc.Login(ctx, "nobody@b.com", "whatever", testDevice())
 
 	// 两者必须返回相同错误，避免邮箱枚举
 	if !errors.Is(errWrong, ErrInvalidCredentials) || !errors.Is(errUnknown, ErrInvalidCredentials) {
@@ -276,18 +315,22 @@ func TestLoginIssuesUsableTokenPair(t *testing.T) {
 		t.Fatalf("注册失败: %v", err)
 	}
 
-	pair, u, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
+	res, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
 	if err != nil {
 		t.Fatalf("登录失败: %v", err)
 	}
+	if res.RequiresMFA {
+		t.Fatal("未开启 2FA 时不应要求二次验证")
+	}
+	pair := res.TokenPair
 
 	// access token 应能通过校验并解析出用户 uuid
 	uid, err := svc.ValidateAccess(ctx, pair.AccessToken)
 	if err != nil {
 		t.Fatalf("access token 校验失败: %v", err)
 	}
-	if uid != u.UUID.String() {
-		t.Errorf("uuid 不匹配: %s != %s", uid, u.UUID)
+	if uid != res.User.UUID.String() {
+		t.Errorf("uuid 不匹配: %s != %s", uid, res.User.UUID)
 	}
 	// refresh token 必须已写入白名单
 	if len(store.refreshValid) != 1 {
@@ -305,10 +348,11 @@ func TestRefreshRejectsMismatchedDeviceAndAccessTokenMisuse(t *testing.T) {
 	if _, err := svc.Register(ctx, "a@b.com", "pw12345678", "n"); err != nil {
 		t.Fatalf("注册失败: %v", err)
 	}
-	pair, _, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
+	res, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
 	if err != nil {
 		t.Fatalf("登录失败: %v", err)
 	}
+	pair := res.TokenPair
 
 	// 正常刷新应成功
 	if _, _, err := svc.Refresh(ctx, pair.RefreshToken, testDevice()); err != nil {
@@ -342,10 +386,12 @@ func TestLogoutBlacklistsAccessAndRevokesRefresh(t *testing.T) {
 	if _, err := svc.Register(ctx, "a@b.com", "pw12345678", "n"); err != nil {
 		t.Fatalf("注册失败: %v", err)
 	}
-	pair, u, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
+	res, err := svc.Login(ctx, "a@b.com", "pw12345678", testDevice())
 	if err != nil {
 		t.Fatalf("登录失败: %v", err)
 	}
+	pair := res.TokenPair
+	u := res.User
 
 	if err := svc.Logout(ctx, pair.AccessToken, pair.RefreshToken); err != nil {
 		t.Fatalf("登出失败: %v", err)
@@ -370,7 +416,7 @@ func TestValidateAccessRejectsTamperedToken(t *testing.T) {
 	ctx := context.Background()
 
 	// 用不同密钥签发的令牌不应通过校验
-	forged := token.NewTokenManager("attacker-secret", time.Hour, time.Hour)
+	forged := token.NewTokenManager("attacker-secret", time.Hour, time.Hour, 5*time.Minute)
 	tokenStr, err := forged.GenerateAccess(uuid.NewString(), uuid.NewString())
 	if err != nil {
 		t.Fatalf("生成伪造令牌失败: %v", err)
@@ -384,8 +430,8 @@ func TestValidateAccessRejectsTamperedToken(t *testing.T) {
 func TestExpiredAccessTokenIsRejected(t *testing.T) {
 	store := newFakeTokenStore()
 	// 负有效期立即过期
-	tm := token.NewTokenManager("test-secret", -time.Minute, time.Hour)
-	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), bcrypt.MinCost)
+	tm := token.NewTokenManager("test-secret", -time.Minute, time.Hour, 5*time.Minute)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), testMFAConfig(), bcrypt.MinCost)
 
 	tokenStr, err := tm.GenerateAccess(uuid.NewString(), uuid.NewString())
 	if err != nil {
@@ -437,11 +483,11 @@ func TestChangePasswordRequiresCorrectOldPassword(t *testing.T) {
 	if err := svc.ChangePassword(ctx, u.UUID.String(), "oldpass1234", "newpass5678"); err != nil {
 		t.Fatalf("修改密码失败: %v", err)
 	}
-	if _, _, err := svc.Login(ctx, "pwd@museflow.ai", "newpass5678", testDevice()); err != nil {
+	if _, err := svc.Login(ctx, "pwd@museflow.ai", "newpass5678", testDevice()); err != nil {
 		t.Errorf("新密码无法登录: %v", err)
 	}
 	// 旧密码应失效
-	if _, _, err := svc.Login(ctx, "pwd@museflow.ai", "oldpass1234", testDevice()); !errors.Is(err, ErrInvalidCredentials) {
+	if _, err := svc.Login(ctx, "pwd@museflow.ai", "oldpass1234", testDevice()); !errors.Is(err, ErrInvalidCredentials) {
 		t.Errorf("旧密码仍可登录: %v", err)
 	}
 }
@@ -449,8 +495,8 @@ func TestChangePasswordRequiresCorrectOldPassword(t *testing.T) {
 func TestLoginLocksAccountAfterMaxFailures(t *testing.T) {
 	repo := newFakeUserRepo()
 	store := newFakeTokenStore()
-	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour)
-	svc := NewAuthService(repo, store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), bcrypt.MinCost)
+	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute)
+	svc := NewAuthService(repo, store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), testMFAConfig(), bcrypt.MinCost)
 	ctx := context.Background()
 
 	if _, err := svc.Register(ctx, "lock@museflow.ai", "pw12345678", "n"); err != nil {
@@ -459,13 +505,13 @@ func TestLoginLocksAccountAfterMaxFailures(t *testing.T) {
 
 	// 连续失败（repository 层阈值为 5 次）
 	for i := 0; i < 5; i++ {
-		if _, _, err := svc.Login(ctx, "lock@museflow.ai", "bad-password", testDevice()); !errors.Is(err, ErrInvalidCredentials) {
+		if _, err := svc.Login(ctx, "lock@museflow.ai", "bad-password", testDevice()); !errors.Is(err, ErrInvalidCredentials) {
 			t.Fatalf("第 %d 次登录失败应返回凭证错误，实际: %v", i+1, err)
 		}
 	}
 
 	// 达到阈值后锁定：即使密码正确也应拒绝
-	if _, _, err := svc.Login(ctx, "lock@museflow.ai", "pw12345678", testDevice()); err == nil {
+	if _, err := svc.Login(ctx, "lock@museflow.ai", "pw12345678", testDevice()); err == nil {
 		t.Errorf("账号锁定后仍可登录")
 	}
 }
@@ -478,7 +524,7 @@ func TestListSessionsReturnsActiveDevices(t *testing.T) {
 	if err != nil {
 		t.Fatalf("注册失败: %v", err)
 	}
-	if _, _, err := svc.Login(ctx, "sess@museflow.ai", "pw12345678", testDevice()); err != nil {
+	if _, err := svc.Login(ctx, "sess@museflow.ai", "pw12345678", testDevice()); err != nil {
 		t.Fatalf("登录失败: %v", err)
 	}
 

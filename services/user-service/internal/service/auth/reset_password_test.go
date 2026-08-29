@@ -58,6 +58,9 @@ func (m *stubMailer) Send(to, subject, body string) error {
 	return nil
 }
 
+// testMFAConfig 返回测试用 2FA 配置（使用默认值）。
+func testMFAConfig() MFAConfig { return MFAConfig{} }
+
 func testResetConfig() ResetServiceConfig {
 	return ResetServiceConfig{
 		CodeTTL:      10 * time.Minute,
@@ -70,11 +73,11 @@ func testResetConfig() ResetServiceConfig {
 func newResetTestService() (*AuthService, *fakeCodeStore, *stubMailer) {
 	store := newFakeCodeStore()
 	mailer := &stubMailer{}
-	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour)
+	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute)
 	svc := NewAuthService(
 		newFakeUserRepo(), newFakeTokenStore(), tm,
 		nil, nil, nil, // rbac / audit / oauth 传 nil
-		store, mailer, testResetConfig(), bcrypt.MinCost,
+		store, mailer, testResetConfig(), testMFAConfig(), bcrypt.MinCost,
 	)
 	return svc, store, mailer
 }
@@ -177,10 +180,10 @@ func TestResetPasswordConsumesCodeAndAllowsNewLogin(t *testing.T) {
 	}
 
 	// 新密码可登录，旧密码失效
-	if _, _, err := svc.Login(ctx, "reset4@museflow.ai", "newpass5678", testDevice()); err != nil {
+	if _, err := svc.Login(ctx, "reset4@museflow.ai", "newpass5678", testDevice()); err != nil {
 		t.Errorf("新密码无法登录: %v", err)
 	}
-	if _, _, err := svc.Login(ctx, "reset4@museflow.ai", "oldpass1234", testDevice()); !errors.Is(err, ErrInvalidCredentials) {
+	if _, err := svc.Login(ctx, "reset4@museflow.ai", "oldpass1234", testDevice()); !errors.Is(err, ErrInvalidCredentials) {
 		t.Errorf("旧密码仍可登录: %v", err)
 	}
 }
@@ -193,10 +196,10 @@ func TestSendResetCodeEnforcesResendCooldown(t *testing.T) {
 	codes := newFakeCodeStore()
 	withCD := NewAuthService(
 		newFakeUserRepo(), newFakeTokenStore(),
-		token.NewTokenManager("test-secret", time.Hour, time.Hour),
+		token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute),
 		nil, nil, nil, codes, &stubMailer{},
 		ResetServiceConfig{CodeTTL: 10 * time.Minute, CodeLength: 6, CodeResendCD: time.Minute},
-		bcrypt.MinCost,
+		testMFAConfig(), bcrypt.MinCost,
 	)
 
 	if _, err := withCD.Register(ctx, "cooldown@museflow.ai", "oldpass1234", "n"); err != nil {

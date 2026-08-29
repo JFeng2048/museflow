@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 
 	"github.com/museflow/user-service/internal/model"
@@ -39,6 +40,14 @@ type UserRepository interface {
 	UpdatePasswordHash(ctx context.Context, id uuid.UUID, hash string) error
 	// UpdateStatus 更新账号状态（冻结 / 解冻 / 注销）。
 	UpdateStatus(ctx context.Context, id uuid.UUID, status int16) error
+	// SaveMFASecret 保存 2FA 共享密钥（启用前暂存，此时 mfa_enabled 仍为 false）。
+	SaveMFASecret(ctx context.Context, id uuid.UUID, secret string) error
+	// EnableMFA 启用 2FA：置 mfa_enabled=true 并写入恢复码。
+	EnableMFA(ctx context.Context, id uuid.UUID, recoveryCodes []string) error
+	// DisableMFA 关闭 2FA：置 mfa_enabled=false，清空密钥与恢复码。
+	DisableMFA(ctx context.Context, id uuid.UUID) error
+	// UpdateRecoveryCodes 覆盖更新恢复码列表。
+	UpdateRecoveryCodes(ctx context.Context, id uuid.UUID, recoveryCodes []string) error
 	// ListUsers 分页查询用户（支持关键字与状态过滤、排序）。
 	ListUsers(ctx context.Context, keyword string, status int16, orderBy string, desc bool, offset, limit int) ([]model.User, error)
 	// CountUsers 统计用户总数（与 ListUsers 过滤条件一致）。
@@ -187,6 +196,45 @@ func (r *userRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status 
 		Model(&model.User{}).
 		Where("uuid = ?", id).
 		Updates(map[string]any{"status": status}).Error
+}
+
+// SaveMFASecret 保存 2FA 共享密钥（尚未启用）。
+func (r *userRepository) SaveMFASecret(ctx context.Context, id uuid.UUID, secret string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(map[string]any{"mfa_secret": secret}).Error
+}
+
+// EnableMFA 启用 2FA 并写入恢复码。
+func (r *userRepository) EnableMFA(ctx context.Context, id uuid.UUID, recoveryCodes []string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(map[string]any{
+			"mfa_enabled":        true,
+			"mfa_recovery_codes": pq.StringArray(recoveryCodes),
+		}).Error
+}
+
+// DisableMFA 关闭 2FA，清空密钥与恢复码。
+func (r *userRepository) DisableMFA(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(map[string]any{
+			"mfa_enabled":        false,
+			"mfa_secret":         nil,
+			"mfa_recovery_codes": pq.StringArray{},
+		}).Error
+}
+
+// UpdateRecoveryCodes 覆盖更新恢复码列表。
+func (r *userRepository) UpdateRecoveryCodes(ctx context.Context, id uuid.UUID, recoveryCodes []string) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(map[string]any{"mfa_recovery_codes": pq.StringArray(recoveryCodes)}).Error
 }
 
 // ListUsers 分页查询用户，支持关键字（邮箱 / 昵称）与状态过滤。

@@ -9,17 +9,23 @@ import (
 
 // TokenManager 负责 JWT 的签发与解析。
 type TokenManager struct {
-	secret     []byte
-	accessTTL  time.Duration
-	refreshTTL time.Duration
+	secret       []byte
+	accessTTL    time.Duration
+	refreshTTL   time.Duration
+	mfaTicketTTL time.Duration // 2FA 中间票据有效期
 }
 
 // NewTokenManager 构造令牌管理器。
-func NewTokenManager(secret string, accessTTL, refreshTTL time.Duration) *TokenManager {
+// mfaTicketTTL 为 2FA 中间票据有效期，传 0 时使用默认值 5 分钟。
+func NewTokenManager(secret string, accessTTL, refreshTTL, mfaTicketTTL time.Duration) *TokenManager {
+	if mfaTicketTTL <= 0 {
+		mfaTicketTTL = DefaultMFATicketTTL
+	}
 	return &TokenManager{
-		secret:     []byte(secret),
-		accessTTL:  accessTTL,
-		refreshTTL: refreshTTL,
+		secret:       []byte(secret),
+		accessTTL:    accessTTL,
+		refreshTTL:   refreshTTL,
+		mfaTicketTTL: mfaTicketTTL,
 	}
 }
 
@@ -60,6 +66,45 @@ func (m *TokenManager) GenerateRefresh(userUUID, tokenID, deviceID, fingerprint 
 		},
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(m.secret)
+}
+
+// GenerateMFATicket 签发 2FA 中间票据。
+//
+// 用途：账号密码校验通过后，若用户已开启 2FA，则先不下发令牌，
+// 而是签发一张短时效（默认 5 分钟）的票据；用户提交验证码后凭此票据
+// 换取真正的双令牌。票据只用于关联登录的两个步骤，不代表已登录。
+func (m *TokenManager) GenerateMFATicket(userUUID, jti string) (string, error) {
+	now := time.Now()
+	claims := MFATicketClaims{
+		Type: TokenTypeMFATicket,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userUUID,
+			ID:        jti,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(m.mfaTicketTTL)),
+		},
+	}
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(m.secret)
+}
+
+// ParseMFATicket 解析并校验 2FA 中间票据（验签 + 过期 + 类型）。
+func (m *TokenManager) ParseMFATicket(tokenStr string) (*MFATicketClaims, error) {
+	claims := &MFATicketClaims{}
+	token, err := jwt.ParseWithClaims(tokenStr, claims, m.keyFunc,
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	if err != nil {
+		return nil, fmt.Errorf("2FA 票据无效: %w", err)
+	}
+	if !token.Valid {
+		return nil, fmt.Errorf("2FA 票据无效")
+	}
+	if claims.Type != TokenTypeMFATicket {
+		return nil, fmt.Errorf("令牌类型不匹配")
+	}
+	if claims.Subject == "" {
+		return nil, fmt.Errorf("2FA 票据缺少 sub 声明")
+	}
+	return claims, nil
 }
 
 // ParseAccess 解析并校验 access token（验签 + 过期 + 类型）。

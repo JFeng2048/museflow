@@ -395,8 +395,14 @@ type LoginResponse struct {
 	ExpiresIn        int64                  `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`                        // access token 有效期（秒）
 	RefreshExpiresIn int64                  `protobuf:"varint,5,opt,name=refresh_expires_in,json=refreshExpiresIn,proto3" json:"refresh_expires_in,omitempty"` // refresh token 有效期（秒）
 	User             *UserInfo              `protobuf:"bytes,6,opt,name=user,proto3" json:"user,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// requires_mfa 为 true 表示账号已开启 2FA，本次不签发令牌，
+	// 需调用 VerifyMFA（或提交恢复码）二次验证后才能拿到令牌。
+	RequiresMfa bool `protobuf:"varint,7,opt,name=requires_mfa,json=requiresMfa,proto3" json:"requires_mfa,omitempty"`
+	// mfa_ticket 2FA 中间票据：账号密码校验通过后签发，
+	// 用于关联后续的 2FA 验证请求，有效期较短（默认 5 分钟）。
+	MfaTicket     string `protobuf:"bytes,8,opt,name=mfa_ticket,json=mfaTicket,proto3" json:"mfa_ticket,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LoginResponse) Reset() {
@@ -469,6 +475,20 @@ func (x *LoginResponse) GetUser() *UserInfo {
 		return x.User
 	}
 	return nil
+}
+
+func (x *LoginResponse) GetRequiresMfa() bool {
+	if x != nil {
+		return x.RequiresMfa
+	}
+	return false
+}
+
+func (x *LoginResponse) GetMfaTicket() string {
+	if x != nil {
+		return x.MfaTicket
+	}
+	return ""
 }
 
 type RefreshRequest struct {
@@ -3160,6 +3180,554 @@ func (x *SetRolePermissionsResponse) GetSuccess() bool {
 	return false
 }
 
+type SetupMFARequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"` // 当前登录用户 uuid
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetupMFARequest) Reset() {
+	*x = SetupMFARequest{}
+	mi := &file_proto_user_user_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetupMFARequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetupMFARequest) ProtoMessage() {}
+
+func (x *SetupMFARequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetupMFARequest.ProtoReflect.Descriptor instead.
+func (*SetupMFARequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *SetupMFARequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+type SetupMFAResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Secret        string                 `protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`                           // TOTP 共享密钥（base32）
+	OtpauthUrl    string                 `protobuf:"bytes,2,opt,name=otpauth_url,json=otpauthUrl,proto3" json:"otpauth_url,omitempty"` // otpauth:// 绑定地址，供前端生成二维码
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetupMFAResponse) Reset() {
+	*x = SetupMFAResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetupMFAResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetupMFAResponse) ProtoMessage() {}
+
+func (x *SetupMFAResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetupMFAResponse.ProtoReflect.Descriptor instead.
+func (*SetupMFAResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *SetupMFAResponse) GetSecret() string {
+	if x != nil {
+		return x.Secret
+	}
+	return ""
+}
+
+func (x *SetupMFAResponse) GetOtpauthUrl() string {
+	if x != nil {
+		return x.OtpauthUrl
+	}
+	return ""
+}
+
+type VerifyMFARequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"` // 验证器 App 显示的 6 位验证码
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyMFARequest) Reset() {
+	*x = VerifyMFARequest{}
+	mi := &file_proto_user_user_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyMFARequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyMFARequest) ProtoMessage() {}
+
+func (x *VerifyMFARequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyMFARequest.ProtoReflect.Descriptor instead.
+func (*VerifyMFARequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *VerifyMFARequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+func (x *VerifyMFARequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type VerifyMFAResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enabled       bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                 // 是否已成功启用 2FA
+	RecoveryCodes []string               `protobuf:"bytes,2,rep,name=recovery_codes,json=recoveryCodes,proto3" json:"recovery_codes,omitempty"` // 8 个恢复码，仅在本次返回，请妥善保存
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyMFAResponse) Reset() {
+	*x = VerifyMFAResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyMFAResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyMFAResponse) ProtoMessage() {}
+
+func (x *VerifyMFAResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyMFAResponse.ProtoReflect.Descriptor instead.
+func (*VerifyMFAResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *VerifyMFAResponse) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *VerifyMFAResponse) GetRecoveryCodes() []string {
+	if x != nil {
+		return x.RecoveryCodes
+	}
+	return nil
+}
+
+type DisableMFARequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"` // 当前验证码（或恢复码）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DisableMFARequest) Reset() {
+	*x = DisableMFARequest{}
+	mi := &file_proto_user_user_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DisableMFARequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DisableMFARequest) ProtoMessage() {}
+
+func (x *DisableMFARequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DisableMFARequest.ProtoReflect.Descriptor instead.
+func (*DisableMFARequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *DisableMFARequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+func (x *DisableMFARequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type DisableMFAResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DisableMFAResponse) Reset() {
+	*x = DisableMFAResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DisableMFAResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DisableMFAResponse) ProtoMessage() {}
+
+func (x *DisableMFAResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DisableMFAResponse.ProtoReflect.Descriptor instead.
+func (*DisableMFAResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *DisableMFAResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type RegenerateRecoveryCodesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"` // 当前验证码（或恢复码）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegenerateRecoveryCodesRequest) Reset() {
+	*x = RegenerateRecoveryCodesRequest{}
+	mi := &file_proto_user_user_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegenerateRecoveryCodesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegenerateRecoveryCodesRequest) ProtoMessage() {}
+
+func (x *RegenerateRecoveryCodesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegenerateRecoveryCodesRequest.ProtoReflect.Descriptor instead.
+func (*RegenerateRecoveryCodesRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *RegenerateRecoveryCodesRequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+func (x *RegenerateRecoveryCodesRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+type RegenerateRecoveryCodesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RecoveryCodes []string               `protobuf:"bytes,1,rep,name=recovery_codes,json=recoveryCodes,proto3" json:"recovery_codes,omitempty"` // 8 个新的恢复码，替换掉旧的
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RegenerateRecoveryCodesResponse) Reset() {
+	*x = RegenerateRecoveryCodesResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RegenerateRecoveryCodesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RegenerateRecoveryCodesResponse) ProtoMessage() {}
+
+func (x *RegenerateRecoveryCodesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RegenerateRecoveryCodesResponse.ProtoReflect.Descriptor instead.
+func (*RegenerateRecoveryCodesResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *RegenerateRecoveryCodesResponse) GetRecoveryCodes() []string {
+	if x != nil {
+		return x.RecoveryCodes
+	}
+	return nil
+}
+
+type GetMFAStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetMFAStatusRequest) Reset() {
+	*x = GetMFAStatusRequest{}
+	mi := &file_proto_user_user_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMFAStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMFAStatusRequest) ProtoMessage() {}
+
+func (x *GetMFAStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMFAStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetMFAStatusRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *GetMFAStatusRequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+type GetMFAStatusResponse struct {
+	state                  protoimpl.MessageState `protogen:"open.v1"`
+	Enabled                bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`                                                               // 是否已开启 2FA
+	RemainingRecoveryCodes int32                  `protobuf:"varint,2,opt,name=remaining_recovery_codes,json=remainingRecoveryCodes,proto3" json:"remaining_recovery_codes,omitempty"` // 剩余可用恢复码数量
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *GetMFAStatusResponse) Reset() {
+	*x = GetMFAStatusResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[68]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetMFAStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetMFAStatusResponse) ProtoMessage() {}
+
+func (x *GetMFAStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[68]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetMFAStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetMFAStatusResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *GetMFAStatusResponse) GetEnabled() bool {
+	if x != nil {
+		return x.Enabled
+	}
+	return false
+}
+
+func (x *GetMFAStatusResponse) GetRemainingRecoveryCodes() int32 {
+	if x != nil {
+		return x.RemainingRecoveryCodes
+	}
+	return 0
+}
+
+type VerifyMFALoginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MfaTicket     string                 `protobuf:"bytes,1,opt,name=mfa_ticket,json=mfaTicket,proto3" json:"mfa_ticket,omitempty"` // 登录第一步返回的中间票据
+	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`                            // 6 位验证码或恢复码
+	Device        *DeviceContext         `protobuf:"bytes,3,opt,name=device,proto3" json:"device,omitempty"`                        // 设备上下文，用于签发令牌时的指纹校验
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyMFALoginRequest) Reset() {
+	*x = VerifyMFALoginRequest{}
+	mi := &file_proto_user_user_proto_msgTypes[69]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyMFALoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyMFALoginRequest) ProtoMessage() {}
+
+func (x *VerifyMFALoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[69]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyMFALoginRequest.ProtoReflect.Descriptor instead.
+func (*VerifyMFALoginRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *VerifyMFALoginRequest) GetMfaTicket() string {
+	if x != nil {
+		return x.MfaTicket
+	}
+	return ""
+}
+
+func (x *VerifyMFALoginRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *VerifyMFALoginRequest) GetDevice() *DeviceContext {
+	if x != nil {
+		return x.Device
+	}
+	return nil
+}
+
 // AuditLogItem 单条审计日志。
 type AuditLogItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -3178,7 +3746,7 @@ type AuditLogItem struct {
 
 func (x *AuditLogItem) Reset() {
 	*x = AuditLogItem{}
-	mi := &file_proto_user_user_proto_msgTypes[59]
+	mi := &file_proto_user_user_proto_msgTypes[70]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3190,7 +3758,7 @@ func (x *AuditLogItem) String() string {
 func (*AuditLogItem) ProtoMessage() {}
 
 func (x *AuditLogItem) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[59]
+	mi := &file_proto_user_user_proto_msgTypes[70]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3203,7 +3771,7 @@ func (x *AuditLogItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditLogItem.ProtoReflect.Descriptor instead.
 func (*AuditLogItem) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{59}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{70}
 }
 
 func (x *AuditLogItem) GetId() int64 {
@@ -3282,7 +3850,7 @@ type ListAuditLogsRequest struct {
 
 func (x *ListAuditLogsRequest) Reset() {
 	*x = ListAuditLogsRequest{}
-	mi := &file_proto_user_user_proto_msgTypes[60]
+	mi := &file_proto_user_user_proto_msgTypes[71]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3294,7 +3862,7 @@ func (x *ListAuditLogsRequest) String() string {
 func (*ListAuditLogsRequest) ProtoMessage() {}
 
 func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[60]
+	mi := &file_proto_user_user_proto_msgTypes[71]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3307,7 +3875,7 @@ func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditLogsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{60}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{71}
 }
 
 func (x *ListAuditLogsRequest) GetPagination() *Pagination {
@@ -3355,7 +3923,7 @@ type ListAuditLogsResponse struct {
 
 func (x *ListAuditLogsResponse) Reset() {
 	*x = ListAuditLogsResponse{}
-	mi := &file_proto_user_user_proto_msgTypes[61]
+	mi := &file_proto_user_user_proto_msgTypes[72]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3367,7 +3935,7 @@ func (x *ListAuditLogsResponse) String() string {
 func (*ListAuditLogsResponse) ProtoMessage() {}
 
 func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[61]
+	mi := &file_proto_user_user_proto_msgTypes[72]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3380,7 +3948,7 @@ func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditLogsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{61}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{72}
 }
 
 func (x *ListAuditLogsResponse) GetLogs() []*AuditLogItem {
@@ -3415,7 +3983,7 @@ type OAuthProfile struct {
 
 func (x *OAuthProfile) Reset() {
 	*x = OAuthProfile{}
-	mi := &file_proto_user_user_proto_msgTypes[62]
+	mi := &file_proto_user_user_proto_msgTypes[73]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3427,7 +3995,7 @@ func (x *OAuthProfile) String() string {
 func (*OAuthProfile) ProtoMessage() {}
 
 func (x *OAuthProfile) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[62]
+	mi := &file_proto_user_user_proto_msgTypes[73]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3440,7 +4008,7 @@ func (x *OAuthProfile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OAuthProfile.ProtoReflect.Descriptor instead.
 func (*OAuthProfile) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{62}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *OAuthProfile) GetProvider() string {
@@ -3522,7 +4090,7 @@ type OAuthBinding struct {
 
 func (x *OAuthBinding) Reset() {
 	*x = OAuthBinding{}
-	mi := &file_proto_user_user_proto_msgTypes[63]
+	mi := &file_proto_user_user_proto_msgTypes[74]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3534,7 +4102,7 @@ func (x *OAuthBinding) String() string {
 func (*OAuthBinding) ProtoMessage() {}
 
 func (x *OAuthBinding) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[63]
+	mi := &file_proto_user_user_proto_msgTypes[74]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3547,7 +4115,7 @@ func (x *OAuthBinding) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OAuthBinding.ProtoReflect.Descriptor instead.
 func (*OAuthBinding) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{63}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *OAuthBinding) GetProvider() string {
@@ -3609,7 +4177,7 @@ type BindOAuthRequest struct {
 
 func (x *BindOAuthRequest) Reset() {
 	*x = BindOAuthRequest{}
-	mi := &file_proto_user_user_proto_msgTypes[64]
+	mi := &file_proto_user_user_proto_msgTypes[75]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3621,7 +4189,7 @@ func (x *BindOAuthRequest) String() string {
 func (*BindOAuthRequest) ProtoMessage() {}
 
 func (x *BindOAuthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[64]
+	mi := &file_proto_user_user_proto_msgTypes[75]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3634,7 +4202,7 @@ func (x *BindOAuthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BindOAuthRequest.ProtoReflect.Descriptor instead.
 func (*BindOAuthRequest) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{64}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *BindOAuthRequest) GetUuid() string {
@@ -3660,7 +4228,7 @@ type BindOAuthResponse struct {
 
 func (x *BindOAuthResponse) Reset() {
 	*x = BindOAuthResponse{}
-	mi := &file_proto_user_user_proto_msgTypes[65]
+	mi := &file_proto_user_user_proto_msgTypes[76]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3672,7 +4240,7 @@ func (x *BindOAuthResponse) String() string {
 func (*BindOAuthResponse) ProtoMessage() {}
 
 func (x *BindOAuthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[65]
+	mi := &file_proto_user_user_proto_msgTypes[76]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3685,7 +4253,7 @@ func (x *BindOAuthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BindOAuthResponse.ProtoReflect.Descriptor instead.
 func (*BindOAuthResponse) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{65}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *BindOAuthResponse) GetSuccess() bool {
@@ -3705,7 +4273,7 @@ type UnbindOAuthRequest struct {
 
 func (x *UnbindOAuthRequest) Reset() {
 	*x = UnbindOAuthRequest{}
-	mi := &file_proto_user_user_proto_msgTypes[66]
+	mi := &file_proto_user_user_proto_msgTypes[77]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3717,7 +4285,7 @@ func (x *UnbindOAuthRequest) String() string {
 func (*UnbindOAuthRequest) ProtoMessage() {}
 
 func (x *UnbindOAuthRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[66]
+	mi := &file_proto_user_user_proto_msgTypes[77]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3730,7 +4298,7 @@ func (x *UnbindOAuthRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnbindOAuthRequest.ProtoReflect.Descriptor instead.
 func (*UnbindOAuthRequest) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{66}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *UnbindOAuthRequest) GetUuid() string {
@@ -3756,7 +4324,7 @@ type UnbindOAuthResponse struct {
 
 func (x *UnbindOAuthResponse) Reset() {
 	*x = UnbindOAuthResponse{}
-	mi := &file_proto_user_user_proto_msgTypes[67]
+	mi := &file_proto_user_user_proto_msgTypes[78]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3768,7 +4336,7 @@ func (x *UnbindOAuthResponse) String() string {
 func (*UnbindOAuthResponse) ProtoMessage() {}
 
 func (x *UnbindOAuthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[67]
+	mi := &file_proto_user_user_proto_msgTypes[78]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3781,7 +4349,7 @@ func (x *UnbindOAuthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnbindOAuthResponse.ProtoReflect.Descriptor instead.
 func (*UnbindOAuthResponse) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{67}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *UnbindOAuthResponse) GetSuccess() bool {
@@ -3800,7 +4368,7 @@ type ListOAuthBindingsRequest struct {
 
 func (x *ListOAuthBindingsRequest) Reset() {
 	*x = ListOAuthBindingsRequest{}
-	mi := &file_proto_user_user_proto_msgTypes[68]
+	mi := &file_proto_user_user_proto_msgTypes[79]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3812,7 +4380,7 @@ func (x *ListOAuthBindingsRequest) String() string {
 func (*ListOAuthBindingsRequest) ProtoMessage() {}
 
 func (x *ListOAuthBindingsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[68]
+	mi := &file_proto_user_user_proto_msgTypes[79]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3825,7 +4393,7 @@ func (x *ListOAuthBindingsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOAuthBindingsRequest.ProtoReflect.Descriptor instead.
 func (*ListOAuthBindingsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{68}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *ListOAuthBindingsRequest) GetUuid() string {
@@ -3844,7 +4412,7 @@ type ListOAuthBindingsResponse struct {
 
 func (x *ListOAuthBindingsResponse) Reset() {
 	*x = ListOAuthBindingsResponse{}
-	mi := &file_proto_user_user_proto_msgTypes[69]
+	mi := &file_proto_user_user_proto_msgTypes[80]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3856,7 +4424,7 @@ func (x *ListOAuthBindingsResponse) String() string {
 func (*ListOAuthBindingsResponse) ProtoMessage() {}
 
 func (x *ListOAuthBindingsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[69]
+	mi := &file_proto_user_user_proto_msgTypes[80]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3869,7 +4437,7 @@ func (x *ListOAuthBindingsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListOAuthBindingsResponse.ProtoReflect.Descriptor instead.
 func (*ListOAuthBindingsResponse) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{69}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *ListOAuthBindingsResponse) GetBindings() []*OAuthBinding {
@@ -3889,7 +4457,7 @@ type OAuthLoginRequest struct {
 
 func (x *OAuthLoginRequest) Reset() {
 	*x = OAuthLoginRequest{}
-	mi := &file_proto_user_user_proto_msgTypes[70]
+	mi := &file_proto_user_user_proto_msgTypes[81]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3901,7 +4469,7 @@ func (x *OAuthLoginRequest) String() string {
 func (*OAuthLoginRequest) ProtoMessage() {}
 
 func (x *OAuthLoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[70]
+	mi := &file_proto_user_user_proto_msgTypes[81]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3914,7 +4482,7 @@ func (x *OAuthLoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OAuthLoginRequest.ProtoReflect.Descriptor instead.
 func (*OAuthLoginRequest) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{70}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *OAuthLoginRequest) GetProfile() *OAuthProfile {
@@ -3946,7 +4514,7 @@ type OAuthLoginResponse struct {
 
 func (x *OAuthLoginResponse) Reset() {
 	*x = OAuthLoginResponse{}
-	mi := &file_proto_user_user_proto_msgTypes[71]
+	mi := &file_proto_user_user_proto_msgTypes[82]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3958,7 +4526,7 @@ func (x *OAuthLoginResponse) String() string {
 func (*OAuthLoginResponse) ProtoMessage() {}
 
 func (x *OAuthLoginResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_user_user_proto_msgTypes[71]
+	mi := &file_proto_user_user_proto_msgTypes[82]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3971,7 +4539,7 @@ func (x *OAuthLoginResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OAuthLoginResponse.ProtoReflect.Descriptor instead.
 func (*OAuthLoginResponse) Descriptor() ([]byte, []int) {
-	return file_proto_user_user_proto_rawDescGZIP(), []int{71}
+	return file_proto_user_user_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *OAuthLoginResponse) GetAccessToken() string {
@@ -4061,7 +4629,7 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"\fLoginRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\x12+\n" +
-	"\x06device\x18\x03 \x01(\v2\x13.user.DeviceContextR\x06device\"\xe5\x01\n" +
+	"\x06device\x18\x03 \x01(\v2\x13.user.DeviceContextR\x06device\"\xa7\x02\n" +
 	"\rLoginResponse\x12!\n" +
 	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
 	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1b\n" +
@@ -4069,7 +4637,10 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"\n" +
 	"expires_in\x18\x04 \x01(\x03R\texpiresIn\x12,\n" +
 	"\x12refresh_expires_in\x18\x05 \x01(\x03R\x10refreshExpiresIn\x12\"\n" +
-	"\x04user\x18\x06 \x01(\v2\x0e.user.UserInfoR\x04user\"b\n" +
+	"\x04user\x18\x06 \x01(\v2\x0e.user.UserInfoR\x04user\x12!\n" +
+	"\frequires_mfa\x18\a \x01(\bR\vrequiresMfa\x12\x1d\n" +
+	"\n" +
+	"mfa_ticket\x18\b \x01(\tR\tmfaTicket\"b\n" +
 	"\x0eRefreshRequest\x12#\n" +
 	"\rrefresh_token\x18\x01 \x01(\tR\frefreshToken\x12+\n" +
 	"\x06device\x18\x02 \x01(\v2\x13.user.DeviceContextR\x06device\"S\n" +
@@ -4232,7 +4803,39 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"\arole_id\x18\x01 \x01(\x05R\x06roleId\x12)\n" +
 	"\x10permission_codes\x18\x02 \x03(\tR\x0fpermissionCodes\"6\n" +
 	"\x1aSetRolePermissionsResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xf6\x01\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"%\n" +
+	"\x0fSetupMFARequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"K\n" +
+	"\x10SetupMFAResponse\x12\x16\n" +
+	"\x06secret\x18\x01 \x01(\tR\x06secret\x12\x1f\n" +
+	"\votpauth_url\x18\x02 \x01(\tR\n" +
+	"otpauthUrl\":\n" +
+	"\x10VerifyMFARequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\"T\n" +
+	"\x11VerifyMFAResponse\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x12%\n" +
+	"\x0erecovery_codes\x18\x02 \x03(\tR\rrecoveryCodes\";\n" +
+	"\x11DisableMFARequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\".\n" +
+	"\x12DisableMFAResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"H\n" +
+	"\x1eRegenerateRecoveryCodesRequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\"H\n" +
+	"\x1fRegenerateRecoveryCodesResponse\x12%\n" +
+	"\x0erecovery_codes\x18\x01 \x03(\tR\rrecoveryCodes\")\n" +
+	"\x13GetMFAStatusRequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"j\n" +
+	"\x14GetMFAStatusResponse\x12\x18\n" +
+	"\aenabled\x18\x01 \x01(\bR\aenabled\x128\n" +
+	"\x18remaining_recovery_codes\x18\x02 \x01(\x05R\x16remainingRecoveryCodes\"w\n" +
+	"\x15VerifyMFALoginRequest\x12\x1d\n" +
+	"\n" +
+	"mfa_ticket\x18\x01 \x01(\tR\tmfaTicket\x12\x12\n" +
+	"\x04code\x18\x02 \x01(\tR\x04code\x12+\n" +
+	"\x06device\x18\x03 \x01(\v2\x13.user.DeviceContextR\x06device\"\xf6\x01\n" +
 	"\fAuditLogItem\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
 	"\tuser_uuid\x18\x02 \x01(\tR\buserUuid\x12\x16\n" +
@@ -4303,7 +4906,7 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"expires_in\x18\x04 \x01(\x03R\texpiresIn\x12,\n" +
 	"\x12refresh_expires_in\x18\x05 \x01(\x03R\x10refreshExpiresIn\x12\"\n" +
 	"\x04user\x18\x06 \x01(\v2\x0e.user.UserInfoR\x04user\x12\x1e\n" +
-	"\vis_new_user\x18\a \x01(\bR\tisNewUser2\x97\x11\n" +
+	"\vis_new_user\x18\a \x01(\bR\tisNewUser2\xc4\x14\n" +
 	"\vUserService\x129\n" +
 	"\bRegister\x12\x15.user.RegisterRequest\x1a\x16.user.RegisterResponse\x120\n" +
 	"\x05Login\x12\x12.user.LoginRequest\x1a\x13.user.LoginResponse\x126\n" +
@@ -4336,7 +4939,14 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"DeleteRole\x12\x17.user.DeleteRoleRequest\x1a\x18.user.DeleteRoleResponse\x12N\n" +
 	"\x0fListPermissions\x12\x1c.user.ListPermissionsRequest\x1a\x1d.user.ListPermissionsResponse\x12W\n" +
 	"\x12SetRolePermissions\x12\x1f.user.SetRolePermissionsRequest\x1a .user.SetRolePermissionsResponse\x12H\n" +
-	"\rListAuditLogs\x12\x1a.user.ListAuditLogsRequest\x1a\x1b.user.ListAuditLogsResponse\x12<\n" +
+	"\rListAuditLogs\x12\x1a.user.ListAuditLogsRequest\x1a\x1b.user.ListAuditLogsResponse\x129\n" +
+	"\bSetupMFA\x12\x15.user.SetupMFARequest\x1a\x16.user.SetupMFAResponse\x12<\n" +
+	"\tVerifyMFA\x12\x16.user.VerifyMFARequest\x1a\x17.user.VerifyMFAResponse\x12?\n" +
+	"\n" +
+	"DisableMFA\x12\x17.user.DisableMFARequest\x1a\x18.user.DisableMFAResponse\x12f\n" +
+	"\x17RegenerateRecoveryCodes\x12$.user.RegenerateRecoveryCodesRequest\x1a%.user.RegenerateRecoveryCodesResponse\x12E\n" +
+	"\fGetMFAStatus\x12\x19.user.GetMFAStatusRequest\x1a\x1a.user.GetMFAStatusResponse\x12B\n" +
+	"\x0eVerifyMFALogin\x12\x1b.user.VerifyMFALoginRequest\x1a\x13.user.LoginResponse\x12<\n" +
 	"\tBindOAuth\x12\x16.user.BindOAuthRequest\x1a\x17.user.BindOAuthResponse\x12B\n" +
 	"\vUnbindOAuth\x12\x18.user.UnbindOAuthRequest\x1a\x19.user.UnbindOAuthResponse\x12T\n" +
 	"\x11ListOAuthBindings\x12\x1e.user.ListOAuthBindingsRequest\x1a\x1f.user.ListOAuthBindingsResponse\x12?\n" +
@@ -4355,80 +4965,91 @@ func file_proto_user_user_proto_rawDescGZIP() []byte {
 	return file_proto_user_user_proto_rawDescData
 }
 
-var file_proto_user_user_proto_msgTypes = make([]protoimpl.MessageInfo, 72)
+var file_proto_user_user_proto_msgTypes = make([]protoimpl.MessageInfo, 83)
 var file_proto_user_user_proto_goTypes = []any{
-	(*UserInfo)(nil),                   // 0: user.UserInfo
-	(*DeviceContext)(nil),              // 1: user.DeviceContext
-	(*RegisterRequest)(nil),            // 2: user.RegisterRequest
-	(*RegisterResponse)(nil),           // 3: user.RegisterResponse
-	(*LoginRequest)(nil),               // 4: user.LoginRequest
-	(*LoginResponse)(nil),              // 5: user.LoginResponse
-	(*RefreshRequest)(nil),             // 6: user.RefreshRequest
-	(*RefreshResponse)(nil),            // 7: user.RefreshResponse
-	(*LogoutRequest)(nil),              // 8: user.LogoutRequest
-	(*LogoutResponse)(nil),             // 9: user.LogoutResponse
-	(*GetProfileRequest)(nil),          // 10: user.GetProfileRequest
-	(*GetProfileResponse)(nil),         // 11: user.GetProfileResponse
-	(*ValidateTokenRequest)(nil),       // 12: user.ValidateTokenRequest
-	(*ValidateTokenResponse)(nil),      // 13: user.ValidateTokenResponse
-	(*UpdateProfileRequest)(nil),       // 14: user.UpdateProfileRequest
-	(*UpdateProfileResponse)(nil),      // 15: user.UpdateProfileResponse
-	(*ChangePasswordRequest)(nil),      // 16: user.ChangePasswordRequest
-	(*ChangePasswordResponse)(nil),     // 17: user.ChangePasswordResponse
-	(*SendResetCodeRequest)(nil),       // 18: user.SendResetCodeRequest
-	(*SendResetCodeResponse)(nil),      // 19: user.SendResetCodeResponse
-	(*ResetPasswordRequest)(nil),       // 20: user.ResetPasswordRequest
-	(*ResetPasswordResponse)(nil),      // 21: user.ResetPasswordResponse
-	(*GetUserByUUIDRequest)(nil),       // 22: user.GetUserByUUIDRequest
-	(*GetUserByUUIDResponse)(nil),      // 23: user.GetUserByUUIDResponse
-	(*GetUserPermissionsRequest)(nil),  // 24: user.GetUserPermissionsRequest
-	(*GetUserPermissionsResponse)(nil), // 25: user.GetUserPermissionsResponse
-	(*CheckPermissionRequest)(nil),     // 26: user.CheckPermissionRequest
-	(*CheckPermissionResponse)(nil),    // 27: user.CheckPermissionResponse
-	(*ClearUserCacheRequest)(nil),      // 28: user.ClearUserCacheRequest
-	(*ClearUserCacheResponse)(nil),     // 29: user.ClearUserCacheResponse
-	(*SessionInfo)(nil),                // 30: user.SessionInfo
-	(*ListSessionsRequest)(nil),        // 31: user.ListSessionsRequest
-	(*ListSessionsResponse)(nil),       // 32: user.ListSessionsResponse
-	(*RevokeSessionRequest)(nil),       // 33: user.RevokeSessionRequest
-	(*RevokeSessionResponse)(nil),      // 34: user.RevokeSessionResponse
-	(*Pagination)(nil),                 // 35: user.Pagination
-	(*ListUsersRequest)(nil),           // 36: user.ListUsersRequest
-	(*AdminUserItem)(nil),              // 37: user.AdminUserItem
-	(*ListUsersResponse)(nil),          // 38: user.ListUsersResponse
-	(*GetUserDetailRequest)(nil),       // 39: user.GetUserDetailRequest
-	(*GetUserDetailResponse)(nil),      // 40: user.GetUserDetailResponse
-	(*UpdateUserStatusRequest)(nil),    // 41: user.UpdateUserStatusRequest
-	(*UpdateUserStatusResponse)(nil),   // 42: user.UpdateUserStatusResponse
-	(*AssignRoleRequest)(nil),          // 43: user.AssignRoleRequest
-	(*AssignRoleResponse)(nil),         // 44: user.AssignRoleResponse
-	(*RoleInfo)(nil),                   // 45: user.RoleInfo
-	(*ListRolesRequest)(nil),           // 46: user.ListRolesRequest
-	(*ListRolesResponse)(nil),          // 47: user.ListRolesResponse
-	(*CreateRoleRequest)(nil),          // 48: user.CreateRoleRequest
-	(*CreateRoleResponse)(nil),         // 49: user.CreateRoleResponse
-	(*UpdateRoleRequest)(nil),          // 50: user.UpdateRoleRequest
-	(*UpdateRoleResponse)(nil),         // 51: user.UpdateRoleResponse
-	(*DeleteRoleRequest)(nil),          // 52: user.DeleteRoleRequest
-	(*DeleteRoleResponse)(nil),         // 53: user.DeleteRoleResponse
-	(*PermissionInfo)(nil),             // 54: user.PermissionInfo
-	(*ListPermissionsRequest)(nil),     // 55: user.ListPermissionsRequest
-	(*ListPermissionsResponse)(nil),    // 56: user.ListPermissionsResponse
-	(*SetRolePermissionsRequest)(nil),  // 57: user.SetRolePermissionsRequest
-	(*SetRolePermissionsResponse)(nil), // 58: user.SetRolePermissionsResponse
-	(*AuditLogItem)(nil),               // 59: user.AuditLogItem
-	(*ListAuditLogsRequest)(nil),       // 60: user.ListAuditLogsRequest
-	(*ListAuditLogsResponse)(nil),      // 61: user.ListAuditLogsResponse
-	(*OAuthProfile)(nil),               // 62: user.OAuthProfile
-	(*OAuthBinding)(nil),               // 63: user.OAuthBinding
-	(*BindOAuthRequest)(nil),           // 64: user.BindOAuthRequest
-	(*BindOAuthResponse)(nil),          // 65: user.BindOAuthResponse
-	(*UnbindOAuthRequest)(nil),         // 66: user.UnbindOAuthRequest
-	(*UnbindOAuthResponse)(nil),        // 67: user.UnbindOAuthResponse
-	(*ListOAuthBindingsRequest)(nil),   // 68: user.ListOAuthBindingsRequest
-	(*ListOAuthBindingsResponse)(nil),  // 69: user.ListOAuthBindingsResponse
-	(*OAuthLoginRequest)(nil),          // 70: user.OAuthLoginRequest
-	(*OAuthLoginResponse)(nil),         // 71: user.OAuthLoginResponse
+	(*UserInfo)(nil),                        // 0: user.UserInfo
+	(*DeviceContext)(nil),                   // 1: user.DeviceContext
+	(*RegisterRequest)(nil),                 // 2: user.RegisterRequest
+	(*RegisterResponse)(nil),                // 3: user.RegisterResponse
+	(*LoginRequest)(nil),                    // 4: user.LoginRequest
+	(*LoginResponse)(nil),                   // 5: user.LoginResponse
+	(*RefreshRequest)(nil),                  // 6: user.RefreshRequest
+	(*RefreshResponse)(nil),                 // 7: user.RefreshResponse
+	(*LogoutRequest)(nil),                   // 8: user.LogoutRequest
+	(*LogoutResponse)(nil),                  // 9: user.LogoutResponse
+	(*GetProfileRequest)(nil),               // 10: user.GetProfileRequest
+	(*GetProfileResponse)(nil),              // 11: user.GetProfileResponse
+	(*ValidateTokenRequest)(nil),            // 12: user.ValidateTokenRequest
+	(*ValidateTokenResponse)(nil),           // 13: user.ValidateTokenResponse
+	(*UpdateProfileRequest)(nil),            // 14: user.UpdateProfileRequest
+	(*UpdateProfileResponse)(nil),           // 15: user.UpdateProfileResponse
+	(*ChangePasswordRequest)(nil),           // 16: user.ChangePasswordRequest
+	(*ChangePasswordResponse)(nil),          // 17: user.ChangePasswordResponse
+	(*SendResetCodeRequest)(nil),            // 18: user.SendResetCodeRequest
+	(*SendResetCodeResponse)(nil),           // 19: user.SendResetCodeResponse
+	(*ResetPasswordRequest)(nil),            // 20: user.ResetPasswordRequest
+	(*ResetPasswordResponse)(nil),           // 21: user.ResetPasswordResponse
+	(*GetUserByUUIDRequest)(nil),            // 22: user.GetUserByUUIDRequest
+	(*GetUserByUUIDResponse)(nil),           // 23: user.GetUserByUUIDResponse
+	(*GetUserPermissionsRequest)(nil),       // 24: user.GetUserPermissionsRequest
+	(*GetUserPermissionsResponse)(nil),      // 25: user.GetUserPermissionsResponse
+	(*CheckPermissionRequest)(nil),          // 26: user.CheckPermissionRequest
+	(*CheckPermissionResponse)(nil),         // 27: user.CheckPermissionResponse
+	(*ClearUserCacheRequest)(nil),           // 28: user.ClearUserCacheRequest
+	(*ClearUserCacheResponse)(nil),          // 29: user.ClearUserCacheResponse
+	(*SessionInfo)(nil),                     // 30: user.SessionInfo
+	(*ListSessionsRequest)(nil),             // 31: user.ListSessionsRequest
+	(*ListSessionsResponse)(nil),            // 32: user.ListSessionsResponse
+	(*RevokeSessionRequest)(nil),            // 33: user.RevokeSessionRequest
+	(*RevokeSessionResponse)(nil),           // 34: user.RevokeSessionResponse
+	(*Pagination)(nil),                      // 35: user.Pagination
+	(*ListUsersRequest)(nil),                // 36: user.ListUsersRequest
+	(*AdminUserItem)(nil),                   // 37: user.AdminUserItem
+	(*ListUsersResponse)(nil),               // 38: user.ListUsersResponse
+	(*GetUserDetailRequest)(nil),            // 39: user.GetUserDetailRequest
+	(*GetUserDetailResponse)(nil),           // 40: user.GetUserDetailResponse
+	(*UpdateUserStatusRequest)(nil),         // 41: user.UpdateUserStatusRequest
+	(*UpdateUserStatusResponse)(nil),        // 42: user.UpdateUserStatusResponse
+	(*AssignRoleRequest)(nil),               // 43: user.AssignRoleRequest
+	(*AssignRoleResponse)(nil),              // 44: user.AssignRoleResponse
+	(*RoleInfo)(nil),                        // 45: user.RoleInfo
+	(*ListRolesRequest)(nil),                // 46: user.ListRolesRequest
+	(*ListRolesResponse)(nil),               // 47: user.ListRolesResponse
+	(*CreateRoleRequest)(nil),               // 48: user.CreateRoleRequest
+	(*CreateRoleResponse)(nil),              // 49: user.CreateRoleResponse
+	(*UpdateRoleRequest)(nil),               // 50: user.UpdateRoleRequest
+	(*UpdateRoleResponse)(nil),              // 51: user.UpdateRoleResponse
+	(*DeleteRoleRequest)(nil),               // 52: user.DeleteRoleRequest
+	(*DeleteRoleResponse)(nil),              // 53: user.DeleteRoleResponse
+	(*PermissionInfo)(nil),                  // 54: user.PermissionInfo
+	(*ListPermissionsRequest)(nil),          // 55: user.ListPermissionsRequest
+	(*ListPermissionsResponse)(nil),         // 56: user.ListPermissionsResponse
+	(*SetRolePermissionsRequest)(nil),       // 57: user.SetRolePermissionsRequest
+	(*SetRolePermissionsResponse)(nil),      // 58: user.SetRolePermissionsResponse
+	(*SetupMFARequest)(nil),                 // 59: user.SetupMFARequest
+	(*SetupMFAResponse)(nil),                // 60: user.SetupMFAResponse
+	(*VerifyMFARequest)(nil),                // 61: user.VerifyMFARequest
+	(*VerifyMFAResponse)(nil),               // 62: user.VerifyMFAResponse
+	(*DisableMFARequest)(nil),               // 63: user.DisableMFARequest
+	(*DisableMFAResponse)(nil),              // 64: user.DisableMFAResponse
+	(*RegenerateRecoveryCodesRequest)(nil),  // 65: user.RegenerateRecoveryCodesRequest
+	(*RegenerateRecoveryCodesResponse)(nil), // 66: user.RegenerateRecoveryCodesResponse
+	(*GetMFAStatusRequest)(nil),             // 67: user.GetMFAStatusRequest
+	(*GetMFAStatusResponse)(nil),            // 68: user.GetMFAStatusResponse
+	(*VerifyMFALoginRequest)(nil),           // 69: user.VerifyMFALoginRequest
+	(*AuditLogItem)(nil),                    // 70: user.AuditLogItem
+	(*ListAuditLogsRequest)(nil),            // 71: user.ListAuditLogsRequest
+	(*ListAuditLogsResponse)(nil),           // 72: user.ListAuditLogsResponse
+	(*OAuthProfile)(nil),                    // 73: user.OAuthProfile
+	(*OAuthBinding)(nil),                    // 74: user.OAuthBinding
+	(*BindOAuthRequest)(nil),                // 75: user.BindOAuthRequest
+	(*BindOAuthResponse)(nil),               // 76: user.BindOAuthResponse
+	(*UnbindOAuthRequest)(nil),              // 77: user.UnbindOAuthRequest
+	(*UnbindOAuthResponse)(nil),             // 78: user.UnbindOAuthResponse
+	(*ListOAuthBindingsRequest)(nil),        // 79: user.ListOAuthBindingsRequest
+	(*ListOAuthBindingsResponse)(nil),       // 80: user.ListOAuthBindingsResponse
+	(*OAuthLoginRequest)(nil),               // 81: user.OAuthLoginRequest
+	(*OAuthLoginResponse)(nil),              // 82: user.OAuthLoginResponse
 }
 var file_proto_user_user_proto_depIdxs = []int32{
 	0,  // 0: user.RegisterResponse.user:type_name -> user.UserInfo
@@ -4446,80 +5067,93 @@ var file_proto_user_user_proto_depIdxs = []int32{
 	45, // 12: user.ListRolesResponse.roles:type_name -> user.RoleInfo
 	45, // 13: user.CreateRoleResponse.role:type_name -> user.RoleInfo
 	54, // 14: user.ListPermissionsResponse.permissions:type_name -> user.PermissionInfo
-	35, // 15: user.ListAuditLogsRequest.pagination:type_name -> user.Pagination
-	59, // 16: user.ListAuditLogsResponse.logs:type_name -> user.AuditLogItem
-	62, // 17: user.BindOAuthRequest.profile:type_name -> user.OAuthProfile
-	63, // 18: user.ListOAuthBindingsResponse.bindings:type_name -> user.OAuthBinding
-	62, // 19: user.OAuthLoginRequest.profile:type_name -> user.OAuthProfile
-	1,  // 20: user.OAuthLoginRequest.device:type_name -> user.DeviceContext
-	0,  // 21: user.OAuthLoginResponse.user:type_name -> user.UserInfo
-	2,  // 22: user.UserService.Register:input_type -> user.RegisterRequest
-	4,  // 23: user.UserService.Login:input_type -> user.LoginRequest
-	6,  // 24: user.UserService.Refresh:input_type -> user.RefreshRequest
-	8,  // 25: user.UserService.Logout:input_type -> user.LogoutRequest
-	10, // 26: user.UserService.GetProfile:input_type -> user.GetProfileRequest
-	12, // 27: user.UserService.ValidateToken:input_type -> user.ValidateTokenRequest
-	14, // 28: user.UserService.UpdateProfile:input_type -> user.UpdateProfileRequest
-	16, // 29: user.UserService.ChangePassword:input_type -> user.ChangePasswordRequest
-	18, // 30: user.UserService.SendResetCode:input_type -> user.SendResetCodeRequest
-	20, // 31: user.UserService.ResetPassword:input_type -> user.ResetPasswordRequest
-	22, // 32: user.UserService.GetUserByUUID:input_type -> user.GetUserByUUIDRequest
-	24, // 33: user.UserService.GetUserPermissions:input_type -> user.GetUserPermissionsRequest
-	26, // 34: user.UserService.CheckPermission:input_type -> user.CheckPermissionRequest
-	28, // 35: user.UserService.ClearUserCache:input_type -> user.ClearUserCacheRequest
-	31, // 36: user.UserService.ListSessions:input_type -> user.ListSessionsRequest
-	33, // 37: user.UserService.RevokeSession:input_type -> user.RevokeSessionRequest
-	36, // 38: user.UserService.ListUsers:input_type -> user.ListUsersRequest
-	39, // 39: user.UserService.GetUserDetail:input_type -> user.GetUserDetailRequest
-	41, // 40: user.UserService.UpdateUserStatus:input_type -> user.UpdateUserStatusRequest
-	43, // 41: user.UserService.AssignRole:input_type -> user.AssignRoleRequest
-	46, // 42: user.UserService.ListRoles:input_type -> user.ListRolesRequest
-	48, // 43: user.UserService.CreateRole:input_type -> user.CreateRoleRequest
-	50, // 44: user.UserService.UpdateRole:input_type -> user.UpdateRoleRequest
-	52, // 45: user.UserService.DeleteRole:input_type -> user.DeleteRoleRequest
-	55, // 46: user.UserService.ListPermissions:input_type -> user.ListPermissionsRequest
-	57, // 47: user.UserService.SetRolePermissions:input_type -> user.SetRolePermissionsRequest
-	60, // 48: user.UserService.ListAuditLogs:input_type -> user.ListAuditLogsRequest
-	64, // 49: user.UserService.BindOAuth:input_type -> user.BindOAuthRequest
-	66, // 50: user.UserService.UnbindOAuth:input_type -> user.UnbindOAuthRequest
-	68, // 51: user.UserService.ListOAuthBindings:input_type -> user.ListOAuthBindingsRequest
-	70, // 52: user.UserService.OAuthLogin:input_type -> user.OAuthLoginRequest
-	3,  // 53: user.UserService.Register:output_type -> user.RegisterResponse
-	5,  // 54: user.UserService.Login:output_type -> user.LoginResponse
-	7,  // 55: user.UserService.Refresh:output_type -> user.RefreshResponse
-	9,  // 56: user.UserService.Logout:output_type -> user.LogoutResponse
-	11, // 57: user.UserService.GetProfile:output_type -> user.GetProfileResponse
-	13, // 58: user.UserService.ValidateToken:output_type -> user.ValidateTokenResponse
-	15, // 59: user.UserService.UpdateProfile:output_type -> user.UpdateProfileResponse
-	17, // 60: user.UserService.ChangePassword:output_type -> user.ChangePasswordResponse
-	19, // 61: user.UserService.SendResetCode:output_type -> user.SendResetCodeResponse
-	21, // 62: user.UserService.ResetPassword:output_type -> user.ResetPasswordResponse
-	23, // 63: user.UserService.GetUserByUUID:output_type -> user.GetUserByUUIDResponse
-	25, // 64: user.UserService.GetUserPermissions:output_type -> user.GetUserPermissionsResponse
-	27, // 65: user.UserService.CheckPermission:output_type -> user.CheckPermissionResponse
-	29, // 66: user.UserService.ClearUserCache:output_type -> user.ClearUserCacheResponse
-	32, // 67: user.UserService.ListSessions:output_type -> user.ListSessionsResponse
-	34, // 68: user.UserService.RevokeSession:output_type -> user.RevokeSessionResponse
-	38, // 69: user.UserService.ListUsers:output_type -> user.ListUsersResponse
-	40, // 70: user.UserService.GetUserDetail:output_type -> user.GetUserDetailResponse
-	42, // 71: user.UserService.UpdateUserStatus:output_type -> user.UpdateUserStatusResponse
-	44, // 72: user.UserService.AssignRole:output_type -> user.AssignRoleResponse
-	47, // 73: user.UserService.ListRoles:output_type -> user.ListRolesResponse
-	49, // 74: user.UserService.CreateRole:output_type -> user.CreateRoleResponse
-	51, // 75: user.UserService.UpdateRole:output_type -> user.UpdateRoleResponse
-	53, // 76: user.UserService.DeleteRole:output_type -> user.DeleteRoleResponse
-	56, // 77: user.UserService.ListPermissions:output_type -> user.ListPermissionsResponse
-	58, // 78: user.UserService.SetRolePermissions:output_type -> user.SetRolePermissionsResponse
-	61, // 79: user.UserService.ListAuditLogs:output_type -> user.ListAuditLogsResponse
-	65, // 80: user.UserService.BindOAuth:output_type -> user.BindOAuthResponse
-	67, // 81: user.UserService.UnbindOAuth:output_type -> user.UnbindOAuthResponse
-	69, // 82: user.UserService.ListOAuthBindings:output_type -> user.ListOAuthBindingsResponse
-	71, // 83: user.UserService.OAuthLogin:output_type -> user.OAuthLoginResponse
-	53, // [53:84] is the sub-list for method output_type
-	22, // [22:53] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	1,  // 15: user.VerifyMFALoginRequest.device:type_name -> user.DeviceContext
+	35, // 16: user.ListAuditLogsRequest.pagination:type_name -> user.Pagination
+	70, // 17: user.ListAuditLogsResponse.logs:type_name -> user.AuditLogItem
+	73, // 18: user.BindOAuthRequest.profile:type_name -> user.OAuthProfile
+	74, // 19: user.ListOAuthBindingsResponse.bindings:type_name -> user.OAuthBinding
+	73, // 20: user.OAuthLoginRequest.profile:type_name -> user.OAuthProfile
+	1,  // 21: user.OAuthLoginRequest.device:type_name -> user.DeviceContext
+	0,  // 22: user.OAuthLoginResponse.user:type_name -> user.UserInfo
+	2,  // 23: user.UserService.Register:input_type -> user.RegisterRequest
+	4,  // 24: user.UserService.Login:input_type -> user.LoginRequest
+	6,  // 25: user.UserService.Refresh:input_type -> user.RefreshRequest
+	8,  // 26: user.UserService.Logout:input_type -> user.LogoutRequest
+	10, // 27: user.UserService.GetProfile:input_type -> user.GetProfileRequest
+	12, // 28: user.UserService.ValidateToken:input_type -> user.ValidateTokenRequest
+	14, // 29: user.UserService.UpdateProfile:input_type -> user.UpdateProfileRequest
+	16, // 30: user.UserService.ChangePassword:input_type -> user.ChangePasswordRequest
+	18, // 31: user.UserService.SendResetCode:input_type -> user.SendResetCodeRequest
+	20, // 32: user.UserService.ResetPassword:input_type -> user.ResetPasswordRequest
+	22, // 33: user.UserService.GetUserByUUID:input_type -> user.GetUserByUUIDRequest
+	24, // 34: user.UserService.GetUserPermissions:input_type -> user.GetUserPermissionsRequest
+	26, // 35: user.UserService.CheckPermission:input_type -> user.CheckPermissionRequest
+	28, // 36: user.UserService.ClearUserCache:input_type -> user.ClearUserCacheRequest
+	31, // 37: user.UserService.ListSessions:input_type -> user.ListSessionsRequest
+	33, // 38: user.UserService.RevokeSession:input_type -> user.RevokeSessionRequest
+	36, // 39: user.UserService.ListUsers:input_type -> user.ListUsersRequest
+	39, // 40: user.UserService.GetUserDetail:input_type -> user.GetUserDetailRequest
+	41, // 41: user.UserService.UpdateUserStatus:input_type -> user.UpdateUserStatusRequest
+	43, // 42: user.UserService.AssignRole:input_type -> user.AssignRoleRequest
+	46, // 43: user.UserService.ListRoles:input_type -> user.ListRolesRequest
+	48, // 44: user.UserService.CreateRole:input_type -> user.CreateRoleRequest
+	50, // 45: user.UserService.UpdateRole:input_type -> user.UpdateRoleRequest
+	52, // 46: user.UserService.DeleteRole:input_type -> user.DeleteRoleRequest
+	55, // 47: user.UserService.ListPermissions:input_type -> user.ListPermissionsRequest
+	57, // 48: user.UserService.SetRolePermissions:input_type -> user.SetRolePermissionsRequest
+	71, // 49: user.UserService.ListAuditLogs:input_type -> user.ListAuditLogsRequest
+	59, // 50: user.UserService.SetupMFA:input_type -> user.SetupMFARequest
+	61, // 51: user.UserService.VerifyMFA:input_type -> user.VerifyMFARequest
+	63, // 52: user.UserService.DisableMFA:input_type -> user.DisableMFARequest
+	65, // 53: user.UserService.RegenerateRecoveryCodes:input_type -> user.RegenerateRecoveryCodesRequest
+	67, // 54: user.UserService.GetMFAStatus:input_type -> user.GetMFAStatusRequest
+	69, // 55: user.UserService.VerifyMFALogin:input_type -> user.VerifyMFALoginRequest
+	75, // 56: user.UserService.BindOAuth:input_type -> user.BindOAuthRequest
+	77, // 57: user.UserService.UnbindOAuth:input_type -> user.UnbindOAuthRequest
+	79, // 58: user.UserService.ListOAuthBindings:input_type -> user.ListOAuthBindingsRequest
+	81, // 59: user.UserService.OAuthLogin:input_type -> user.OAuthLoginRequest
+	3,  // 60: user.UserService.Register:output_type -> user.RegisterResponse
+	5,  // 61: user.UserService.Login:output_type -> user.LoginResponse
+	7,  // 62: user.UserService.Refresh:output_type -> user.RefreshResponse
+	9,  // 63: user.UserService.Logout:output_type -> user.LogoutResponse
+	11, // 64: user.UserService.GetProfile:output_type -> user.GetProfileResponse
+	13, // 65: user.UserService.ValidateToken:output_type -> user.ValidateTokenResponse
+	15, // 66: user.UserService.UpdateProfile:output_type -> user.UpdateProfileResponse
+	17, // 67: user.UserService.ChangePassword:output_type -> user.ChangePasswordResponse
+	19, // 68: user.UserService.SendResetCode:output_type -> user.SendResetCodeResponse
+	21, // 69: user.UserService.ResetPassword:output_type -> user.ResetPasswordResponse
+	23, // 70: user.UserService.GetUserByUUID:output_type -> user.GetUserByUUIDResponse
+	25, // 71: user.UserService.GetUserPermissions:output_type -> user.GetUserPermissionsResponse
+	27, // 72: user.UserService.CheckPermission:output_type -> user.CheckPermissionResponse
+	29, // 73: user.UserService.ClearUserCache:output_type -> user.ClearUserCacheResponse
+	32, // 74: user.UserService.ListSessions:output_type -> user.ListSessionsResponse
+	34, // 75: user.UserService.RevokeSession:output_type -> user.RevokeSessionResponse
+	38, // 76: user.UserService.ListUsers:output_type -> user.ListUsersResponse
+	40, // 77: user.UserService.GetUserDetail:output_type -> user.GetUserDetailResponse
+	42, // 78: user.UserService.UpdateUserStatus:output_type -> user.UpdateUserStatusResponse
+	44, // 79: user.UserService.AssignRole:output_type -> user.AssignRoleResponse
+	47, // 80: user.UserService.ListRoles:output_type -> user.ListRolesResponse
+	49, // 81: user.UserService.CreateRole:output_type -> user.CreateRoleResponse
+	51, // 82: user.UserService.UpdateRole:output_type -> user.UpdateRoleResponse
+	53, // 83: user.UserService.DeleteRole:output_type -> user.DeleteRoleResponse
+	56, // 84: user.UserService.ListPermissions:output_type -> user.ListPermissionsResponse
+	58, // 85: user.UserService.SetRolePermissions:output_type -> user.SetRolePermissionsResponse
+	72, // 86: user.UserService.ListAuditLogs:output_type -> user.ListAuditLogsResponse
+	60, // 87: user.UserService.SetupMFA:output_type -> user.SetupMFAResponse
+	62, // 88: user.UserService.VerifyMFA:output_type -> user.VerifyMFAResponse
+	64, // 89: user.UserService.DisableMFA:output_type -> user.DisableMFAResponse
+	66, // 90: user.UserService.RegenerateRecoveryCodes:output_type -> user.RegenerateRecoveryCodesResponse
+	68, // 91: user.UserService.GetMFAStatus:output_type -> user.GetMFAStatusResponse
+	5,  // 92: user.UserService.VerifyMFALogin:output_type -> user.LoginResponse
+	76, // 93: user.UserService.BindOAuth:output_type -> user.BindOAuthResponse
+	78, // 94: user.UserService.UnbindOAuth:output_type -> user.UnbindOAuthResponse
+	80, // 95: user.UserService.ListOAuthBindings:output_type -> user.ListOAuthBindingsResponse
+	82, // 96: user.UserService.OAuthLogin:output_type -> user.OAuthLoginResponse
+	60, // [60:97] is the sub-list for method output_type
+	23, // [23:60] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_proto_user_user_proto_init() }
@@ -4533,7 +5167,7 @@ func file_proto_user_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_user_user_proto_rawDesc), len(file_proto_user_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   72,
+			NumMessages:   83,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

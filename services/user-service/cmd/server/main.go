@@ -66,7 +66,7 @@ func main() {
 	tokenStore := repository.NewTokenStore(rdb)
 	codeStore := repository.NewVerifyCodeStore(rdb)
 	mailer := notify.NewEmailSender(cfg.SMTP)
-	tokenManager := token.NewTokenManager(cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL)
+	tokenManager := token.NewTokenManager(cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL, cfg.MFATicketTTL)
 	// 权限缓存 TTL 与 Refresh Token 一致（7 天）
 	rbacService := rbac.NewService(rbacRepo, tokenStore, cfg.RefreshTTL)
 	auditService := audit.NewService(auditRepo)
@@ -79,6 +79,12 @@ func main() {
 			CodeTTL:      cfg.CodeTTL,
 			CodeLength:   cfg.CodeLength,
 			CodeResendCD: cfg.CodeResendCD,
+		},
+		auth.MFAConfig{
+			Issuer:             cfg.MFAIssuer,
+			CodeSkew:           cfg.MFASkew,
+			RecoveryCodeCount:  cfg.MFARecoveryCodes,
+			RecoveryCodeLength: cfg.MFARecoveryCodeLen,
 		},
 		cfg.BcryptCost,
 	)

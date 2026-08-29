@@ -42,24 +42,60 @@ func (h *UserHandler) Register(ctx context.Context, req *userpb.RegisterRequest)
 	return &userpb.RegisterResponse{User: toUserInfo(u)}, nil
 }
 
-// Login 用户登录，返回双令牌。
+// Login 用户登录。
+//
+// 若账号已开启 2FA，则不签发令牌，返回 requires_mfa=true 与中间票据，
+// 由前端引导用户输入验证码后调用 VerifyMFALogin。
 func (h *UserHandler) Login(ctx context.Context, req *userpb.LoginRequest) (*userpb.LoginResponse, error) {
 	logger.InfoContext(ctx, "收到登录请求", "email", req.GetEmail())
-	pair, u, err := h.auth.Login(ctx, req.GetEmail(), req.GetPassword(), toDevice(req.GetDevice()))
+	res, err := h.auth.Login(ctx, req.GetEmail(), req.GetPassword(), toDevice(req.GetDevice()))
 	if err != nil {
 		logger.WarnContext(ctx, "登录失败", "email", req.GetEmail(), logger.Err(err))
 		return nil, mapError(err)
 	}
 
-	logger.InfoContext(ctx, "登录成功", logger.UserUUID(u.UUID.String()))
+	// 需要二次验证：不下发令牌，仅返回票据
+	if res.RequiresMFA {
+		logger.InfoContext(ctx, "账号已开启 2FA，等待二次验证", logger.UserUUID(res.User.UUID.String()))
+		return &userpb.LoginResponse{
+			User:        toUserInfo(res.User),
+			RequiresMfa: true,
+			MfaTicket:   res.MFATicket,
+		}, nil
+	}
+
+	logger.InfoContext(ctx, "登录成功", logger.UserUUID(res.User.UUID.String()))
 	return &userpb.LoginResponse{
-		AccessToken:      pair.AccessToken,
-		RefreshToken:     pair.RefreshToken,
-		DeviceId:         pair.DeviceID,
-		ExpiresIn:        pair.ExpiresIn,
-		RefreshExpiresIn: pair.RefreshExpiresIn,
-		User:             toUserInfo(u),
+		AccessToken:      res.TokenPair.AccessToken,
+		RefreshToken:     res.TokenPair.RefreshToken,
+		DeviceId:         res.TokenPair.DeviceID,
+		ExpiresIn:        res.TokenPair.ExpiresIn,
+		RefreshExpiresIn: res.TokenPair.RefreshExpiresIn,
+		User:             toUserInfo(res.User),
 	}, nil
+}
+
+// VerifyMFALogin 登录流程的 2FA 二次验证，通过后签发双令牌。
+func (h *UserHandler) VerifyMFALogin(ctx context.Context, req *userpb.VerifyMFALoginRequest) (*userpb.LoginResponse, error) {
+	res, usedRecovery, err := h.auth.VerifyMFALogin(ctx, req.GetMfaTicket(), req.GetCode(), toDevice(req.GetDevice()))
+	if err != nil {
+		logger.WarnContext(ctx, "2FA 登录验证失败", logger.Err(err))
+		return nil, mapMFAError(err)
+	}
+
+	logger.InfoContext(ctx, "2FA 登录成功", logger.UserUUID(res.User.UUID.String()), "used_recovery", usedRecovery)
+
+	resp := &userpb.LoginResponse{
+		AccessToken:      res.TokenPair.AccessToken,
+		RefreshToken:     res.TokenPair.RefreshToken,
+		DeviceId:         res.TokenPair.DeviceID,
+		ExpiresIn:        res.TokenPair.ExpiresIn,
+		RefreshExpiresIn: res.TokenPair.RefreshExpiresIn,
+		User:             toUserInfo(res.User),
+	}
+	// 使用恢复码登录时，在 user 信息中无法表达，交由上层通过日志/审计感知；
+	// 前端可据此引导用户重新生成恢复码（此处借用 mfa_ticket 字段置空表示已完成）。
+	return resp, nil
 }
 
 // Refresh 刷新 access token。

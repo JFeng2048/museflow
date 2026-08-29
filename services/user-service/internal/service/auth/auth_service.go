@@ -47,6 +47,7 @@ type AuthService struct {
 	codes      repository.VerifyCodeStore // 验证码存储（密码重置）
 	mailer     notify.EmailSender         // 邮件发送器
 	reset      ResetServiceConfig         // 密码重置配置
+	mfaCfg     MFAConfig                  // 2FA 配置
 	bcryptCost int
 }
 
@@ -61,8 +62,10 @@ func NewAuthService(
 	codes repository.VerifyCodeStore,
 	mailer notify.EmailSender,
 	reset ResetServiceConfig,
+	mfaCfg MFAConfig,
 	bcryptCost int,
 ) *AuthService {
+	mfaCfg.applyDefaults()
 	return &AuthService{
 		users:      users,
 		tokens:     tokens,
@@ -73,6 +76,7 @@ func NewAuthService(
 		codes:      codes,
 		mailer:     mailer,
 		reset:      reset,
+		mfaCfg:     mfaCfg,
 		bcryptCost: bcryptCost,
 	}
 }
@@ -136,18 +140,35 @@ func (s *AuthService) Register(ctx context.Context, email, password, nickname st
 	return u, nil
 }
 
+// LoginResult 登录结果。
+//
+// 分两种情形：
+//   - 未开启 2FA：TokenPair 与 User 均非空，RequiresMFA 为 false，可直接返回令牌
+//   - 已开启 2FA：RequiresMFA 为 true 且 MFATicket 非空，此时不下发令牌，
+//     需用户提交验证码后调用 VerifyMFALogin 换取令牌
+type LoginResult struct {
+	TokenPair *dto.TokenPair
+	User      *model.User
+	// RequiresMFA 是否需要二次验证（账号已开启 2FA）。
+	RequiresMFA bool
+	// MFATicket 2FA 中间票据，仅 RequiresMFA 为 true 时有值。
+	MFATicket string
+}
+
 // Login 校验密码并签发双令牌；成功后写入用户权限缓存。
 // 包含登录失败锁定（5 次 / 15 分钟）与账号状态校验。
-func (s *AuthService) Login(ctx context.Context, email, password string, dev dto.Device) (*dto.TokenPair, *model.User, error) {
+//
+// 若用户已开启 2FA，则不下发令牌，而是返回 RequiresMFA=true 与中间票据。
+func (s *AuthService) Login(ctx context.Context, email, password string, dev dto.Device) (*LoginResult, error) {
 	email = normalizeEmail(email)
 
 	u, err := s.users.FindByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, repository.ErrUserNotFound) {
 			// 不区分“用户不存在”与“密码错误”，避免邮箱枚举
-			return nil, nil, ErrInvalidCredentials
+			return nil, ErrInvalidCredentials
 		}
-		return nil, nil, fmt.Errorf("查询用户失败: %w", err)
+		return nil, fmt.Errorf("查询用户失败: %w", err)
 	}
 
 	// 账号锁定检查（locked_until 未过期则拒绝）
@@ -161,12 +182,12 @@ func (s *AuthService) Login(ctx context.Context, email, password string, dev dto
 			UserAgent:  dev.UserAgent,
 			Detail:     map[string]string{"reason": "account_locked"},
 		})
-		return nil, nil, ErrAccountLocked
+		return nil, ErrAccountLocked
 	}
 
 	// 第三方登录用户可能没有密码，此时不允许密码登录
 	if u.PasswordHash == nil || *u.PasswordHash == "" {
-		return nil, nil, ErrInvalidCredentials
+		return nil, ErrInvalidCredentials
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(*u.PasswordHash), []byte(password)); err != nil {
 		// 密码错误：累加失败计数，达到阈值锁定
@@ -182,18 +203,37 @@ func (s *AuthService) Login(ctx context.Context, email, password string, dev dto
 			UserAgent:  dev.UserAgent,
 			Detail:     map[string]string{"reason": "bad_password"},
 		})
-		return nil, nil, ErrInvalidCredentials
+		return nil, ErrInvalidCredentials
+	}
+
+	// 密码校验通过：重置失败计数（后续成功与否都不再累加）
+	if err := s.users.ResetLoginFails(ctx, u.UUID); err != nil {
+		logger.WarnContext(ctx, "重置登录失败计数失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
+	}
+
+	// 已开启 2FA：不下发令牌，签发中间票据等待二次验证
+	if u.MFAEnabled && u.MFASecret != nil && *u.MFASecret != "" {
+		ticket, err := s.tm.GenerateMFATicket(u.UUID.String(), uuid.NewString())
+		if err != nil {
+			return nil, fmt.Errorf("签发 2FA 票据失败: %w", err)
+		}
+		s.audit.Record(ctx, audit.Entry{
+			UserUUID:   u.UUID.String(),
+			Action:     model.AuditActionMFAChallenge,
+			Resource:   model.AuditResourceAuth,
+			ResourceID: u.UUID.String(),
+			IP:         dev.IP,
+			UserAgent:  dev.UserAgent,
+		})
+		return &LoginResult{User: u, RequiresMFA: true, MFATicket: ticket}, nil
 	}
 
 	pair, err := s.issueTokens(ctx, u.UUID.String(), dev)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	// 登录成功：重置失败计数 + 更新登录信息 + 写入权限缓存
-	if err := s.users.ResetLoginFails(ctx, u.UUID); err != nil {
-		logger.WarnContext(ctx, "重置登录失败计数失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
-	}
+	// 登录成功：更新登录信息 + 写入权限缓存
 	if err := s.users.UpdateLoginInfo(ctx, u.UUID, dev.IP, dev.DeviceName); err != nil {
 		logger.WarnContext(ctx, "更新登录信息失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
 	}
@@ -213,7 +253,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string, dev dto
 		Detail:     map[string]string{"device_id": dev.DeviceID},
 	})
 
-	return pair, u, nil
+	return &LoginResult{TokenPair: pair, User: u}, nil
 }
 
 // issueTokens 生成 tokenId、签发双令牌并写入 Redis 白名单与设备列表。

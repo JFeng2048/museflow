@@ -19,37 +19,43 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserService_Register_FullMethodName           = "/user.UserService/Register"
-	UserService_Login_FullMethodName              = "/user.UserService/Login"
-	UserService_Refresh_FullMethodName            = "/user.UserService/Refresh"
-	UserService_Logout_FullMethodName             = "/user.UserService/Logout"
-	UserService_GetProfile_FullMethodName         = "/user.UserService/GetProfile"
-	UserService_ValidateToken_FullMethodName      = "/user.UserService/ValidateToken"
-	UserService_UpdateProfile_FullMethodName      = "/user.UserService/UpdateProfile"
-	UserService_ChangePassword_FullMethodName     = "/user.UserService/ChangePassword"
-	UserService_SendResetCode_FullMethodName      = "/user.UserService/SendResetCode"
-	UserService_ResetPassword_FullMethodName      = "/user.UserService/ResetPassword"
-	UserService_GetUserByUUID_FullMethodName      = "/user.UserService/GetUserByUUID"
-	UserService_GetUserPermissions_FullMethodName = "/user.UserService/GetUserPermissions"
-	UserService_CheckPermission_FullMethodName    = "/user.UserService/CheckPermission"
-	UserService_ClearUserCache_FullMethodName     = "/user.UserService/ClearUserCache"
-	UserService_ListSessions_FullMethodName       = "/user.UserService/ListSessions"
-	UserService_RevokeSession_FullMethodName      = "/user.UserService/RevokeSession"
-	UserService_ListUsers_FullMethodName          = "/user.UserService/ListUsers"
-	UserService_GetUserDetail_FullMethodName      = "/user.UserService/GetUserDetail"
-	UserService_UpdateUserStatus_FullMethodName   = "/user.UserService/UpdateUserStatus"
-	UserService_AssignRole_FullMethodName         = "/user.UserService/AssignRole"
-	UserService_ListRoles_FullMethodName          = "/user.UserService/ListRoles"
-	UserService_CreateRole_FullMethodName         = "/user.UserService/CreateRole"
-	UserService_UpdateRole_FullMethodName         = "/user.UserService/UpdateRole"
-	UserService_DeleteRole_FullMethodName         = "/user.UserService/DeleteRole"
-	UserService_ListPermissions_FullMethodName    = "/user.UserService/ListPermissions"
-	UserService_SetRolePermissions_FullMethodName = "/user.UserService/SetRolePermissions"
-	UserService_ListAuditLogs_FullMethodName      = "/user.UserService/ListAuditLogs"
-	UserService_BindOAuth_FullMethodName          = "/user.UserService/BindOAuth"
-	UserService_UnbindOAuth_FullMethodName        = "/user.UserService/UnbindOAuth"
-	UserService_ListOAuthBindings_FullMethodName  = "/user.UserService/ListOAuthBindings"
-	UserService_OAuthLogin_FullMethodName         = "/user.UserService/OAuthLogin"
+	UserService_Register_FullMethodName                = "/user.UserService/Register"
+	UserService_Login_FullMethodName                   = "/user.UserService/Login"
+	UserService_Refresh_FullMethodName                 = "/user.UserService/Refresh"
+	UserService_Logout_FullMethodName                  = "/user.UserService/Logout"
+	UserService_GetProfile_FullMethodName              = "/user.UserService/GetProfile"
+	UserService_ValidateToken_FullMethodName           = "/user.UserService/ValidateToken"
+	UserService_UpdateProfile_FullMethodName           = "/user.UserService/UpdateProfile"
+	UserService_ChangePassword_FullMethodName          = "/user.UserService/ChangePassword"
+	UserService_SendResetCode_FullMethodName           = "/user.UserService/SendResetCode"
+	UserService_ResetPassword_FullMethodName           = "/user.UserService/ResetPassword"
+	UserService_GetUserByUUID_FullMethodName           = "/user.UserService/GetUserByUUID"
+	UserService_GetUserPermissions_FullMethodName      = "/user.UserService/GetUserPermissions"
+	UserService_CheckPermission_FullMethodName         = "/user.UserService/CheckPermission"
+	UserService_ClearUserCache_FullMethodName          = "/user.UserService/ClearUserCache"
+	UserService_ListSessions_FullMethodName            = "/user.UserService/ListSessions"
+	UserService_RevokeSession_FullMethodName           = "/user.UserService/RevokeSession"
+	UserService_ListUsers_FullMethodName               = "/user.UserService/ListUsers"
+	UserService_GetUserDetail_FullMethodName           = "/user.UserService/GetUserDetail"
+	UserService_UpdateUserStatus_FullMethodName        = "/user.UserService/UpdateUserStatus"
+	UserService_AssignRole_FullMethodName              = "/user.UserService/AssignRole"
+	UserService_ListRoles_FullMethodName               = "/user.UserService/ListRoles"
+	UserService_CreateRole_FullMethodName              = "/user.UserService/CreateRole"
+	UserService_UpdateRole_FullMethodName              = "/user.UserService/UpdateRole"
+	UserService_DeleteRole_FullMethodName              = "/user.UserService/DeleteRole"
+	UserService_ListPermissions_FullMethodName         = "/user.UserService/ListPermissions"
+	UserService_SetRolePermissions_FullMethodName      = "/user.UserService/SetRolePermissions"
+	UserService_ListAuditLogs_FullMethodName           = "/user.UserService/ListAuditLogs"
+	UserService_SetupMFA_FullMethodName                = "/user.UserService/SetupMFA"
+	UserService_VerifyMFA_FullMethodName               = "/user.UserService/VerifyMFA"
+	UserService_DisableMFA_FullMethodName              = "/user.UserService/DisableMFA"
+	UserService_RegenerateRecoveryCodes_FullMethodName = "/user.UserService/RegenerateRecoveryCodes"
+	UserService_GetMFAStatus_FullMethodName            = "/user.UserService/GetMFAStatus"
+	UserService_VerifyMFALogin_FullMethodName          = "/user.UserService/VerifyMFALogin"
+	UserService_BindOAuth_FullMethodName               = "/user.UserService/BindOAuth"
+	UserService_UnbindOAuth_FullMethodName             = "/user.UserService/UnbindOAuth"
+	UserService_ListOAuthBindings_FullMethodName       = "/user.UserService/ListOAuthBindings"
+	UserService_OAuthLogin_FullMethodName              = "/user.UserService/OAuthLogin"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -116,6 +122,18 @@ type UserServiceClient interface {
 	SetRolePermissions(ctx context.Context, in *SetRolePermissionsRequest, opts ...grpc.CallOption) (*SetRolePermissionsResponse, error)
 	// ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
 	ListAuditLogs(ctx context.Context, in *ListAuditLogsRequest, opts ...grpc.CallOption) (*ListAuditLogsResponse, error)
+	// SetupMFA 生成 TOTP 密钥并返回 otpauth:// 绑定 URL（此时尚未启用）
+	SetupMFA(ctx context.Context, in *SetupMFARequest, opts ...grpc.CallOption) (*SetupMFAResponse, error)
+	// VerifyMFA 验证验证码并正式启用 2FA，返回 8 个恢复码
+	VerifyMFA(ctx context.Context, in *VerifyMFARequest, opts ...grpc.CallOption) (*VerifyMFAResponse, error)
+	// DisableMFA 验证验证码后关闭 2FA，清空密钥与恢复码
+	DisableMFA(ctx context.Context, in *DisableMFARequest, opts ...grpc.CallOption) (*DisableMFAResponse, error)
+	// RegenerateRecoveryCodes 验证验证码后重新生成 8 个恢复码
+	RegenerateRecoveryCodes(ctx context.Context, in *RegenerateRecoveryCodesRequest, opts ...grpc.CallOption) (*RegenerateRecoveryCodesResponse, error)
+	// GetMFAStatus 查询当前用户的 2FA 开启状态与剩余恢复码数量
+	GetMFAStatus(ctx context.Context, in *GetMFAStatusRequest, opts ...grpc.CallOption) (*GetMFAStatusResponse, error)
+	// VerifyMFALogin 登录流程的 2FA 二次验证（验证码或恢复码），通过后签发令牌
+	VerifyMFALogin(ctx context.Context, in *VerifyMFALoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	// BindOAuth 为当前用户绑定第三方账号
 	BindOAuth(ctx context.Context, in *BindOAuthRequest, opts ...grpc.CallOption) (*BindOAuthResponse, error)
 	// UnbindOAuth 解绑第三方账号
@@ -404,6 +422,66 @@ func (c *userServiceClient) ListAuditLogs(ctx context.Context, in *ListAuditLogs
 	return out, nil
 }
 
+func (c *userServiceClient) SetupMFA(ctx context.Context, in *SetupMFARequest, opts ...grpc.CallOption) (*SetupMFAResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetupMFAResponse)
+	err := c.cc.Invoke(ctx, UserService_SetupMFA_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) VerifyMFA(ctx context.Context, in *VerifyMFARequest, opts ...grpc.CallOption) (*VerifyMFAResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyMFAResponse)
+	err := c.cc.Invoke(ctx, UserService_VerifyMFA_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) DisableMFA(ctx context.Context, in *DisableMFARequest, opts ...grpc.CallOption) (*DisableMFAResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DisableMFAResponse)
+	err := c.cc.Invoke(ctx, UserService_DisableMFA_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) RegenerateRecoveryCodes(ctx context.Context, in *RegenerateRecoveryCodesRequest, opts ...grpc.CallOption) (*RegenerateRecoveryCodesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RegenerateRecoveryCodesResponse)
+	err := c.cc.Invoke(ctx, UserService_RegenerateRecoveryCodes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) GetMFAStatus(ctx context.Context, in *GetMFAStatusRequest, opts ...grpc.CallOption) (*GetMFAStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetMFAStatusResponse)
+	err := c.cc.Invoke(ctx, UserService_GetMFAStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) VerifyMFALogin(ctx context.Context, in *VerifyMFALoginRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginResponse)
+	err := c.cc.Invoke(ctx, UserService_VerifyMFALogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userServiceClient) BindOAuth(ctx context.Context, in *BindOAuthRequest, opts ...grpc.CallOption) (*BindOAuthResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BindOAuthResponse)
@@ -508,6 +586,18 @@ type UserServiceServer interface {
 	SetRolePermissions(context.Context, *SetRolePermissionsRequest) (*SetRolePermissionsResponse, error)
 	// ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
 	ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error)
+	// SetupMFA 生成 TOTP 密钥并返回 otpauth:// 绑定 URL（此时尚未启用）
+	SetupMFA(context.Context, *SetupMFARequest) (*SetupMFAResponse, error)
+	// VerifyMFA 验证验证码并正式启用 2FA，返回 8 个恢复码
+	VerifyMFA(context.Context, *VerifyMFARequest) (*VerifyMFAResponse, error)
+	// DisableMFA 验证验证码后关闭 2FA，清空密钥与恢复码
+	DisableMFA(context.Context, *DisableMFARequest) (*DisableMFAResponse, error)
+	// RegenerateRecoveryCodes 验证验证码后重新生成 8 个恢复码
+	RegenerateRecoveryCodes(context.Context, *RegenerateRecoveryCodesRequest) (*RegenerateRecoveryCodesResponse, error)
+	// GetMFAStatus 查询当前用户的 2FA 开启状态与剩余恢复码数量
+	GetMFAStatus(context.Context, *GetMFAStatusRequest) (*GetMFAStatusResponse, error)
+	// VerifyMFALogin 登录流程的 2FA 二次验证（验证码或恢复码），通过后签发令牌
+	VerifyMFALogin(context.Context, *VerifyMFALoginRequest) (*LoginResponse, error)
 	// BindOAuth 为当前用户绑定第三方账号
 	BindOAuth(context.Context, *BindOAuthRequest) (*BindOAuthResponse, error)
 	// UnbindOAuth 解绑第三方账号
@@ -606,6 +696,24 @@ func (UnimplementedUserServiceServer) SetRolePermissions(context.Context, *SetRo
 }
 func (UnimplementedUserServiceServer) ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAuditLogs not implemented")
+}
+func (UnimplementedUserServiceServer) SetupMFA(context.Context, *SetupMFARequest) (*SetupMFAResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetupMFA not implemented")
+}
+func (UnimplementedUserServiceServer) VerifyMFA(context.Context, *VerifyMFARequest) (*VerifyMFAResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyMFA not implemented")
+}
+func (UnimplementedUserServiceServer) DisableMFA(context.Context, *DisableMFARequest) (*DisableMFAResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DisableMFA not implemented")
+}
+func (UnimplementedUserServiceServer) RegenerateRecoveryCodes(context.Context, *RegenerateRecoveryCodesRequest) (*RegenerateRecoveryCodesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegenerateRecoveryCodes not implemented")
+}
+func (UnimplementedUserServiceServer) GetMFAStatus(context.Context, *GetMFAStatusRequest) (*GetMFAStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetMFAStatus not implemented")
+}
+func (UnimplementedUserServiceServer) VerifyMFALogin(context.Context, *VerifyMFALoginRequest) (*LoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VerifyMFALogin not implemented")
 }
 func (UnimplementedUserServiceServer) BindOAuth(context.Context, *BindOAuthRequest) (*BindOAuthResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BindOAuth not implemented")
@@ -1126,6 +1234,114 @@ func _UserService_ListAuditLogs_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_SetupMFA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetupMFARequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).SetupMFA(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_SetupMFA_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).SetupMFA(ctx, req.(*SetupMFARequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_VerifyMFA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyMFARequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).VerifyMFA(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_VerifyMFA_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).VerifyMFA(ctx, req.(*VerifyMFARequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_DisableMFA_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DisableMFARequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).DisableMFA(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_DisableMFA_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).DisableMFA(ctx, req.(*DisableMFARequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_RegenerateRecoveryCodes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegenerateRecoveryCodesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).RegenerateRecoveryCodes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_RegenerateRecoveryCodes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).RegenerateRecoveryCodes(ctx, req.(*RegenerateRecoveryCodesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_GetMFAStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMFAStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).GetMFAStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_GetMFAStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).GetMFAStatus(ctx, req.(*GetMFAStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_VerifyMFALogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyMFALoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).VerifyMFALogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_VerifyMFALogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).VerifyMFALogin(ctx, req.(*VerifyMFALoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserService_BindOAuth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BindOAuthRequest)
 	if err := dec(in); err != nil {
@@ -1312,6 +1528,30 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAuditLogs",
 			Handler:    _UserService_ListAuditLogs_Handler,
+		},
+		{
+			MethodName: "SetupMFA",
+			Handler:    _UserService_SetupMFA_Handler,
+		},
+		{
+			MethodName: "VerifyMFA",
+			Handler:    _UserService_VerifyMFA_Handler,
+		},
+		{
+			MethodName: "DisableMFA",
+			Handler:    _UserService_DisableMFA_Handler,
+		},
+		{
+			MethodName: "RegenerateRecoveryCodes",
+			Handler:    _UserService_RegenerateRecoveryCodes_Handler,
+		},
+		{
+			MethodName: "GetMFAStatus",
+			Handler:    _UserService_GetMFAStatus_Handler,
+		},
+		{
+			MethodName: "VerifyMFALogin",
+			Handler:    _UserService_VerifyMFALogin_Handler,
 		},
 		{
 			MethodName: "BindOAuth",

@@ -99,6 +99,12 @@ func (r *fakeUserRepo) UpdatePasswordHash(_ context.Context, _ uuid.UUID, _ stri
 	return nil
 }
 func (r *fakeUserRepo) UpdateStatus(_ context.Context, _ uuid.UUID, _ int16) error { return nil }
+func (r *fakeUserRepo) SaveMFASecret(_ context.Context, _ uuid.UUID, _ string) error { return nil }
+func (r *fakeUserRepo) EnableMFA(_ context.Context, _ uuid.UUID, _ []string) error  { return nil }
+func (r *fakeUserRepo) DisableMFA(_ context.Context, _ uuid.UUID) error             { return nil }
+func (r *fakeUserRepo) UpdateRecoveryCodes(_ context.Context, _ uuid.UUID, _ []string) error {
+	return nil
+}
 func (r *fakeUserRepo) ListUsers(_ context.Context, _ string, _ int16, _ string, _ bool, _, _ int) ([]model.User, error) {
 	return nil, nil
 }

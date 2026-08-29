@@ -36,6 +36,15 @@ const (
 	AuditActionChangePwd   = "change_password"
 	AuditActionResetPwd    = "reset_password"
 	AuditActionSendCode    = "send_reset_code"
+
+	// 双因素认证相关操作
+	AuditActionMFASetup      = "mfa_setup"
+	AuditActionMFAEnable     = "mfa_enable"
+	AuditActionMFADisable    = "mfa_disable"
+	AuditActionMFAChallenge  = "mfa_challenge" // 登录第一步通过，等待二次验证
+	AuditActionMFAVerifyFail = "mfa_verify_fail"
+	AuditActionMFARecovery   = "mfa_recovery_use" // 使用恢复码登录
+	AuditActionMFARegenCodes = "mfa_regen_codes"
 	AuditActionAssignRole  = "assign_role"
 	AuditActionUpdateStat  = "update_status"
 	AuditActionCreateRole  = "create_role"

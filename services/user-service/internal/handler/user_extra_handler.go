@@ -362,7 +362,79 @@ func (h *UserHandler) OAuthLogin(ctx context.Context, req *userpb.OAuthLoginRequ
 	}, nil
 }
 
+// ==================== 双因素认证（2FA / TOTP）====================
+
+// SetupMFA 生成 TOTP 密钥与绑定 URL（此时尚未启用）。
+func (h *UserHandler) SetupMFA(ctx context.Context, req *userpb.SetupMFARequest) (*userpb.SetupMFAResponse, error) {
+	res, err := h.auth.SetupMFA(ctx, req.GetUuid())
+	if err != nil {
+		return nil, mapMFAError(err)
+	}
+	return &userpb.SetupMFAResponse{Secret: res.Secret, OtpauthUrl: res.OtpauthURL}, nil
+}
+
+// VerifyMFA 验证验证码并启用 2FA，返回 8 个恢复码。
+func (h *UserHandler) VerifyMFA(ctx context.Context, req *userpb.VerifyMFARequest) (*userpb.VerifyMFAResponse, error) {
+	codes, err := h.auth.VerifyMFA(ctx, req.GetUuid(), req.GetCode())
+	if err != nil {
+		logger.WarnContext(ctx, "启用 2FA 失败", logger.UserUUID(req.GetUuid()), logger.Err(err))
+		return nil, mapMFAError(err)
+	}
+	logger.InfoContext(ctx, "2FA 已启用", logger.UserUUID(req.GetUuid()))
+	return &userpb.VerifyMFAResponse{Enabled: true, RecoveryCodes: codes}, nil
+}
+
+// DisableMFA 验证验证码后关闭 2FA。
+func (h *UserHandler) DisableMFA(ctx context.Context, req *userpb.DisableMFARequest) (*userpb.DisableMFAResponse, error) {
+	if err := h.auth.DisableMFA(ctx, req.GetUuid(), req.GetCode()); err != nil {
+		logger.WarnContext(ctx, "关闭 2FA 失败", logger.UserUUID(req.GetUuid()), logger.Err(err))
+		return nil, mapMFAError(err)
+	}
+	logger.InfoContext(ctx, "2FA 已关闭", logger.UserUUID(req.GetUuid()))
+	return &userpb.DisableMFAResponse{Success: true}, nil
+}
+
+// RegenerateRecoveryCodes 验证验证码后重新生成恢复码。
+func (h *UserHandler) RegenerateRecoveryCodes(ctx context.Context, req *userpb.RegenerateRecoveryCodesRequest) (*userpb.RegenerateRecoveryCodesResponse, error) {
+	codes, err := h.auth.RegenerateRecoveryCodes(ctx, req.GetUuid(), req.GetCode())
+	if err != nil {
+		return nil, mapMFAError(err)
+	}
+	return &userpb.RegenerateRecoveryCodesResponse{RecoveryCodes: codes}, nil
+}
+
+// GetMFAStatus 查询 2FA 状态与剩余恢复码数量。
+func (h *UserHandler) GetMFAStatus(ctx context.Context, req *userpb.GetMFAStatusRequest) (*userpb.GetMFAStatusResponse, error) {
+	status, err := h.auth.GetMFAStatus(ctx, req.GetUuid())
+	if err != nil {
+		return nil, mapMFAError(err)
+	}
+	return &userpb.GetMFAStatusResponse{
+		Enabled:                status.Enabled,
+		RemainingRecoveryCodes: int32(status.RemainingRecoveryCodes),
+	}, nil
+}
+
 // ==================== 辅助函数 ====================
+
+// mapMFAError 将 2FA 业务错误映射为 gRPC status。
+func mapMFAError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case errors.Is(err, auth.ErrMFANotEnabled), errors.Is(err, auth.ErrMFASecretMissing):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, auth.ErrMFAAlreadyEnabled):
+		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, auth.ErrMFACodeInvalid):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, auth.ErrMFATicketInvalid):
+		return status.Error(codes.Unauthenticated, err.Error())
+	default:
+		return mapError(err)
+	}
+}
 
 // mapOAuthError 将第三方登录业务错误映射为 gRPC status。
 func mapOAuthError(err error) error {

@@ -27,6 +27,14 @@ type Config struct {
 	RefreshTTL time.Duration // refresh token 有效期
 	BcryptCost int           // bcrypt 加密成本
 
+	MFATicketTTL time.Duration // 2FA 中间票据有效期（登录第一步到第二步）
+
+	// 2FA 参数
+	MFAIssuer            string // 发行方名称，展示在验证器 App 中
+	MFASkew              int    // 允许的时钟偏移步数（每步 30 秒）
+	MFARecoveryCodes     int    // 恢复码数量
+	MFARecoveryCodeLen   int    // 单个恢复码长度
+
 	// 验证码与邮件（密码重置）
 	CodeTTL       time.Duration // 验证码有效期
 	CodeLength    int           // 验证码位数
@@ -63,6 +71,13 @@ func Load() (*Config, error) {
 		AccessTTL:  env.GetDuration("ACCESS_TTL_SECONDS", 3600*time.Second),
 		RefreshTTL: env.GetDuration("REFRESH_TTL_SECONDS", 2592000*time.Second),
 		BcryptCost: env.GetInt("BCRYPT_COST", 10),
+		// 2FA 中间票据默认 5 分钟有效
+		MFATicketTTL: env.GetDuration("MFA_TICKET_TTL_SECONDS", 300*time.Second),
+		// 2FA 参数：发行方、时钟偏移步数、恢复码数量与长度
+		MFAIssuer:          env.Get("MFA_ISSUER", "MuseFlow"),
+		MFASkew:            env.GetInt("MFA_SKEW", 1),
+		MFARecoveryCodes:   env.GetInt("MFA_RECOVERY_CODE_COUNT", 8),
+		MFARecoveryCodeLen: env.GetInt("MFA_RECOVERY_CODE_LENGTH", 10),
 		// 验证码默认 6 位、10 分钟有效、60 秒内不可重发
 		CodeTTL:      env.GetDuration("CODE_TTL_SECONDS", 600*time.Second),
 		CodeLength:   env.GetInt("CODE_LENGTH", 6),

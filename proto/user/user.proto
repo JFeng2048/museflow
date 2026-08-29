@@ -100,6 +100,26 @@ service UserService {
   // ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
   rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
 
+  // ---- 双因素认证（2FA / TOTP）----
+
+  // SetupMFA 生成 TOTP 密钥并返回 otpauth:// 绑定 URL（此时尚未启用）
+  rpc SetupMFA(SetupMFARequest) returns (SetupMFAResponse);
+
+  // VerifyMFA 验证验证码并正式启用 2FA，返回 8 个恢复码
+  rpc VerifyMFA(VerifyMFARequest) returns (VerifyMFAResponse);
+
+  // DisableMFA 验证验证码后关闭 2FA，清空密钥与恢复码
+  rpc DisableMFA(DisableMFARequest) returns (DisableMFAResponse);
+
+  // RegenerateRecoveryCodes 验证验证码后重新生成 8 个恢复码
+  rpc RegenerateRecoveryCodes(RegenerateRecoveryCodesRequest) returns (RegenerateRecoveryCodesResponse);
+
+  // GetMFAStatus 查询当前用户的 2FA 开启状态与剩余恢复码数量
+  rpc GetMFAStatus(GetMFAStatusRequest) returns (GetMFAStatusResponse);
+
+  // VerifyMFALogin 登录流程的 2FA 二次验证（验证码或恢复码），通过后签发令牌
+  rpc VerifyMFALogin(VerifyMFALoginRequest) returns (LoginResponse);
+
   // ---- 第三方登录 ----
 
   // BindOAuth 为当前用户绑定第三方账号
@@ -162,6 +182,12 @@ message LoginResponse {
   int64 expires_in = 4;            // access token 有效期（秒）
   int64 refresh_expires_in = 5;    // refresh token 有效期（秒）
   UserInfo user = 6;
+  // requires_mfa 为 true 表示账号已开启 2FA，本次不签发令牌，
+  // 需调用 VerifyMFA（或提交恢复码）二次验证后才能拿到令牌。
+  bool requires_mfa = 7;
+  // mfa_ticket 2FA 中间票据：账号密码校验通过后签发，
+  // 用于关联后续的 2FA 验证请求，有效期较短（默认 5 分钟）。
+  string mfa_ticket = 8;
 }
 
 message RefreshRequest {
@@ -433,6 +459,60 @@ message SetRolePermissionsRequest {
 
 message SetRolePermissionsResponse {
   bool success = 1;
+}
+
+// ==================== 双因素认证（2FA / TOTP）====================
+
+message SetupMFARequest {
+  string uuid = 1;                 // 当前登录用户 uuid
+}
+
+message SetupMFAResponse {
+  string secret = 1;               // TOTP 共享密钥（base32）
+  string otpauth_url = 2;          // otpauth:// 绑定地址，供前端生成二维码
+}
+
+message VerifyMFARequest {
+  string uuid = 1;
+  string code = 2;                 // 验证器 App 显示的 6 位验证码
+}
+
+message VerifyMFAResponse {
+  bool enabled = 1;                // 是否已成功启用 2FA
+  repeated string recovery_codes = 2; // 8 个恢复码，仅在本次返回，请妥善保存
+}
+
+message DisableMFARequest {
+  string uuid = 1;
+  string code = 2;                 // 当前验证码（或恢复码）
+}
+
+message DisableMFAResponse {
+  bool success = 1;
+}
+
+message RegenerateRecoveryCodesRequest {
+  string uuid = 1;
+  string code = 2;                 // 当前验证码（或恢复码）
+}
+
+message RegenerateRecoveryCodesResponse {
+  repeated string recovery_codes = 1; // 8 个新的恢复码，替换掉旧的
+}
+
+message GetMFAStatusRequest {
+  string uuid = 1;
+}
+
+message GetMFAStatusResponse {
+  bool enabled = 1;                // 是否已开启 2FA
+  int32 remaining_recovery_codes = 2; // 剩余可用恢复码数量
+}
+
+message VerifyMFALoginRequest {
+  string mfa_ticket = 1;           // 登录第一步返回的中间票据
+  string code = 2;                 // 6 位验证码或恢复码
+  DeviceContext device = 3;        // 设备上下文，用于签发令牌时的指纹校验
 }
 
 // ==================== 审计日志 ====================
