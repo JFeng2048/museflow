@@ -12,13 +12,28 @@
 
 ## 接口（HTTP 路由）
 
-前缀 `/api/v1`，详见根 README 的「API Reference」与 Swagger。核心分组：
+前缀 `/api/v1`。完整字段与示例见网关 Swagger（`/swagger/index.html`）。
 
-- 认证：`/auth/register`、`/auth/login`、`/auth/refresh`、`/auth/logout`、`/auth/change-password`
-- 邮箱：`/auth/email/send-code`、`/auth/email/verify`、`/auth/login/code`
-- 两步验证：`/auth/mfa/enable`、`/auth/mfa/verify`、`/auth/mfa/disable`、`/auth/mfa/recovery-codes`
-- 密码重置：`/auth/password/reset-code`、`/auth/password/reset`
-- 会话：`/auth/sessions`、`/auth/sessions/:id`
-- 用户：`/user/profile`
+| Method | Path | Auth | 作用 |
+| :--- | :--- | :--- | :--- |
+| POST | `/api/v1/auth/register` | No | 注册；请求体需带邮箱验证码 `code`（先调 `send-code` 取码），成功后账号标记已验证 |
+| POST | `/api/v1/auth/login` | No | 密码登录；成功签发 access（响应体）+ refresh（HttpOnly Cookie）。开启 2FA 时返回 `mfa_ticket` 而非令牌 |
+| POST | `/api/v1/auth/refresh` | No (Cookie) | 用 refresh Cookie 换取新 access token；刷新后旧 refresh 轮转 |
+| POST | `/api/v1/auth/logout` | No (Cookie) | 登出；吊销当前设备的 refresh 并加入 access 黑名单 |
+| POST | `/api/v1/auth/change-password` | Yes | 修改密码；需校验旧密码 |
+| POST | `/api/v1/auth/email/send-code` | No | 发送邮箱验证码；`scene` 取 `register`/`verify`/`login`，带重发冷却，避免账号枚举 |
+| POST | `/api/v1/auth/email/verify` | No | 校验邮箱验证码（补验证），验证通过后标记 `email_verified` |
+| POST | `/api/v1/auth/login/code` | No | 邮箱验证码免密登录；复用双令牌签发，兼容 2FA 票据返回 |
+| POST | `/api/v1/auth/mfa/enable` | Yes | 开启两步验证；返回 TOTP 密钥与二维码 URI，需 `verify` 确认 |
+| POST | `/api/v1/auth/mfa/verify` | Yes | 校验 TOTP 或一次性恢复码；登录态下用于确认开启/关闭，或登录流程中换发令牌 |
+| POST | `/api/v1/auth/mfa/disable` | Yes | 关闭两步验证 |
+| GET  | `/api/v1/auth/mfa/recovery-codes` | Yes | 获取一次性恢复码（用于丢失 TOTP 设备时登录） |
+| POST | `/api/v1/auth/password/reset-code` | No | 发送密码重置验证码到邮箱 |
+| POST | `/api/v1/auth/password/reset` | No | 用验证码重置密码；验证码一次性消费 |
+| GET  | `/api/v1/auth/sessions` | Yes | 当前用户的活跃会话（设备）列表 |
+| DELETE | `/api/v1/auth/sessions/:id` | Yes | 吊销指定会话（设备） |
+| GET  | `/api/v1/user/profile` | Yes | 获取当前用户资料 |
+| GET  | `/health` | No | 健康检查 |
+| GET  | `/swagger/index.html` | No | Swagger 文档 UI |
 
-> 网关本身不持有用户数据，所有业务校验与令牌签发均在 user-service 完成。
+> 网关本身不持有用户数据，所有业务校验与令牌签发均在 user-service 完成；`Auth` 列标注 `Yes` 的接口需在请求头携带 `Authorization: Bearer <access_token>`。

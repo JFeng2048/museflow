@@ -116,32 +116,40 @@ MuseFlow/
 │   ├── errcode/                 # Unified error codes & i18n (zh/en) responses
 │   └── logger/                  # slog + lumberjack logger (with file rotation)
 ├── services/
-│   ├── user-service/            # User service (gRPC, :5002)
+│   ├── user-service/            # User service (Go, gRPC :5002)
 │   │   ├── cmd/server/main.go    # Entrypoint: wire config/repo/service/handler
 │   │   ├── .env.example          # Service config template (committed; .env gitignored)
 │   │   └── internal/
 │   │       ├── config/           # Config loading (USER_ / DB_ / REDIS_ / JWT_SECRET / LOG_)
 │   │       ├── handler/          # gRPC handlers (proto ↔ service layer)
 │   │       ├── service/          # Business logic (split by domain into subpackages)
-│   │       │   ├── auth/         #   Auth (AuthService: register/login/refresh/logout/verify)
+│   │       │   ├── auth/         #   Auth (register/login/refresh/logout/verify/email-code/2FA)
 │   │       │   ├── token/        #   JWT management (manager / claims / fingerprint)
+│   │       │   ├── rbac/         #   Roles & permissions (Redis-cached)
+│   │       │   ├── oauth/        #   Third-party account linking
+│   │       │   ├── audit/        #   Operation audit persistence
+│   │       │   ├── notify/       #   Email sending (SMTP, log fallback)
 │   │       │   └── dto/          #   Service-internal DTOs (Device / TokenPair)
-│   │       ├── repository/       # Data access (GORM models + Redis token store)
+│   │       ├── repository/       # Data access (GORM models + Redis token/code store)
 │   │       └── model/            # GORM entities (user_svc.users)
-│   └── api-gateway/             # API Gateway (HTTP, :5001)
-│       ├── .env.example          # Service config template (committed; .env gitignored)
-│       └── internal/
-│           ├── config/           # Config loading (GATEWAY_ / REDIS_ / JWT_SECRET / LOG_)
-│           ├── router/           # Gin router wiring
-│           ├── middleware/       # Middlewares (CORS / auth / access-log / request-id)
-│           ├── handler/          # HTTP handlers (dto ↔ proto)
-│           ├── client/           # user-service gRPC client
-│           └── dto/              # HTTP-layer DTOs (request/response, for Swagger)
+│   ├── api-gateway/             # API Gateway (Go, HTTP :5001)
+│   │   ├── .env.example          # Service config template (committed; .env gitignored)
+│   │   └── internal/
+│   │       ├── config/           # Config loading (GATEWAY_ / REDIS_ / JWT_SECRET / LOG_)
+│   │       ├── router/           # Gin router wiring
+│   │       ├── middleware/       # Middlewares (CORS / auth / access-log / request-id)
+│   │       ├── handler/          # HTTP handlers (dto ↔ proto)
+│   │       ├── client/           # user-service gRPC client
+│   │       └── dto/              # HTTP-layer DTOs (request/response, for Swagger)
+│   └── crawl4ai-service/        # Data-crawling service (Python, HTTP + gRPC :5003)
+│       ├── src/                  # Business modules (crawler / extractor / api / grpc_server)
+│       ├── pyproject.toml        # uv-managed deps (base + [http] / [grpc] groups)
+│       ├── docker/               # Multi-stage Dockerfile + compose
+│       └── README.md             # Service README (zh) + README.en.md (en)
 ├── database/
 │   └── user_svc.sql             # User DB DDL (schema namespace user_svc + sequences/triggers)
 ├── deploy/                      # Deployment assets (K8s / Redis config, etc.)
-├── services/crawl4ai-service/    # Data-crawling service (Python, HTTP + gRPC dual interface)
-├── docs/                        # Design docs (incl. dual-token auth design)
+├── docs/                        # Design docs (incl. dual-token auth design, api/)
 ├── web/                         # Frontend (Vue 3 + TypeScript + Vite)
 ├── scripts/                     # Codegen & helper scripts
 ├── .env                         # Global config (gitignored, holds dev defaults)
@@ -263,29 +271,13 @@ make docker      # build Docker images (context = repo root)
 
 ## 📡 API Reference
 
-| Method | Path | Auth | Function |
-| :--- | :--- | :--- | :--- |
-| POST | `/api/v1/auth/register` | No | 注册（需邮箱验证码 `code`） |
-| POST | `/api/v1/auth/login` | No | 密码登录（签发双令牌，可能触发 2FA） |
-| POST | `/api/v1/auth/refresh` | No (Cookie) | 刷新 access token |
-| POST | `/api/v1/auth/logout` | No (Cookie) | 登出并吊销当前设备令牌 |
-| POST | `/api/v1/auth/change-password` | Yes | 修改密码 |
-| POST | `/api/v1/auth/email/send-code` | No | 发送邮箱验证码（register/verify/login） |
-| POST | `/api/v1/auth/email/verify` | No | 校验邮箱（补验证，标记已验证） |
-| POST | `/api/v1/auth/login/code` | No | 邮箱验证码免密登录 |
-| POST | `/api/v1/auth/mfa/enable` | Yes | 开启两步验证（TOTP） |
-| POST | `/api/v1/auth/mfa/verify` | Yes | 校验 TOTP / 恢复码 |
-| POST | `/api/v1/auth/mfa/disable` | Yes | 关闭两步验证 |
-| GET  | `/api/v1/auth/mfa/recovery-codes` | Yes | 获取一次性恢复码 |
-| POST | `/api/v1/auth/password/reset-code` | No | 发送密码重置验证码 |
-| POST | `/api/v1/auth/password/reset` | No | 验证码重置密码 |
-| GET  | `/api/v1/auth/sessions` | Yes | 会话列表 |
-| DELETE | `/api/v1/auth/sessions/:id` | Yes | 吊销指定会话 |
-| GET  | `/api/v1/user/profile` | Yes | 获取当前用户资料 |
-| GET  | `/health` | No | 健康检查 |
-| GET  | `/swagger/index.html` | No | Swagger 文档 |
+按模块分文档维护，详细路由与字段说明见 [`docs/cn/develop/api/`](docs/cn/develop/api/)：
 
-Full request/response definitions: see the Swagger docs. Per-module API overviews: [`docs/cn/develop/api/`](docs/cn/develop/api/).
+- **[user-service](docs/cn/develop/api/user-service.md)** — 用户与认证核心（gRPC `:5002`）：账号、双令牌、邮箱验证码、2FA、RBAC、审计、OAuth。
+- **[api-gateway](docs/cn/develop/api/api-gateway.md)** — 统一 HTTP 入口（`:5001`）：完整路由表、认证/错误映射、CORS 与 Cookie 策略。
+- **[crawl4ai-service](docs/cn/develop/api/crawl4ai-service.md)** — 数据采集（`:5003`）：`Health` / `Crawl` / `Extract`（HTTP + gRPC）。
+
+各服务均提供 Swagger（网关在 `/swagger/index.html`，crawl4ai-service 在 `/docs`）。
 
 ---
 
