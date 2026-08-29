@@ -17,6 +17,8 @@ const (
 	accessBlacklistPrefix = "auth:access:blacklist:"
 	// userTokensPrefix 用户 token 元数据列表，用于设备管理与批量吊销。
 	userTokensPrefix = "auth:user:tokens:"
+	// permissionCachePrefix 用户权限缓存：perm:user:{userUUID} -> "perm1,perm2"
+	permissionCachePrefix = "perm:user:"
 )
 
 // TokenMeta 单个登录会话（设备）的元数据。
@@ -48,6 +50,14 @@ type TokenStore interface {
 	RemoveUserToken(ctx context.Context, userID, tokenID string) error
 	// TouchUserToken 更新指定 tokenID 的最后刷新时间
 	TouchUserToken(ctx context.Context, userID, tokenID string, ttl time.Duration) error
+
+	// GetUserPermissions 读取用户权限缓存（perm:user:{userID}），未命中返回空切片。
+	// 注意：缓存不可用（Redis 故障）时返回 (nil, nil) 交由上层降级查库。
+	GetUserPermissions(ctx context.Context, userID string) ([]string, error)
+	// SetUserPermissions 写入用户权限缓存，perm 为权限编码列表（逗号分隔存储）。
+	SetUserPermissions(ctx context.Context, userID string, perms []string, ttl time.Duration) error
+	// ClearUserPermissions 删除用户权限缓存（权限变更时调用）。
+	ClearUserPermissions(ctx context.Context, userID string) error
 }
 
 type redisTokenStore struct {
@@ -179,4 +189,63 @@ func (s *redisTokenStore) saveUserTokens(ctx context.Context, userID string, met
 		return fmt.Errorf("序列化用户会话列表失败: %w", err)
 	}
 	return s.rdb.Set(ctx, userTokensPrefix+userID, raw, ttl).Err()
+}
+
+// GetUserPermissions 读取用户权限缓存；未命中或 Redis 故障时返回空切片（降级查库）。
+func (s *redisTokenStore) GetUserPermissions(ctx context.Context, userID string) ([]string, error) {
+	raw, err := s.rdb.Get(ctx, permissionCachePrefix+userID).Result()
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		// Redis 不可用时降级到数据库查询，不返回错误阻断主流程
+		return nil, nil
+	}
+	if raw == "" {
+		return nil, nil
+	}
+	return splitPerms(raw), nil
+}
+
+// SetUserPermissions 写入用户权限缓存（权限编码用逗号拼接存储）。
+func (s *redisTokenStore) SetUserPermissions(ctx context.Context, userID string, perms []string, ttl time.Duration) error {
+	if len(perms) == 0 {
+		// 无权限时写入空串，避免缓存穿透反复查库
+		return s.rdb.Set(ctx, permissionCachePrefix+userID, "", ttl).Err()
+	}
+	return s.rdb.Set(ctx, permissionCachePrefix+userID, joinPerms(perms), ttl).Err()
+}
+
+// ClearUserPermissions 删除用户权限缓存（权限变更时调用）。
+// 删除失败（Redis 故障）返回 nil，由调用方按"不阻断主流程"处理。
+func (s *redisTokenStore) ClearUserPermissions(ctx context.Context, userID string) error {
+	return s.rdb.Del(ctx, permissionCachePrefix+userID).Err()
+}
+
+func joinPerms(perms []string) string {
+	out := ""
+	for i, p := range perms {
+		if i > 0 {
+			out += ","
+		}
+		out += p
+	}
+	return out
+}
+
+func splitPerms(raw string) []string {
+	parts := make([]string, 0)
+	start := 0
+	for i := 0; i < len(raw); i++ {
+		if raw[i] == ',' {
+			if seg := raw[start:i]; seg != "" {
+				parts = append(parts, seg)
+			}
+			start = i + 1
+		}
+	}
+	if seg := raw[start:]; seg != "" {
+		parts = append(parts, seg)
+	}
+	return parts
 }

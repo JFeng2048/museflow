@@ -25,6 +25,7 @@ import (
 	"github.com/museflow/user-service/internal/handler"
 	"github.com/museflow/user-service/internal/repository"
 	"github.com/museflow/user-service/internal/service/auth"
+	"github.com/museflow/user-service/internal/service/rbac"
 	"github.com/museflow/user-service/internal/service/token"
 )
 
@@ -55,10 +56,18 @@ func main() {
 
 	// 依赖注入：repository -> service -> handler
 	userRepo := repository.NewUserRepository(db)
+	rbacRepo := repository.NewRBACRepository(db)
 	tokenStore := repository.NewTokenStore(rdb)
 	tokenManager := token.NewTokenManager(cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL)
-	authService := auth.NewAuthService(userRepo, tokenStore, tokenManager, cfg.BcryptCost)
+	// 权限缓存 TTL 与 Refresh Token 一致（7 天）
+	rbacService := rbac.NewService(rbacRepo, tokenStore, cfg.RefreshTTL)
+	authService := auth.NewAuthService(userRepo, tokenStore, tokenManager, rbacService, cfg.BcryptCost)
 	userHandler := handler.NewUserHandler(authService)
+
+	// 预置角色 / 权限（库为空时插入），失败仅告警不阻断启动
+	if err := rbacService.EnsureSeeded(context.Background()); err != nil {
+		logger.Warn("预置 RBAC 数据失败", logger.Err(err))
+	}
 
 	grpcServer := grpc.NewServer()
 	userpb.RegisterUserServiceServer(grpcServer, userHandler)

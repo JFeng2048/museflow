@@ -15,6 +15,7 @@ import (
 	"github.com/museflow/user-service/internal/model"
 	"github.com/museflow/user-service/internal/repository"
 	"github.com/museflow/user-service/internal/service/dto"
+	"github.com/museflow/user-service/internal/service/rbac"
 	"github.com/museflow/user-service/internal/service/token"
 )
 
@@ -24,6 +25,7 @@ var (
 	ErrInvalidCredentials = errors.New("邮箱或密码错误")
 	ErrUserNotFound       = errors.New("用户不存在")
 	ErrAccountUnavailable = errors.New("账号状态异常")
+	ErrAccountLocked      = errors.New("账号已锁定，请稍后再试")
 	ErrTokenInvalid       = errors.New("令牌无效或已失效")
 	ErrDeviceMismatch     = errors.New("设备校验失败")
 )
@@ -36,6 +38,7 @@ type AuthService struct {
 	users      repository.UserRepository
 	tokens     repository.TokenStore
 	tm         *token.TokenManager
+	rbac       *rbac.Service
 	bcryptCost int
 }
 
@@ -44,12 +47,13 @@ func NewAuthService(
 	users repository.UserRepository,
 	tokens repository.TokenStore,
 	tm *token.TokenManager,
+	rbacSvc *rbac.Service,
 	bcryptCost int,
 ) *AuthService {
-	return &AuthService{users: users, tokens: tokens, tm: tm, bcryptCost: bcryptCost}
+	return &AuthService{users: users, tokens: tokens, tm: tm, rbac: rbacSvc, bcryptCost: bcryptCost}
 }
 
-// Register 用户注册：校验邮箱唯一性后以 bcrypt 存储密码。
+// Register 用户注册：校验邮箱唯一性后以 bcrypt 存储密码，并授予默认角色 user。
 func (s *AuthService) Register(ctx context.Context, email, password, nickname string) (*model.User, error) {
 	email = normalizeEmail(email)
 	if email == "" || password == "" {
@@ -89,13 +93,19 @@ func (s *AuthService) Register(ctx context.Context, email, password, nickname st
 	if err := s.users.Create(ctx, u); err != nil {
 		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
+
+	// 注册即授予默认角色（user），并预清权限缓存，待登录时加载
+	if s.rbac != nil {
+		if err := s.rbac.AssignRole(ctx, u.UUID, rbac.RoleUser, u.UUID); err != nil {
+			logger.WarnContext(ctx, "注册授予默认角色失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
+		}
+	}
+
 	return u, nil
 }
 
-// Login 校验密码并签发双令牌。
-//
-// 说明：按当前需求，登录流程不使用 login_fail_count / locked_until，
-// 仅做密码比对与 status 读取（不阻断）。
+// Login 校验密码并签发双令牌；成功后写入用户权限缓存。
+// 包含登录失败锁定（5 次 / 15 分钟）与账号状态校验。
 func (s *AuthService) Login(ctx context.Context, email, password string, dev dto.Device) (*dto.TokenPair, *model.User, error) {
 	email = normalizeEmail(email)
 
@@ -108,11 +118,20 @@ func (s *AuthService) Login(ctx context.Context, email, password string, dev dto
 		return nil, nil, fmt.Errorf("查询用户失败: %w", err)
 	}
 
+	// 账号锁定检查（locked_until 未过期则拒绝）
+	if u.LockedUntil != nil && u.LockedUntil.After(time.Now()) {
+		return nil, nil, ErrAccountLocked
+	}
+
 	// 第三方登录用户可能没有密码，此时不允许密码登录
 	if u.PasswordHash == nil || *u.PasswordHash == "" {
 		return nil, nil, ErrInvalidCredentials
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(*u.PasswordHash), []byte(password)); err != nil {
+		// 密码错误：累加失败计数，达到阈值锁定
+		if failErr := s.recordLoginFailure(ctx, email); failErr == nil {
+			// 仅日志，不覆盖原错误
+		}
 		return nil, nil, ErrInvalidCredentials
 	}
 
@@ -121,12 +140,26 @@ func (s *AuthService) Login(ctx context.Context, email, password string, dev dto
 		return nil, nil, err
 	}
 
-	// 更新最后登录信息失败不阻断登录流程，仅记录日志
+	// 登录成功：重置失败计数 + 更新登录信息 + 写入权限缓存
+	if err := s.users.ResetLoginFails(ctx, u.UUID); err != nil {
+		logger.WarnContext(ctx, "重置登录失败计数失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
+	}
 	if err := s.users.UpdateLoginInfo(ctx, u.UUID, dev.IP, dev.DeviceName); err != nil {
 		logger.WarnContext(ctx, "更新登录信息失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
 	}
+	if s.rbac != nil {
+		if _, perr := s.rbac.GetUserPermissions(ctx, u.UUID); perr != nil {
+			logger.WarnContext(ctx, "写入用户权限缓存失败", logger.UserUUID(u.UUID.String()), logger.Err(perr))
+		}
+	}
 
 	return pair, u, nil
+}
+
+// recordLoginFailure 累加登录失败计数，失败达到阈值会锁定账号。
+func (s *AuthService) recordLoginFailure(ctx context.Context, email string) error {
+	_, err := s.users.IncrementLoginFails(ctx, email)
+	return err
 }
 
 // issueTokens 生成 tokenId、签发双令牌并写入 Redis 白名单与设备列表。
@@ -218,8 +251,11 @@ func (s *AuthService) Refresh(ctx context.Context, refreshTokenStr string, dev d
 // 两个令牌都尽最大努力处理：任一解析失败不影响另一个的吊销，
 // 保证客户端即使只带了其中一个也能完成登出。
 func (s *AuthService) Logout(ctx context.Context, accessToken, refreshTokenStr string) error {
+	var subject string
+
 	if refreshTokenStr != "" {
 		if claims, err := s.tm.ParseRefresh(refreshTokenStr); err == nil {
+			subject = claims.Subject
 			if err := s.tokens.DeleteRefreshValid(ctx, claims.TokenID); err != nil {
 				return fmt.Errorf("删除刷新令牌白名单失败: %w", err)
 			}
@@ -232,6 +268,9 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshTokenStr s
 	if accessToken != "" {
 		// 已过期的 token 解析会失败，此时无需入黑名单
 		if claims, err := s.tm.ParseAccess(accessToken); err == nil && claims.ID != "" {
+			if subject == "" {
+				subject = claims.Subject
+			}
 			ttl := time.Duration(0)
 			if claims.ExpiresAt != nil {
 				// 黑名单 TTL = 令牌剩余有效期，到期自动清理
@@ -240,6 +279,13 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshTokenStr s
 			if err := s.tokens.BlacklistAccess(ctx, claims.ID, ttl); err != nil {
 				return fmt.Errorf("写入访问令牌黑名单失败: %w", err)
 			}
+		}
+	}
+
+	// 登出后清理权限缓存（下次访问重新加载）
+	if subject != "" {
+		if err := s.ClearUserCache(ctx, subject); err != nil {
+			logger.WarnContext(ctx, "清理用户权限缓存失败", logger.UserUUID(subject), logger.Err(err))
 		}
 	}
 
@@ -285,4 +331,40 @@ func (s *AuthService) GetProfile(ctx context.Context, userUUID string) (*model.U
 
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+// GetPermissions 返回用户权限编码列表（缓存优先，供网关校验权限）。
+func (s *AuthService) GetPermissions(ctx context.Context, userUUID string) ([]string, error) {
+	if s.rbac == nil {
+		return nil, fmt.Errorf("RBAC 服务未初始化")
+	}
+	id, err := uuid.Parse(userUUID)
+	if err != nil {
+		return nil, ErrUserNotFound
+	}
+	return s.rbac.GetUserPermissions(ctx, id)
+}
+
+// CheckPermission 校验用户是否拥有指定权限。
+func (s *AuthService) CheckPermission(ctx context.Context, userUUID, perm string) (bool, error) {
+	if s.rbac == nil {
+		return false, fmt.Errorf("RBAC 服务未初始化")
+	}
+	id, err := uuid.Parse(userUUID)
+	if err != nil {
+		return false, ErrUserNotFound
+	}
+	return s.rbac.CheckPermission(ctx, id, perm)
+}
+
+// ClearUserCache 清理用户权限缓存（权限变更后调用）。
+func (s *AuthService) ClearUserCache(ctx context.Context, userUUID string) error {
+	if s.rbac == nil {
+		return nil
+	}
+	id, err := uuid.Parse(userUUID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+	return s.rbac.ClearUserCache(ctx, id)
 }

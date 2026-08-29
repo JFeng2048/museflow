@@ -58,6 +58,23 @@ func (r *fakeUserRepo) UpdateLoginInfo(_ context.Context, _ uuid.UUID, _, _ stri
 	return nil
 }
 
+func (r *fakeUserRepo) IncrementLoginFails(_ context.Context, email string) (*model.User, error) {
+	u, ok := r.byEmail[email]
+	if !ok {
+		return nil, repository.ErrUserNotFound
+	}
+	u.LoginFailCount++
+	return u, nil
+}
+
+func (r *fakeUserRepo) ResetLoginFails(_ context.Context, id uuid.UUID) error {
+	if u, ok := r.byUUID[id.String()]; ok {
+		u.LoginFailCount = 0
+		u.LockedUntil = nil
+	}
+	return nil
+}
+
 // ---- 内存版 TokenStore ----
 
 type fakeTokenStore struct {
@@ -119,13 +136,25 @@ func (s *fakeTokenStore) TouchUserToken(_ context.Context, _, _ string, _ time.D
 	return nil
 }
 
+func (s *fakeTokenStore) GetUserPermissions(_ context.Context, userID string) ([]string, error) {
+	return nil, nil
+}
+
+func (s *fakeTokenStore) SetUserPermissions(_ context.Context, userID string, _ []string, _ time.Duration) error {
+	return nil
+}
+
+func (s *fakeTokenStore) ClearUserPermissions(_ context.Context, userID string) error {
+	return nil
+}
+
 // ---- 测试辅助 ----
 
 func newTestService() (*AuthService, *fakeTokenStore) {
 	store := newFakeTokenStore()
 	tm := token.NewTokenManager("test-secret", time.Hour, 30*24*time.Hour)
 	// bcrypt 使用最小成本加速测试
-	svc := NewAuthService(newFakeUserRepo(), store, tm, bcrypt.MinCost)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, bcrypt.MinCost)
 	return svc, store
 }
 
@@ -300,7 +329,7 @@ func TestExpiredAccessTokenIsRejected(t *testing.T) {
 	store := newFakeTokenStore()
 	// 负有效期立即过期
 	tm := token.NewTokenManager("test-secret", -time.Minute, time.Hour)
-	svc := NewAuthService(newFakeUserRepo(), store, tm, bcrypt.MinCost)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, bcrypt.MinCost)
 
 	tokenStr, err := tm.GenerateAccess(uuid.NewString(), uuid.NewString())
 	if err != nil {

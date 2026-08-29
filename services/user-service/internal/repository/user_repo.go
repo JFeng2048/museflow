@@ -15,6 +15,12 @@ import (
 // ErrUserNotFound 用户不存在。
 var ErrUserNotFound = errors.New("用户不存在")
 
+// 登录锁定策略（与需求一致：失败 5 次锁定 15 分钟）。
+const (
+	maxLoginFails = 5
+	lockDuration  = 15 * time.Minute
+)
+
 // UserRepository 用户数据访问接口。
 type UserRepository interface {
 	Create(ctx context.Context, u *model.User) error
@@ -22,6 +28,11 @@ type UserRepository interface {
 	FindByUUID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
 	UpdateLoginInfo(ctx context.Context, id uuid.UUID, ip, platform string) error
+	// IncrementLoginFails 登录失败计数 +1，达到阈值时锁定 locked_until。
+	// 返回更新后的用户（含最新计数与锁定时间）。
+	IncrementLoginFails(ctx context.Context, email string) (*model.User, error)
+	// ResetLoginFails 重置登录失败计数与锁定时间（登录成功时调用）。
+	ResetLoginFails(ctx context.Context, id uuid.UUID) error
 }
 
 type userRepository struct {
@@ -88,4 +99,45 @@ func (r *userRepository) UpdateLoginInfo(ctx context.Context, id uuid.UUID, ip, 
 		Model(&model.User{}).
 		Where("uuid = ?", id).
 		Updates(updates).Error
+}
+
+// IncrementLoginFails 登录失败计数 +1；达到阈值（maxLoginFails）时写 locked_until 锁定。
+func (r *userRepository) IncrementLoginFails(ctx context.Context, email string) (*model.User, error) {
+	var u model.User
+	if err := r.db.WithContext(ctx).Where("email = ?", email).First(&u).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+
+	fails := u.LoginFailCount + 1
+	updates := map[string]any{"login_fail_count": fails}
+	// 达到阈值即锁定，锁定时间顺延；未达阈值不改锁定时间
+	if fails >= maxLoginFails {
+		lu := time.Now().Add(lockDuration)
+		updates["locked_until"] = lu
+	}
+	if err := r.db.WithContext(ctx).
+		Model(&model.User{}).Where("uuid = ?", u.UUID).
+		Updates(updates).Error; err != nil {
+		return nil, err
+	}
+	u.LoginFailCount = fails
+	if fails >= maxLoginFails {
+		lu := time.Now().Add(lockDuration)
+		u.LockedUntil = &lu
+	}
+	return &u, nil
+}
+
+// ResetLoginFails 登录成功后清零失败计数并解除锁定。
+func (r *userRepository) ResetLoginFails(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Model(&model.User{}).
+		Where("uuid = ?", id).
+		Updates(map[string]any{
+			"login_fail_count": 0,
+			"locked_until":     nil,
+		}).Error
 }
