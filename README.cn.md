@@ -262,17 +262,13 @@ make docker      # 构建 Docker 镜像（上下文为仓库根目录）
 
 ## 📡 API 一览
 
-| 方法 | 路径 | 鉴权 | 功能 |
-| :--- | :--- | :--- | :--- |
-| POST | `/api/v1/auth/register` | 否 | 用户注册（email） |
-| POST | `/api/v1/auth/login` | 否 | 登录（签发双令牌） |
-| POST | `/api/v1/auth/refresh` | 否（Cookie） | 刷新 access token |
-| POST | `/api/v1/auth/logout` | 是 | 登出（吊销当前设备） |
-| GET  | `/api/v1/user/profile` | 是 | 获取当前用户信息 |
-| GET  | `/health` | 否 | 健康检查 |
-| GET  | `/swagger/index.html` | 否 | Swagger 文档 |
+按模块分文档维护，详细路由与字段说明见 [`docs/cn/api/`](docs/cn/api/)：
 
-完整接口定义与字段说明见 Swagger 文档。
+- **[user-service](docs/cn/api/user-service.md)** — 用户与认证核心（gRPC `:5002`）：账号、双令牌、邮箱验证码、2FA、RBAC、审计、OAuth。
+- **[api-gateway](docs/cn/api/api-gateway.md)** — 统一 HTTP 入口（`:5001`）：完整路由表、认证/错误映射、CORS 与 Cookie 策略。
+- **[crawl4ai-service](docs/cn/api/crawl4ai-service.md)** — 数据采集（`:5003`）：`Health` / `Crawl` / `Extract`（HTTP + gRPC）。
+
+各服务均提供 Swagger（网关在 `/swagger/index.html`，crawl4ai-service 在 `/docs`）。
 
 ---
 

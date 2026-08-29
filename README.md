@@ -93,7 +93,7 @@ The repository is a **Monorepo** — all code lives in a single Git repository. 
 - **refresh token**: long-lived (default 30d), JWT + Redis allow-list, stored in an HttpOnly Cookie
 - **logout**: remove refresh allow-list entry + write access token `jti` to Redis deny-list (TTL = remaining lifetime), auto-cleaned on expiry
 - **device fingerprint**: `sha256(deviceId + User-Agent + IP)` to prevent cross-device refresh-token theft
-- Full design: [`docs/cn/develop/双令牌认证系统设计文档.md`](docs/cn/develop/双令牌认证系统设计文档.md)
+- Full design: [`docs/en/develop/dual-token-auth.md`](docs/en/develop/dual-token-auth.md)
 
 ### Email verification & passwordless login (overview)
 
@@ -101,7 +101,7 @@ The repository is a **Monorepo** — all code lives in a single Git repository. 
 - **Catch-up verify**: legacy unverified accounts can call `VerifyEmail` (`scene=verify`) to mark verified.
 - **Passwordless login**: `LoginWithCode` (`scene=login`) issues dual tokens without a password; compatible with 2FA (returns `mfa_ticket` when enabled).
 - Verification codes are scene-isolated in Redis with a resend cooldown.
-- Per-module API docs: [`docs/cn/api/`](docs/cn/api/)
+- Per-module API docs: [`docs/en/api/`](docs/en/api/)
 
 ---
 
@@ -270,13 +270,13 @@ make docker      # build Docker images (context = repo root)
 
 ## 📡 API Reference
 
-按模块分文档维护，详细路由与字段说明见 [`docs/cn/api/`](docs/cn/api/)：
+Per-module docs (with detailed routes and fields) live under [`docs/en/api/`](docs/en/api/):
 
-- **[user-service](docs/cn/api/user-service.md)** — 用户与认证核心（gRPC `:5002`）：账号、双令牌、邮箱验证码、2FA、RBAC、审计、OAuth。
-- **[api-gateway](docs/cn/api/api-gateway.md)** — 统一 HTTP 入口（`:5001`）：完整路由表、认证/错误映射、CORS 与 Cookie 策略。
-- **[crawl4ai-service](docs/cn/api/crawl4ai-service.md)** — 数据采集（`:5003`）：`Health` / `Crawl` / `Extract`（HTTP + gRPC）。
+- **[user-service](docs/en/api/user-service.md)** — core user & auth service (gRPC `:5002`): accounts, dual tokens, email codes, 2FA, RBAC, audit, OAuth.
+- **[api-gateway](docs/en/api/api-gateway.md)** — unified HTTP entry (`:5001`): full route table, auth/error mapping, CORS & Cookie policy.
+- **[crawl4ai-service](docs/en/api/crawl4ai-service.md)** — data crawling (`:5003`): `Health` / `Crawl` / `Extract` (HTTP + gRPC).
 
-各服务均提供 Swagger（网关在 `/swagger/index.html`，crawl4ai-service 在 `/docs`）。
+Each service also ships Swagger (gateway at `/swagger/index.html`, crawl4ai-service at `/docs`).
 
 ---
 
