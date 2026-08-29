@@ -3,9 +3,6 @@
 // 	protoc-gen-go v1.36.12
 // 	protoc        v5.29.3
 // source: proto/crawl/crawl.proto
-//
-// 注：本仓库环境无 protoc 二进制，故 rawDesc 由 crawl_descriptor.go 在包初始化时
-// 通过 FileDescriptorProto 构造并序列化得到，与 protoc 生成结果等价、可正常序列化。
 
 package crawlpb
 
@@ -13,10 +10,14 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
 )
 
 const (
+	// Verify that this generated code is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(20 - protoimpl.MinVersion)
+	// Verify that runtime/protoimpl is sufficiently up-to-date.
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
@@ -32,8 +33,13 @@ func (x *HealthRequest) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *HealthRequest) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*HealthRequest) ProtoMessage()    {}
+
+func (x *HealthRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthRequest) ProtoMessage() {}
+
 func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[0]
 	if x != nil {
@@ -44,6 +50,11 @@ func (x *HealthRequest) ProtoReflect() protoreflect.Message {
 		return ms
 	}
 	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HealthRequest.ProtoReflect.Descriptor instead.
+func (*HealthRequest) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{0}
 }
 
 type HealthResponse struct {
@@ -63,8 +74,13 @@ func (x *HealthResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *HealthResponse) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*HealthResponse) ProtoMessage()    {}
+
+func (x *HealthResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HealthResponse) ProtoMessage() {}
+
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[1]
 	if x != nil {
@@ -77,15 +93,56 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+// Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
+func (*HealthResponse) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *HealthResponse) GetHealthy() bool {
+	if x != nil {
+		return x.Healthy
+	}
+	return false
+}
+
+func (x *HealthResponse) GetService() string {
+	if x != nil {
+		return x.Service
+	}
+	return ""
+}
+
+func (x *HealthResponse) GetVersion() string {
+	if x != nil {
+		return x.Version
+	}
+	return ""
+}
+
+func (x *HealthResponse) GetUptimeSeconds() float32 {
+	if x != nil {
+		return x.UptimeSeconds
+	}
+	return 0
+}
+
+func (x *HealthResponse) GetAuthEnabled() bool {
+	if x != nil {
+		return x.AuthEnabled
+	}
+	return false
+}
+
+// CrawlerOptions 单次抓取的可选行为，对应原 CrawlerOptions。
 type CrawlerOptions struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
-	Timeout               int32                  `protobuf:"varint,1,opt,name=timeout,proto3" json:"timeout,omitempty"`
-	UserAgent             string                 `protobuf:"bytes,2,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
-	BypassCache           bool                   `protobuf:"varint,3,opt,name=bypass_cache,json=bypassCache,proto3" json:"bypass_cache,omitempty"`
-	RemoveOverlayElements bool                   `protobuf:"varint,4,opt,name=remove_overlay_elements,json=removeOverlayElements,proto3" json:"remove_overlay_elements,omitempty"`
-	SimulateUser          bool                   `protobuf:"varint,5,opt,name=simulate_user,json=simulateUser,proto3" json:"simulate_user,omitempty"`
-	Magic                 bool                   `protobuf:"varint,6,opt,name=magic,proto3" json:"magic,omitempty"`
-	Locale                string                 `protobuf:"bytes,7,opt,name=locale,proto3" json:"locale,omitempty"`
+	Timeout               int32                  `protobuf:"varint,1,opt,name=timeout,proto3" json:"timeout,omitempty"`                                                            // 单 URL 超时（秒，5-600）
+	UserAgent             string                 `protobuf:"bytes,2,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`                                        // 覆盖默认 UA
+	BypassCache           bool                   `protobuf:"varint,3,opt,name=bypass_cache,json=bypassCache,proto3" json:"bypass_cache,omitempty"`                                 // 跳过缓存结果
+	RemoveOverlayElements bool                   `protobuf:"varint,4,opt,name=remove_overlay_elements,json=removeOverlayElements,proto3" json:"remove_overlay_elements,omitempty"` // 移除弹窗/遮罩元素
+	SimulateUser          bool                   `protobuf:"varint,5,opt,name=simulate_user,json=simulateUser,proto3" json:"simulate_user,omitempty"`                              // 模拟人类操作行为
+	Magic                 bool                   `protobuf:"varint,6,opt,name=magic,proto3" json:"magic,omitempty"`                                                                // 启用 Crawl4AI 魔法模式（反爬）
+	Locale                string                 `protobuf:"bytes,7,opt,name=locale,proto3" json:"locale,omitempty"`                                                               // 浏览器语言区域，如 zh-CN
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
@@ -96,8 +153,13 @@ func (x *CrawlerOptions) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *CrawlerOptions) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*CrawlerOptions) ProtoMessage()     {}
+
+func (x *CrawlerOptions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CrawlerOptions) ProtoMessage() {}
+
 func (x *CrawlerOptions) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[2]
 	if x != nil {
@@ -110,14 +172,69 @@ func (x *CrawlerOptions) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+// Deprecated: Use CrawlerOptions.ProtoReflect.Descriptor instead.
+func (*CrawlerOptions) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *CrawlerOptions) GetTimeout() int32 {
+	if x != nil {
+		return x.Timeout
+	}
+	return 0
+}
+
+func (x *CrawlerOptions) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *CrawlerOptions) GetBypassCache() bool {
+	if x != nil {
+		return x.BypassCache
+	}
+	return false
+}
+
+func (x *CrawlerOptions) GetRemoveOverlayElements() bool {
+	if x != nil {
+		return x.RemoveOverlayElements
+	}
+	return false
+}
+
+func (x *CrawlerOptions) GetSimulateUser() bool {
+	if x != nil {
+		return x.SimulateUser
+	}
+	return false
+}
+
+func (x *CrawlerOptions) GetMagic() bool {
+	if x != nil {
+		return x.Magic
+	}
+	return false
+}
+
+func (x *CrawlerOptions) GetLocale() string {
+	if x != nil {
+		return x.Locale
+	}
+	return ""
+}
+
+// LLMConfig OpenAI 兼容的 LLM 配置，凭证由调用方按请求传入。
 type LLMConfig struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
-	ApiKey         string                 `protobuf:"bytes,1,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
-	BaseUrl        string                 `protobuf:"bytes,2,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
-	Model          string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`
-	Temperature    float32                `protobuf:"fixed32,4,opt,name=temperature,proto3" json:"temperature,omitempty"`
-	MaxTokens      int32                  `protobuf:"varint,5,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`
-	RequestTimeout int32                  `protobuf:"varint,6,opt,name=request_timeout,json=requestTimeout,proto3" json:"request_timeout,omitempty"`
+	ApiKey         string                 `protobuf:"bytes,1,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`                          // OpenAI 兼容 API Key
+	BaseUrl        string                 `protobuf:"bytes,2,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`                       // OpenAI 兼容 base URL
+	Model          string                 `protobuf:"bytes,3,opt,name=model,proto3" json:"model,omitempty"`                                          // 模型名
+	Temperature    float32                `protobuf:"fixed32,4,opt,name=temperature,proto3" json:"temperature,omitempty"`                            // 采样温度（0.0-2.0）
+	MaxTokens      int32                  `protobuf:"varint,5,opt,name=max_tokens,json=maxTokens,proto3" json:"max_tokens,omitempty"`                // 最大输出 token
+	RequestTimeout int32                  `protobuf:"varint,6,opt,name=request_timeout,json=requestTimeout,proto3" json:"request_timeout,omitempty"` // LLM 请求超时（秒）
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -128,8 +245,13 @@ func (x *LLMConfig) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *LLMConfig) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*LLMConfig) ProtoMessage()    {}
+
+func (x *LLMConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LLMConfig) ProtoMessage() {}
+
 func (x *LLMConfig) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[3]
 	if x != nil {
@@ -142,13 +264,61 @@ func (x *LLMConfig) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+// Deprecated: Use LLMConfig.ProtoReflect.Descriptor instead.
+func (*LLMConfig) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *LLMConfig) GetApiKey() string {
+	if x != nil {
+		return x.ApiKey
+	}
+	return ""
+}
+
+func (x *LLMConfig) GetBaseUrl() string {
+	if x != nil {
+		return x.BaseUrl
+	}
+	return ""
+}
+
+func (x *LLMConfig) GetModel() string {
+	if x != nil {
+		return x.Model
+	}
+	return ""
+}
+
+func (x *LLMConfig) GetTemperature() float32 {
+	if x != nil {
+		return x.Temperature
+	}
+	return 0
+}
+
+func (x *LLMConfig) GetMaxTokens() int32 {
+	if x != nil {
+		return x.MaxTokens
+	}
+	return 0
+}
+
+func (x *LLMConfig) GetRequestTimeout() int32 {
+	if x != nil {
+		return x.RequestTimeout
+	}
+	return 0
+}
+
+// ExtractSchemaField 抽取 schema 中单个字段定义（items 以 JSON 字符串透传）。
 type ExtractSchemaField struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Description   string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"`
+	Type          string                 `protobuf:"bytes,3,opt,name=type,proto3" json:"type,omitempty"` // string/number/integer/boolean/array/object
 	Required      bool                   `protobuf:"varint,4,opt,name=required,proto3" json:"required,omitempty"`
-	ItemsJson     string                 `protobuf:"bytes,5,opt,name=items_json,json=itemsJson,proto3" json:"items_json,omitempty"`
+	ItemsJson     string                 `protobuf:"bytes,5,opt,name=items_json,json=itemsJson,proto3" json:"items_json,omitempty"` // type=array 时的元素 schema（JSON 字符串）
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -159,8 +329,13 @@ func (x *ExtractSchemaField) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *ExtractSchemaField) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*ExtractSchemaField) ProtoMessage()     {}
+
+func (x *ExtractSchemaField) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtractSchemaField) ProtoMessage() {}
+
 func (x *ExtractSchemaField) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[4]
 	if x != nil {
@@ -173,11 +348,51 @@ func (x *ExtractSchemaField) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+// Deprecated: Use ExtractSchemaField.ProtoReflect.Descriptor instead.
+func (*ExtractSchemaField) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ExtractSchemaField) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ExtractSchemaField) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ExtractSchemaField) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *ExtractSchemaField) GetRequired() bool {
+	if x != nil {
+		return x.Required
+	}
+	return false
+}
+
+func (x *ExtractSchemaField) GetItemsJson() string {
+	if x != nil {
+		return x.ItemsJson
+	}
+	return ""
+}
+
 type CrawlRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
-	Options       *CrawlerOptions        `protobuf:"bytes,2,opt,name=options,proto3" json:"options,omitempty"`
-	WaitFor       string                 `protobuf:"bytes,3,opt,name=wait_for,json=waitFor,proto3" json:"wait_for,omitempty"`
+	Url           string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`                        // 目标 URL（必填）
+	Options       *CrawlerOptions        `protobuf:"bytes,2,opt,name=options,proto3" json:"options,omitempty"`                // 抓取选项
+	WaitFor       string                 `protobuf:"bytes,3,opt,name=wait_for,json=waitFor,proto3" json:"wait_for,omitempty"` // 爬取前需等待出现的 CSS 选择器
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -188,8 +403,13 @@ func (x *CrawlRequest) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *CrawlRequest) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*CrawlRequest) ProtoMessage()    {}
+
+func (x *CrawlRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CrawlRequest) ProtoMessage() {}
+
 func (x *CrawlRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[5]
 	if x != nil {
@@ -202,16 +422,42 @@ func (x *CrawlRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+// Deprecated: Use CrawlRequest.ProtoReflect.Descriptor instead.
+func (*CrawlRequest) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CrawlRequest) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *CrawlRequest) GetOptions() *CrawlerOptions {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
+func (x *CrawlRequest) GetWaitFor() string {
+	if x != nil {
+		return x.WaitFor
+	}
+	return ""
+}
+
 type CrawlResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Success        bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	Url            string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
-	Markdown       string                 `protobuf:"bytes,3,opt,name=markdown,proto3" json:"markdown,omitempty"`
-	StatusCode     int32                  `protobuf:"varint,4,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`
-	ErrorCode      string                 `protobuf:"bytes,5,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
-	ErrorMessage   string                 `protobuf:"bytes,6,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
-	ErrorRetryable bool                   `protobuf:"varint,7,opt,name=error_retryable,json=errorRetryable,proto3" json:"error_retryable,omitempty"`
-	ElapsedMs      int32                  `protobuf:"varint,8,opt,name=elapsed_ms,json=elapsedMs,proto3" json:"elapsed_ms,omitempty"`
+	Markdown       string                 `protobuf:"bytes,3,opt,name=markdown,proto3" json:"markdown,omitempty"`                                    // 清洗后的 Markdown
+	StatusCode     int32                  `protobuf:"varint,4,opt,name=status_code,json=statusCode,proto3" json:"status_code,omitempty"`             // HTTP 状态码（可能为 0）
+	ErrorCode      string                 `protobuf:"bytes,5,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`                 // 失败时的错误码
+	ErrorMessage   string                 `protobuf:"bytes,6,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`        // 失败时的错误信息
+	ErrorRetryable bool                   `protobuf:"varint,7,opt,name=error_retryable,json=errorRetryable,proto3" json:"error_retryable,omitempty"` // 是否可重试
+	ElapsedMs      int32                  `protobuf:"varint,8,opt,name=elapsed_ms,json=elapsedMs,proto3" json:"elapsed_ms,omitempty"`                // 服务端处理耗时
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -222,8 +468,13 @@ func (x *CrawlResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *CrawlResponse) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*CrawlResponse) ProtoMessage()    {}
+
+func (x *CrawlResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CrawlResponse) ProtoMessage() {}
+
 func (x *CrawlResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[6]
 	if x != nil {
@@ -236,14 +487,75 @@ func (x *CrawlResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+// Deprecated: Use CrawlResponse.ProtoReflect.Descriptor instead.
+func (*CrawlResponse) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CrawlResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *CrawlResponse) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *CrawlResponse) GetMarkdown() string {
+	if x != nil {
+		return x.Markdown
+	}
+	return ""
+}
+
+func (x *CrawlResponse) GetStatusCode() int32 {
+	if x != nil {
+		return x.StatusCode
+	}
+	return 0
+}
+
+func (x *CrawlResponse) GetErrorCode() string {
+	if x != nil {
+		return x.ErrorCode
+	}
+	return ""
+}
+
+func (x *CrawlResponse) GetErrorMessage() string {
+	if x != nil {
+		return x.ErrorMessage
+	}
+	return ""
+}
+
+func (x *CrawlResponse) GetErrorRetryable() bool {
+	if x != nil {
+		return x.ErrorRetryable
+	}
+	return false
+}
+
+func (x *CrawlResponse) GetElapsedMs() int32 {
+	if x != nil {
+		return x.ElapsedMs
+	}
+	return 0
+}
+
 type ExtractRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
-	Url               string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`
-	Instruction       string                 `protobuf:"bytes,2,opt,name=instruction,proto3" json:"instruction,omitempty"`
-	SchemaFields      []*ExtractSchemaField  `protobuf:"bytes,3,rep,name=schema_fields,json=schemaFields,proto3" json:"schema_fields,omitempty"`
-	Llm               *LLMConfig             `protobuf:"bytes,4,opt,name=llm,proto3" json:"llm,omitempty"`
-	Options           *CrawlerOptions        `protobuf:"bytes,5,opt,name=options,proto3" json:"options,omitempty"`
-	ExtractionTimeout int32                  `protobuf:"varint,6,opt,name=extraction_timeout,json=extractionTimeout,proto3" json:"extraction_timeout,omitempty"`
+	Url               string                 `protobuf:"bytes,1,opt,name=url,proto3" json:"url,omitempty"`                                                       // 目标 URL（必填）
+	Instruction       string                 `protobuf:"bytes,2,opt,name=instruction,proto3" json:"instruction,omitempty"`                                       // 提取规则的自然语言描述（必填）
+	SchemaFields      []*ExtractSchemaField  `protobuf:"bytes,3,rep,name=schema_fields,json=schemaFields,proto3" json:"schema_fields,omitempty"`                 // 可选 JSON Schema 字段
+	Llm               *LLMConfig             `protobuf:"bytes,4,opt,name=llm,proto3" json:"llm,omitempty"`                                                       // LLM 配置（必填）
+	Options           *CrawlerOptions        `protobuf:"bytes,5,opt,name=options,proto3" json:"options,omitempty"`                                               // 抓取选项
+	ExtractionTimeout int32                  `protobuf:"varint,6,opt,name=extraction_timeout,json=extractionTimeout,proto3" json:"extraction_timeout,omitempty"` // 单次 LLM 调用超时（秒）
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -254,8 +566,13 @@ func (x *ExtractRequest) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *ExtractRequest) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*ExtractRequest) ProtoMessage()    {}
+
+func (x *ExtractRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtractRequest) ProtoMessage() {}
+
 func (x *ExtractRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[7]
 	if x != nil {
@@ -268,17 +585,64 @@ func (x *ExtractRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
+// Deprecated: Use ExtractRequest.ProtoReflect.Descriptor instead.
+func (*ExtractRequest) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ExtractRequest) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
+}
+
+func (x *ExtractRequest) GetInstruction() string {
+	if x != nil {
+		return x.Instruction
+	}
+	return ""
+}
+
+func (x *ExtractRequest) GetSchemaFields() []*ExtractSchemaField {
+	if x != nil {
+		return x.SchemaFields
+	}
+	return nil
+}
+
+func (x *ExtractRequest) GetLlm() *LLMConfig {
+	if x != nil {
+		return x.Llm
+	}
+	return nil
+}
+
+func (x *ExtractRequest) GetOptions() *CrawlerOptions {
+	if x != nil {
+		return x.Options
+	}
+	return nil
+}
+
+func (x *ExtractRequest) GetExtractionTimeout() int32 {
+	if x != nil {
+		return x.ExtractionTimeout
+	}
+	return 0
+}
+
 type ExtractResponse struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Success        bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
 	Url            string                 `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
-	Markdown       string                 `protobuf:"bytes,3,opt,name=markdown,proto3" json:"markdown,omitempty"`
-	DataJson       string                 `protobuf:"bytes,4,opt,name=data_json,json=dataJson,proto3" json:"data_json,omitempty"`
+	Markdown       string                 `protobuf:"bytes,3,opt,name=markdown,proto3" json:"markdown,omitempty"`                 // 喂给 LLM 的 Markdown 原文
+	DataJson       string                 `protobuf:"bytes,4,opt,name=data_json,json=dataJson,proto3" json:"data_json,omitempty"` // 抽取出的结构化数据（JSON 字符串）
 	ErrorCode      string                 `protobuf:"bytes,5,opt,name=error_code,json=errorCode,proto3" json:"error_code,omitempty"`
 	ErrorMessage   string                 `protobuf:"bytes,6,opt,name=error_message,json=errorMessage,proto3" json:"error_message,omitempty"`
 	ErrorRetryable bool                   `protobuf:"varint,7,opt,name=error_retryable,json=errorRetryable,proto3" json:"error_retryable,omitempty"`
 	ElapsedMs      int32                  `protobuf:"varint,8,opt,name=elapsed_ms,json=elapsedMs,proto3" json:"elapsed_ms,omitempty"`
-	Model          string                 `protobuf:"bytes,9,opt,name=model,proto3" json:"model,omitempty"`
+	Model          string                 `protobuf:"bytes,9,opt,name=model,proto3" json:"model,omitempty"` // 实际使用的模型名
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -289,8 +653,13 @@ func (x *ExtractResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *ExtractResponse) String() string { return protoimpl.X.MessageStringOf(x) }
-func (*ExtractResponse) ProtoMessage()    {}
+
+func (x *ExtractResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExtractResponse) ProtoMessage() {}
+
 func (x *ExtractResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_proto_crawl_crawl_proto_msgTypes[8]
 	if x != nil {
@@ -303,247 +672,9 @@ func (x *ExtractResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// ---- Getters ----
-
-func (x *HealthResponse) GetService() string {
-	if x != nil {
-		return x.Service
-	}
-	return ""
-}
-func (x *HealthResponse) GetVersion() string {
-	if x != nil {
-		return x.Version
-	}
-	return ""
-}
-func (x *HealthResponse) GetUptimeSeconds() float32 {
-	if x != nil {
-		return x.UptimeSeconds
-	}
-	return 0
-}
-func (x *HealthResponse) GetAuthEnabled() bool {
-	if x != nil {
-		return x.AuthEnabled
-	}
-	return false
-}
-
-func (x *CrawlerOptions) GetTimeout() int32 {
-	if x != nil {
-		return x.Timeout
-	}
-	return 0
-}
-func (x *CrawlerOptions) GetUserAgent() string {
-	if x != nil {
-		return x.UserAgent
-	}
-	return ""
-}
-func (x *CrawlerOptions) GetBypassCache() bool {
-	if x != nil {
-		return x.BypassCache
-	}
-	return false
-}
-func (x *CrawlerOptions) GetRemoveOverlayElements() bool {
-	if x != nil {
-		return x.RemoveOverlayElements
-	}
-	return false
-}
-func (x *CrawlerOptions) GetSimulateUser() bool {
-	if x != nil {
-		return x.SimulateUser
-	}
-	return false
-}
-func (x *CrawlerOptions) GetMagic() bool {
-	if x != nil {
-		return x.Magic
-	}
-	return false
-}
-func (x *CrawlerOptions) GetLocale() string {
-	if x != nil {
-		return x.Locale
-	}
-	return ""
-}
-
-func (x *LLMConfig) GetApiKey() string {
-	if x != nil {
-		return x.ApiKey
-	}
-	return ""
-}
-func (x *LLMConfig) GetBaseUrl() string {
-	if x != nil {
-		return x.BaseUrl
-	}
-	return ""
-}
-func (x *LLMConfig) GetModel() string {
-	if x != nil {
-		return x.Model
-	}
-	return ""
-}
-func (x *LLMConfig) GetTemperature() float32 {
-	if x != nil {
-		return x.Temperature
-	}
-	return 0
-}
-func (x *LLMConfig) GetMaxTokens() int32 {
-	if x != nil {
-		return x.MaxTokens
-	}
-	return 0
-}
-func (x *LLMConfig) GetRequestTimeout() int32 {
-	if x != nil {
-		return x.RequestTimeout
-	}
-	return 0
-}
-
-func (x *ExtractSchemaField) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-func (x *ExtractSchemaField) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-func (x *ExtractSchemaField) GetType() string {
-	if x != nil {
-		return x.Type
-	}
-	return ""
-}
-func (x *ExtractSchemaField) GetRequired() bool {
-	if x != nil {
-		return x.Required
-	}
-	return false
-}
-func (x *ExtractSchemaField) GetItemsJson() string {
-	if x != nil {
-		return x.ItemsJson
-	}
-	return ""
-}
-
-func (x *CrawlRequest) GetUrl() string {
-	if x != nil {
-		return x.Url
-	}
-	return ""
-}
-func (x *CrawlRequest) GetOptions() *CrawlerOptions {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-func (x *CrawlRequest) GetWaitFor() string {
-	if x != nil {
-		return x.WaitFor
-	}
-	return ""
-}
-
-func (x *CrawlResponse) GetSuccess() bool {
-	if x != nil {
-		return x.Success
-	}
-	return false
-}
-func (x *CrawlResponse) GetUrl() string {
-	if x != nil {
-		return x.Url
-	}
-	return ""
-}
-func (x *CrawlResponse) GetMarkdown() string {
-	if x != nil {
-		return x.Markdown
-	}
-	return ""
-}
-func (x *CrawlResponse) GetStatusCode() int32 {
-	if x != nil {
-		return x.StatusCode
-	}
-	return 0
-}
-func (x *CrawlResponse) GetErrorCode() string {
-	if x != nil {
-		return x.ErrorCode
-	}
-	return ""
-}
-func (x *CrawlResponse) GetErrorMessage() string {
-	if x != nil {
-		return x.ErrorMessage
-	}
-	return ""
-}
-func (x *CrawlResponse) GetErrorRetryable() bool {
-	if x != nil {
-		return x.ErrorRetryable
-	}
-	return false
-}
-func (x *CrawlResponse) GetElapsedMs() int32 {
-	if x != nil {
-		return x.ElapsedMs
-	}
-	return 0
-}
-
-func (x *ExtractRequest) GetUrl() string {
-	if x != nil {
-		return x.Url
-	}
-	return ""
-}
-func (x *ExtractRequest) GetInstruction() string {
-	if x != nil {
-		return x.Instruction
-	}
-	return ""
-}
-func (x *ExtractRequest) GetSchemaFields() []*ExtractSchemaField {
-	if x != nil {
-		return x.SchemaFields
-	}
-	return nil
-}
-func (x *ExtractRequest) GetLlm() *LLMConfig {
-	if x != nil {
-		return x.Llm
-	}
-	return nil
-}
-func (x *ExtractRequest) GetOptions() *CrawlerOptions {
-	if x != nil {
-		return x.Options
-	}
-	return nil
-}
-func (x *ExtractRequest) GetExtractionTimeout() int32 {
-	if x != nil {
-		return x.ExtractionTimeout
-	}
-	return 0
+// Deprecated: Use ExtractResponse.ProtoReflect.Descriptor instead.
+func (*ExtractResponse) Descriptor() ([]byte, []int) {
+	return file_proto_crawl_crawl_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ExtractResponse) GetSuccess() bool {
@@ -552,48 +683,56 @@ func (x *ExtractResponse) GetSuccess() bool {
 	}
 	return false
 }
+
 func (x *ExtractResponse) GetUrl() string {
 	if x != nil {
 		return x.Url
 	}
 	return ""
 }
+
 func (x *ExtractResponse) GetMarkdown() string {
 	if x != nil {
 		return x.Markdown
 	}
 	return ""
 }
+
 func (x *ExtractResponse) GetDataJson() string {
 	if x != nil {
 		return x.DataJson
 	}
 	return ""
 }
+
 func (x *ExtractResponse) GetErrorCode() string {
 	if x != nil {
 		return x.ErrorCode
 	}
 	return ""
 }
+
 func (x *ExtractResponse) GetErrorMessage() string {
 	if x != nil {
 		return x.ErrorMessage
 	}
 	return ""
 }
+
 func (x *ExtractResponse) GetErrorRetryable() bool {
 	if x != nil {
 		return x.ErrorRetryable
 	}
 	return false
 }
+
 func (x *ExtractResponse) GetElapsedMs() int32 {
 	if x != nil {
 		return x.ElapsedMs
 	}
 	return 0
 }
+
 func (x *ExtractResponse) GetModel() string {
 	if x != nil {
 		return x.Model
@@ -601,71 +740,125 @@ func (x *ExtractResponse) GetModel() string {
 	return ""
 }
 
-var file_proto_crawl_crawl_proto_rawDesc = mustMarshalCrawlFile()
+var File_proto_crawl_crawl_proto protoreflect.FileDescriptor
+
+const file_proto_crawl_crawl_proto_rawDesc = "" +
+	"\n" +
+	"\x17proto/crawl/crawl.proto\x12\x05crawl\"\x0f\n" +
+	"\rHealthRequest\"\xa8\x01\n" +
+	"\x0eHealthResponse\x12\x18\n" +
+	"\ahealthy\x18\x01 \x01(\bR\ahealthy\x12\x18\n" +
+	"\aservice\x18\x02 \x01(\tR\aservice\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\tR\aversion\x12%\n" +
+	"\x0euptime_seconds\x18\x04 \x01(\x02R\ruptimeSeconds\x12!\n" +
+	"\fauth_enabled\x18\x05 \x01(\bR\vauthEnabled\"\xf7\x01\n" +
+	"\x0eCrawlerOptions\x12\x18\n" +
+	"\atimeout\x18\x01 \x01(\x05R\atimeout\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\x02 \x01(\tR\tuserAgent\x12!\n" +
+	"\fbypass_cache\x18\x03 \x01(\bR\vbypassCache\x126\n" +
+	"\x17remove_overlay_elements\x18\x04 \x01(\bR\x15removeOverlayElements\x12#\n" +
+	"\rsimulate_user\x18\x05 \x01(\bR\fsimulateUser\x12\x14\n" +
+	"\x05magic\x18\x06 \x01(\bR\x05magic\x12\x16\n" +
+	"\x06locale\x18\a \x01(\tR\x06locale\"\xbf\x01\n" +
+	"\tLLMConfig\x12\x17\n" +
+	"\aapi_key\x18\x01 \x01(\tR\x06apiKey\x12\x19\n" +
+	"\bbase_url\x18\x02 \x01(\tR\abaseUrl\x12\x14\n" +
+	"\x05model\x18\x03 \x01(\tR\x05model\x12 \n" +
+	"\vtemperature\x18\x04 \x01(\x02R\vtemperature\x12\x1d\n" +
+	"\n" +
+	"max_tokens\x18\x05 \x01(\x05R\tmaxTokens\x12'\n" +
+	"\x0frequest_timeout\x18\x06 \x01(\x05R\x0erequestTimeout\"\x99\x01\n" +
+	"\x12ExtractSchemaField\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x02 \x01(\tR\vdescription\x12\x12\n" +
+	"\x04type\x18\x03 \x01(\tR\x04type\x12\x1a\n" +
+	"\brequired\x18\x04 \x01(\bR\brequired\x12\x1d\n" +
+	"\n" +
+	"items_json\x18\x05 \x01(\tR\titemsJson\"l\n" +
+	"\fCrawlRequest\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12/\n" +
+	"\aoptions\x18\x02 \x01(\v2\x15.crawl.CrawlerOptionsR\aoptions\x12\x19\n" +
+	"\bwait_for\x18\x03 \x01(\tR\awaitFor\"\x84\x02\n" +
+	"\rCrawlResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12\x1a\n" +
+	"\bmarkdown\x18\x03 \x01(\tR\bmarkdown\x12\x1f\n" +
+	"\vstatus_code\x18\x04 \x01(\x05R\n" +
+	"statusCode\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x05 \x01(\tR\terrorCode\x12#\n" +
+	"\rerror_message\x18\x06 \x01(\tR\ferrorMessage\x12'\n" +
+	"\x0ferror_retryable\x18\a \x01(\bR\x0eerrorRetryable\x12\x1d\n" +
+	"\n" +
+	"elapsed_ms\x18\b \x01(\x05R\telapsedMs\"\x88\x02\n" +
+	"\x0eExtractRequest\x12\x10\n" +
+	"\x03url\x18\x01 \x01(\tR\x03url\x12 \n" +
+	"\vinstruction\x18\x02 \x01(\tR\vinstruction\x12>\n" +
+	"\rschema_fields\x18\x03 \x03(\v2\x19.crawl.ExtractSchemaFieldR\fschemaFields\x12\"\n" +
+	"\x03llm\x18\x04 \x01(\v2\x10.crawl.LLMConfigR\x03llm\x12/\n" +
+	"\aoptions\x18\x05 \x01(\v2\x15.crawl.CrawlerOptionsR\aoptions\x12-\n" +
+	"\x12extraction_timeout\x18\x06 \x01(\x05R\x11extractionTimeout\"\x98\x02\n" +
+	"\x0fExtractResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\x12\x1a\n" +
+	"\bmarkdown\x18\x03 \x01(\tR\bmarkdown\x12\x1b\n" +
+	"\tdata_json\x18\x04 \x01(\tR\bdataJson\x12\x1d\n" +
+	"\n" +
+	"error_code\x18\x05 \x01(\tR\terrorCode\x12#\n" +
+	"\rerror_message\x18\x06 \x01(\tR\ferrorMessage\x12'\n" +
+	"\x0ferror_retryable\x18\a \x01(\bR\x0eerrorRetryable\x12\x1d\n" +
+	"\n" +
+	"elapsed_ms\x18\b \x01(\x05R\telapsedMs\x12\x14\n" +
+	"\x05model\x18\t \x01(\tR\x05model2\xb3\x01\n" +
+	"\fCrawlService\x125\n" +
+	"\x06Health\x12\x14.crawl.HealthRequest\x1a\x15.crawl.HealthResponse\x122\n" +
+	"\x05Crawl\x12\x13.crawl.CrawlRequest\x1a\x14.crawl.CrawlResponse\x128\n" +
+	"\aExtract\x12\x15.crawl.ExtractRequest\x1a\x16.crawl.ExtractResponseB)Z'github.com/museflow/proto/crawl;crawlpbb\x06proto3"
+
+var (
+	file_proto_crawl_crawl_proto_rawDescOnce sync.Once
+	file_proto_crawl_crawl_proto_rawDescData []byte
+)
+
+func file_proto_crawl_crawl_proto_rawDescGZIP() []byte {
+	file_proto_crawl_crawl_proto_rawDescOnce.Do(func() {
+		file_proto_crawl_crawl_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_crawl_crawl_proto_rawDesc), len(file_proto_crawl_crawl_proto_rawDesc)))
+	})
+	return file_proto_crawl_crawl_proto_rawDescData
+}
 
 var file_proto_crawl_crawl_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_proto_crawl_crawl_proto_goTypes = []any{
-	(*HealthRequest)(nil),      // 0
-	(*HealthResponse)(nil),     // 1
-	(*CrawlerOptions)(nil),     // 2
-	(*LLMConfig)(nil),          // 3
-	(*ExtractSchemaField)(nil), // 4
-	(*CrawlRequest)(nil),       // 5
-	(*CrawlResponse)(nil),      // 6
-	(*ExtractRequest)(nil),    // 7
-	(*ExtractResponse)(nil),   // 8
+	(*HealthRequest)(nil),      // 0: crawl.HealthRequest
+	(*HealthResponse)(nil),     // 1: crawl.HealthResponse
+	(*CrawlerOptions)(nil),     // 2: crawl.CrawlerOptions
+	(*LLMConfig)(nil),          // 3: crawl.LLMConfig
+	(*ExtractSchemaField)(nil), // 4: crawl.ExtractSchemaField
+	(*CrawlRequest)(nil),       // 5: crawl.CrawlRequest
+	(*CrawlResponse)(nil),      // 6: crawl.CrawlResponse
+	(*ExtractRequest)(nil),     // 7: crawl.ExtractRequest
+	(*ExtractResponse)(nil),    // 8: crawl.ExtractResponse
 }
-// 消息类型交叉引用索引。编码方式（与 protoc 生成一致）：
-//   depIdxs.Get(i,j) = x[x[len(x)-i-1]+j]
-// 即最后 n 个条目是偏移量（每条消息一个，偏移值指向 data 区的起始下标），
-// 前段是各消息类型字段所引用 Go 类型在 goTypes 中的下标（按消息声明顺序）。
-//   - CrawlRequest.options -> CrawlerOptions(2)
-//   - ExtractRequest.schema_fields -> ExtractSchemaField(4)
-//   - ExtractRequest.llm -> LLMConfig(3)
-//   - ExtractRequest.options -> CrawlerOptions(2)
 var file_proto_crawl_crawl_proto_depIdxs = []int32{
-	// data 区
-	2, 4, 3, 2,
-	// 偏移量区（共 9 条消息，off_i 存于 x[len-1-i]）
-	4, // i=8 ExtractResponse 起始
-	1, // i=7 ExtractRequest 起始
-	1, // i=6 CrawlResponse 起始
-	0, // i=5 CrawlRequest 起始
-	0, // i=4 ExtractSchemaField 起始
-	0, // i=3 LLMConfig 起始
-	0, // i=2 CrawlerOptions 起始
-	0, // i=1 HealthResponse 起始
-	0, // i=0 HealthRequest 起始
+	2, // 0: crawl.CrawlRequest.options:type_name -> crawl.CrawlerOptions
+	4, // 1: crawl.ExtractRequest.schema_fields:type_name -> crawl.ExtractSchemaField
+	3, // 2: crawl.ExtractRequest.llm:type_name -> crawl.LLMConfig
+	2, // 3: crawl.ExtractRequest.options:type_name -> crawl.CrawlerOptions
+	0, // 4: crawl.CrawlService.Health:input_type -> crawl.HealthRequest
+	5, // 5: crawl.CrawlService.Crawl:input_type -> crawl.CrawlRequest
+	7, // 6: crawl.CrawlService.Extract:input_type -> crawl.ExtractRequest
+	1, // 7: crawl.CrawlService.Health:output_type -> crawl.HealthResponse
+	6, // 8: crawl.CrawlService.Crawl:output_type -> crawl.CrawlResponse
+	8, // 9: crawl.CrawlService.Extract:output_type -> crawl.ExtractResponse
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
-func init() {
-	for i := range file_proto_crawl_crawl_proto_msgTypes {
-		file_proto_crawl_crawl_proto_msgTypes[i].Exporter = func(v any, i int) any {
-			switch m := v.(type) {
-			case *HealthRequest:
-				return &m.state
-			case *HealthResponse:
-				return &m.state
-			case *CrawlerOptions:
-				return &m.state
-			case *LLMConfig:
-				return &m.state
-			case *ExtractSchemaField:
-				return &m.state
-			case *CrawlRequest:
-				return &m.state
-			case *CrawlResponse:
-				return &m.state
-			case *ExtractRequest:
-				return &m.state
-			case *ExtractResponse:
-				return &m.state
-			}
-			return nil
-		}
-	}
-}
-
+func init() { file_proto_crawl_crawl_proto_init() }
 func file_proto_crawl_crawl_proto_init() {
 	if File_proto_crawl_crawl_proto != nil {
 		return
@@ -674,7 +867,7 @@ func file_proto_crawl_crawl_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: file_proto_crawl_crawl_proto_rawDesc,
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_crawl_crawl_proto_rawDesc), len(file_proto_crawl_crawl_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   9,
 			NumExtensions: 0,
@@ -688,7 +881,3 @@ func file_proto_crawl_crawl_proto_init() {
 	file_proto_crawl_crawl_proto_goTypes = nil
 	file_proto_crawl_crawl_proto_depIdxs = nil
 }
-
-var File_proto_crawl_crawl_proto protoreflect.FileDescriptor
-
-func init() { file_proto_crawl_crawl_proto_init() }
