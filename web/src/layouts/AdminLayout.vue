@@ -17,6 +17,7 @@ import ThemeSwitcher from '@/components/common/ThemeSwitcher.vue'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import UserMenu from '@/components/layout/UserMenu.vue'
 import AppLogo from '@/components/common/AppLogo.vue'
+import { useUiStore } from '@/stores/ui'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -24,6 +25,9 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const { currentView } = storeToRefs(userStore)
+const ui = useUiStore()
+
+const mockLabel = computed(() => (ui.currentLang === 'zh' ? '演示数据' : 'Demo Data'))
 
 const nav = computed(() => [
   { label: t('admin.nav.dashboard'), name: 'admin-dashboard', icon: GridOutline },
@@ -67,6 +71,9 @@ function backToUser() {
       </nav>
 
       <div class="layout-right">
+        <!-- 演示（Mock）模式标识：仅未接入真实后端时显示 -->
+        <span v-if="ui.mockMode" class="mock-flag" :title="t('app.mockTip')">{{ mockLabel }}</span>
+
         <!-- 管理员可随时返回用户工作台 -->
         <button class="switch-btn" @click="backToUser" :title="t('admin.backToWorkbench')">
           <n-icon :component="ExitOutline" :size="16" />

@@ -18,6 +18,7 @@ import ThemeSwitcher from '@/components/common/ThemeSwitcher.vue'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import UserMenu from '@/components/layout/UserMenu.vue'
 import AppLogo from '@/components/common/AppLogo.vue'
+import { useUiStore } from '@/stores/ui'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -25,6 +26,9 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const creditStore = useCreditStore()
+const ui = useUiStore()
+
+const mockLabel = computed(() => (ui.currentLang === 'zh' ? '演示数据' : 'Demo Data'))
 const { activityBalance, permanentBalance, validBalance } = storeToRefs(creditStore)
 
 const nav = computed(() => [
@@ -75,6 +79,9 @@ function enterAdmin() {
       </nav>
 
       <div class="layout-right">
+        <!-- 演示（Mock）模式标识：仅未接入真实后端时显示 -->
+        <span v-if="ui.mockMode" class="mock-flag" :title="t('app.mockTip')">{{ mockLabel }}</span>
+
         <!-- 管理员可一键进入管理后台 -->
         <button
           v-if="userStore.isAdmin"

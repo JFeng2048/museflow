@@ -24,6 +24,8 @@ import {
 } from 'naive-ui'
 import { LogoGithub, LogoWechat, LogoAlipay, CameraOutline } from '@vicons/ionicons5'
 import UserAvatar from '@/components/common/UserAvatar.vue'
+import SecuritySettings from '@/views/settings/SecuritySettings.vue'
+import ChangePassword from '@/views/settings/ChangePassword.vue'
 import { useUserStore } from '@/stores/system/user'
 import { useNovelStore } from '@/stores/novel'
 import { useModelStore } from '@/stores/model'
@@ -530,6 +532,16 @@ function unbind(provider: 'github' | 'wechat') {
           </n-gi>
         </n-grid>
         <p class="bind-tip">{{ t('settings.account.tip') }}</p>
+      </n-tab-pane>
+
+      <!-- 安全设置 -->
+      <n-tab-pane name="security" :tab="t('security.title')">
+        <SecuritySettings />
+      </n-tab-pane>
+
+      <!-- 修改密码 -->
+      <n-tab-pane name="password" :tab="t('settings.password.title')">
+        <ChangePassword />
       </n-tab-pane>
     </n-tabs>
 

@@ -45,6 +45,13 @@ export const useUiStore = defineStore('ui', () => {
     document.documentElement.setAttribute('lang', currentLang.value)
   }
 
+  /* --------------------- 演示（Mock）模式 ---------------------
+   * 由环境变量 VITE_ENABLE_MOCK 控制（见 .env.development / .env.production）：
+   * - true：所有接口走本地兜底数据，并展示「演示数据」标识与登录页演示账号；
+   * - false：接入真实后端，隐藏一切演示痕迹。
+   * 兜底：未显式配置时按「无真实后端」处理，避免空值导致误判为生产。 */
+  const mockMode = String(import.meta.env.VITE_ENABLE_MOCK).toLowerCase() !== 'false'
+
   return {
     themeId,
     currentTheme,
@@ -55,5 +62,6 @@ export const useUiStore = defineStore('ui', () => {
     setLang,
     toggleLang,
     initLang,
+    mockMode,
   }
 })
