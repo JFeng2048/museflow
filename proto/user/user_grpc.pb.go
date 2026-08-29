@@ -44,6 +44,10 @@ const (
 	UserService_ListPermissions_FullMethodName    = "/user.UserService/ListPermissions"
 	UserService_SetRolePermissions_FullMethodName = "/user.UserService/SetRolePermissions"
 	UserService_ListAuditLogs_FullMethodName      = "/user.UserService/ListAuditLogs"
+	UserService_BindOAuth_FullMethodName          = "/user.UserService/BindOAuth"
+	UserService_UnbindOAuth_FullMethodName        = "/user.UserService/UnbindOAuth"
+	UserService_ListOAuthBindings_FullMethodName  = "/user.UserService/ListOAuthBindings"
+	UserService_OAuthLogin_FullMethodName         = "/user.UserService/OAuthLogin"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -106,6 +110,14 @@ type UserServiceClient interface {
 	SetRolePermissions(ctx context.Context, in *SetRolePermissionsRequest, opts ...grpc.CallOption) (*SetRolePermissionsResponse, error)
 	// ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
 	ListAuditLogs(ctx context.Context, in *ListAuditLogsRequest, opts ...grpc.CallOption) (*ListAuditLogsResponse, error)
+	// BindOAuth 为当前用户绑定第三方账号
+	BindOAuth(ctx context.Context, in *BindOAuthRequest, opts ...grpc.CallOption) (*BindOAuthResponse, error)
+	// UnbindOAuth 解绑第三方账号
+	UnbindOAuth(ctx context.Context, in *UnbindOAuthRequest, opts ...grpc.CallOption) (*UnbindOAuthResponse, error)
+	// ListOAuthBindings 列出用户已绑定的第三方账号
+	ListOAuthBindings(ctx context.Context, in *ListOAuthBindingsRequest, opts ...grpc.CallOption) (*ListOAuthBindingsResponse, error)
+	// OAuthLogin 通过第三方账号登录（未绑定时自动注册）
+	OAuthLogin(ctx context.Context, in *OAuthLoginRequest, opts ...grpc.CallOption) (*OAuthLoginResponse, error)
 }
 
 type userServiceClient struct {
@@ -366,6 +378,46 @@ func (c *userServiceClient) ListAuditLogs(ctx context.Context, in *ListAuditLogs
 	return out, nil
 }
 
+func (c *userServiceClient) BindOAuth(ctx context.Context, in *BindOAuthRequest, opts ...grpc.CallOption) (*BindOAuthResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BindOAuthResponse)
+	err := c.cc.Invoke(ctx, UserService_BindOAuth_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) UnbindOAuth(ctx context.Context, in *UnbindOAuthRequest, opts ...grpc.CallOption) (*UnbindOAuthResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UnbindOAuthResponse)
+	err := c.cc.Invoke(ctx, UserService_UnbindOAuth_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) ListOAuthBindings(ctx context.Context, in *ListOAuthBindingsRequest, opts ...grpc.CallOption) (*ListOAuthBindingsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOAuthBindingsResponse)
+	err := c.cc.Invoke(ctx, UserService_ListOAuthBindings_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userServiceClient) OAuthLogin(ctx context.Context, in *OAuthLoginRequest, opts ...grpc.CallOption) (*OAuthLoginResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(OAuthLoginResponse)
+	err := c.cc.Invoke(ctx, UserService_OAuthLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -426,6 +478,14 @@ type UserServiceServer interface {
 	SetRolePermissions(context.Context, *SetRolePermissionsRequest) (*SetRolePermissionsResponse, error)
 	// ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
 	ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error)
+	// BindOAuth 为当前用户绑定第三方账号
+	BindOAuth(context.Context, *BindOAuthRequest) (*BindOAuthResponse, error)
+	// UnbindOAuth 解绑第三方账号
+	UnbindOAuth(context.Context, *UnbindOAuthRequest) (*UnbindOAuthResponse, error)
+	// ListOAuthBindings 列出用户已绑定的第三方账号
+	ListOAuthBindings(context.Context, *ListOAuthBindingsRequest) (*ListOAuthBindingsResponse, error)
+	// OAuthLogin 通过第三方账号登录（未绑定时自动注册）
+	OAuthLogin(context.Context, *OAuthLoginRequest) (*OAuthLoginResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -510,6 +570,18 @@ func (UnimplementedUserServiceServer) SetRolePermissions(context.Context, *SetRo
 }
 func (UnimplementedUserServiceServer) ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListAuditLogs not implemented")
+}
+func (UnimplementedUserServiceServer) BindOAuth(context.Context, *BindOAuthRequest) (*BindOAuthResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BindOAuth not implemented")
+}
+func (UnimplementedUserServiceServer) UnbindOAuth(context.Context, *UnbindOAuthRequest) (*UnbindOAuthResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UnbindOAuth not implemented")
+}
+func (UnimplementedUserServiceServer) ListOAuthBindings(context.Context, *ListOAuthBindingsRequest) (*ListOAuthBindingsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListOAuthBindings not implemented")
+}
+func (UnimplementedUserServiceServer) OAuthLogin(context.Context, *OAuthLoginRequest) (*OAuthLoginResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method OAuthLogin not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -982,6 +1054,78 @@ func _UserService_ListAuditLogs_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_BindOAuth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BindOAuthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).BindOAuth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_BindOAuth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).BindOAuth(ctx, req.(*BindOAuthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_UnbindOAuth_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnbindOAuthRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).UnbindOAuth(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_UnbindOAuth_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).UnbindOAuth(ctx, req.(*UnbindOAuthRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ListOAuthBindings_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOAuthBindingsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListOAuthBindings(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListOAuthBindings_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListOAuthBindings(ctx, req.(*ListOAuthBindingsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_OAuthLogin_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OAuthLoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).OAuthLogin(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_OAuthLogin_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).OAuthLogin(ctx, req.(*OAuthLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1088,6 +1232,22 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAuditLogs",
 			Handler:    _UserService_ListAuditLogs_Handler,
+		},
+		{
+			MethodName: "BindOAuth",
+			Handler:    _UserService_BindOAuth_Handler,
+		},
+		{
+			MethodName: "UnbindOAuth",
+			Handler:    _UserService_UnbindOAuth_Handler,
+		},
+		{
+			MethodName: "ListOAuthBindings",
+			Handler:    _UserService_ListOAuthBindings_Handler,
+		},
+		{
+			MethodName: "OAuthLogin",
+			Handler:    _UserService_OAuthLogin_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

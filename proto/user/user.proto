@@ -93,6 +93,20 @@ service UserService {
 
   // ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
   rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+
+  // ---- 第三方登录 ----
+
+  // BindOAuth 为当前用户绑定第三方账号
+  rpc BindOAuth(BindOAuthRequest) returns (BindOAuthResponse);
+
+  // UnbindOAuth 解绑第三方账号
+  rpc UnbindOAuth(UnbindOAuthRequest) returns (UnbindOAuthResponse);
+
+  // ListOAuthBindings 列出用户已绑定的第三方账号
+  rpc ListOAuthBindings(ListOAuthBindingsRequest) returns (ListOAuthBindingsResponse);
+
+  // OAuthLogin 通过第三方账号登录（未绑定时自动注册）
+  rpc OAuthLogin(OAuthLoginRequest) returns (OAuthLoginResponse);
 }
 
 // UserInfo 对外暴露的用户信息，使用 uuid 作为对外标识，不暴露自增 id。
@@ -421,4 +435,71 @@ message ListAuditLogsRequest {
 message ListAuditLogsResponse {
   repeated AuditLogItem logs = 1;
   int64 total = 2;
+}
+
+// ==================== 第三方登录 ====================
+
+// OAuthProfile 第三方平台返回的账号资料。
+message OAuthProfile {
+  string provider = 1;             // 平台标识：github/google/wechat/qq/apple
+  string provider_user_id = 2;     // 第三方用户唯一标识
+  string email = 3;                // 邮箱快照
+  string nickname = 4;             // 昵称快照
+  string avatar_url = 5;           // 头像快照
+  string access_token = 6;         // 第三方 access token
+  string refresh_token = 7;        // 第三方 refresh token
+  int64 expires_at = 8;            // token 过期时间（Unix 秒，0 表示无）
+  string extra = 9;                // 平台特有字段（JSON 字符串）
+}
+
+// OAuthBinding 已绑定的第三方账号（不含 token 等敏感信息）。
+message OAuthBinding {
+  string provider = 1;
+  string provider_user_id = 2;
+  string provider_email = 3;
+  string provider_nickname = 4;
+  string provider_avatar = 5;
+  int64 last_login_at = 6;         // 最后登录时间（Unix 秒，0 表示从未登录）
+  int64 created_at = 7;            // 绑定时间
+}
+
+message BindOAuthRequest {
+  string uuid = 1;                 // 当前登录用户 uuid
+  OAuthProfile profile = 2;
+}
+
+message BindOAuthResponse {
+  bool success = 1;
+}
+
+message UnbindOAuthRequest {
+  string uuid = 1;
+  string provider = 2;
+}
+
+message UnbindOAuthResponse {
+  bool success = 1;
+}
+
+message ListOAuthBindingsRequest {
+  string uuid = 1;
+}
+
+message ListOAuthBindingsResponse {
+  repeated OAuthBinding bindings = 1;
+}
+
+message OAuthLoginRequest {
+  OAuthProfile profile = 1;
+  DeviceContext device = 2;        // 登录后签发双令牌所需的设备上下文
+}
+
+message OAuthLoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  string device_id = 3;
+  int64 expires_in = 4;
+  int64 refresh_expires_in = 5;
+  UserInfo user = 6;
+  bool is_new_user = 7;            // 是否为本次自动注册的新用户
 }

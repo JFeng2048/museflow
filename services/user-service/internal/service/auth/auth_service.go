@@ -16,6 +16,7 @@ import (
 	"github.com/museflow/user-service/internal/repository"
 	"github.com/museflow/user-service/internal/service/audit"
 	"github.com/museflow/user-service/internal/service/dto"
+	"github.com/museflow/user-service/internal/service/oauth"
 	"github.com/museflow/user-service/internal/service/rbac"
 	"github.com/museflow/user-service/internal/service/token"
 )
@@ -41,6 +42,7 @@ type AuthService struct {
 	tm         *token.TokenManager
 	rbac       *rbac.Service
 	audit      *audit.Service
+	oauth      *oauth.Service
 	bcryptCost int
 }
 
@@ -51,6 +53,7 @@ func NewAuthService(
 	tm *token.TokenManager,
 	rbacSvc *rbac.Service,
 	auditSvc *audit.Service,
+	oauthSvc *oauth.Service,
 	bcryptCost int,
 ) *AuthService {
 	return &AuthService{
@@ -59,6 +62,7 @@ func NewAuthService(
 		tm:         tm,
 		rbac:       rbacSvc,
 		audit:      auditSvc,
+		oauth:      oauthSvc,
 		bcryptCost: bcryptCost,
 	}
 }
@@ -477,6 +481,55 @@ func (s *AuthService) CheckPermission(ctx context.Context, userUUID, perm string
 		return false, ErrUserNotFound
 	}
 	return s.rbac.CheckPermission(ctx, id, perm)
+}
+
+// OAuthLogin 通过第三方账号登录。
+// 委托 oauth 服务完成「已绑定直接登录 / 未绑定自动注册」，
+// 随后复用统一的 issueTokens 签发双令牌。
+func (s *AuthService) OAuthLogin(ctx context.Context, p oauth.Profile, dev dto.Device) (*dto.TokenPair, *model.User, bool, error) {
+	if s.oauth == nil {
+		return nil, nil, false, fmt.Errorf("第三方登录服务未初始化")
+	}
+
+	u, isNew, err := s.oauth.LoginOrRegister(ctx, p)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	pair, err := s.issueTokens(ctx, u.UUID.String(), dev)
+	if err != nil {
+		return nil, nil, false, err
+	}
+
+	if err := s.users.UpdateLoginInfo(ctx, u.UUID, dev.IP, dev.DeviceName); err != nil {
+		logger.WarnContext(ctx, "更新第三方登录信息失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
+	}
+
+	return pair, u, isNew, nil
+}
+
+// BindOAuth 为当前用户绑定第三方账号。
+func (s *AuthService) BindOAuth(ctx context.Context, userUUID uuid.UUID, p oauth.Profile) error {
+	if s.oauth == nil {
+		return fmt.Errorf("第三方登录服务未初始化")
+	}
+	return s.oauth.Bind(ctx, userUUID, p)
+}
+
+// UnbindOAuth 解绑第三方账号。
+func (s *AuthService) UnbindOAuth(ctx context.Context, userUUID uuid.UUID, provider string) error {
+	if s.oauth == nil {
+		return fmt.Errorf("第三方登录服务未初始化")
+	}
+	return s.oauth.Unbind(ctx, userUUID, provider)
+}
+
+// ListOAuthBindings 列出用户已绑定的第三方账号。
+func (s *AuthService) ListOAuthBindings(ctx context.Context, userUUID uuid.UUID) ([]model.OAuth, error) {
+	if s.oauth == nil {
+		return nil, fmt.Errorf("第三方登录服务未初始化")
+	}
+	return s.oauth.ListBindings(ctx, userUUID)
 }
 
 // ClearUserCache 清理用户权限缓存（权限变更后调用）。

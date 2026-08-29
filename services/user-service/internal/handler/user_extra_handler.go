@@ -2,8 +2,10 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -11,8 +13,12 @@ import (
 	"github.com/museflow/pkg/logger"
 	"github.com/museflow/user-service/internal/model"
 	"github.com/museflow/user-service/internal/repository"
+	"github.com/museflow/user-service/internal/service/oauth"
 	"github.com/museflow/user-service/internal/service/rbac"
 )
+
+// ErrInvalidUUID 传入的用户标识不是合法 UUID。
+var ErrInvalidUUID = errors.New("用户标识格式非法")
 
 // ==================== 用户管理 ====================
 
@@ -260,7 +266,129 @@ func (h *UserHandler) ListAuditLogs(ctx context.Context, req *userpb.ListAuditLo
 	return &userpb.ListAuditLogsResponse{Logs: items, Total: total}, nil
 }
 
+// ==================== 第三方登录 ====================
+
+// BindOAuth 为当前用户绑定第三方账号。
+func (h *UserHandler) BindOAuth(ctx context.Context, req *userpb.BindOAuthRequest) (*userpb.BindOAuthResponse, error) {
+	id, err := parseUUID(req.GetUuid())
+	if err != nil {
+		return nil, mapError(err)
+	}
+	if err := h.auth.BindOAuth(ctx, id, toOAuthProfile(req.GetProfile())); err != nil {
+		logger.WarnContext(ctx, "绑定第三方账号失败", logger.UserUUID(req.GetUuid()), logger.Err(err))
+		return nil, mapOAuthError(err)
+	}
+	return &userpb.BindOAuthResponse{Success: true}, nil
+}
+
+// UnbindOAuth 解绑第三方账号。
+func (h *UserHandler) UnbindOAuth(ctx context.Context, req *userpb.UnbindOAuthRequest) (*userpb.UnbindOAuthResponse, error) {
+	id, err := parseUUID(req.GetUuid())
+	if err != nil {
+		return nil, mapError(err)
+	}
+	if err := h.auth.UnbindOAuth(ctx, id, req.GetProvider()); err != nil {
+		return nil, mapOAuthError(err)
+	}
+	return &userpb.UnbindOAuthResponse{Success: true}, nil
+}
+
+// ListOAuthBindings 列出用户已绑定的第三方账号（不含 token）。
+func (h *UserHandler) ListOAuthBindings(ctx context.Context, req *userpb.ListOAuthBindingsRequest) (*userpb.ListOAuthBindingsResponse, error) {
+	id, err := parseUUID(req.GetUuid())
+	if err != nil {
+		return nil, mapError(err)
+	}
+	list, err := h.auth.ListOAuthBindings(ctx, id)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	bindings := make([]*userpb.OAuthBinding, 0, len(list))
+	for _, o := range list {
+		b := &userpb.OAuthBinding{
+			Provider:         o.Provider,
+			ProviderUserId:   o.ProviderUserID,
+			ProviderEmail:    derefString(o.ProviderEmail),
+			ProviderNickname: derefString(o.ProviderNickname),
+			ProviderAvatar:   derefString(o.ProviderAvatar),
+			CreatedAt:        o.CreatedAt.Unix(),
+		}
+		if o.LastLoginAt != nil {
+			b.LastLoginAt = o.LastLoginAt.Unix()
+		}
+		bindings = append(bindings, b)
+	}
+	return &userpb.ListOAuthBindingsResponse{Bindings: bindings}, nil
+}
+
+// OAuthLogin 通过第三方账号登录（未绑定时自动注册）。
+func (h *UserHandler) OAuthLogin(ctx context.Context, req *userpb.OAuthLoginRequest) (*userpb.OAuthLoginResponse, error) {
+	pair, u, isNew, err := h.auth.OAuthLogin(ctx, toOAuthProfile(req.GetProfile()), toDevice(req.GetDevice()))
+	if err != nil {
+		logger.WarnContext(ctx, "第三方登录失败", "provider", req.GetProfile().GetProvider(), logger.Err(err))
+		return nil, mapOAuthError(err)
+	}
+	return &userpb.OAuthLoginResponse{
+		AccessToken:      pair.AccessToken,
+		RefreshToken:     pair.RefreshToken,
+		DeviceId:         pair.DeviceID,
+		ExpiresIn:        pair.ExpiresIn,
+		RefreshExpiresIn: pair.RefreshExpiresIn,
+		User:             toUserInfo(u),
+		IsNewUser:        isNew,
+	}, nil
+}
+
 // ==================== 辅助函数 ====================
+
+// mapOAuthError 将第三方登录业务错误映射为 gRPC status。
+func mapOAuthError(err error) error {
+	if err == nil {
+		return nil
+	}
+	switch {
+	case errors.Is(err, oauth.ErrProviderNotSupported):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, oauth.ErrAlreadyBound):
+		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, oauth.ErrOAuthNotFound):
+		return status.Error(codes.NotFound, err.Error())
+	default:
+		return status.Error(codes.Internal, err.Error())
+	}
+}
+
+// toOAuthProfile 将 proto 第三方资料转换为业务层结构。
+func toOAuthProfile(p *userpb.OAuthProfile) oauth.Profile {
+	if p == nil {
+		return oauth.Profile{}
+	}
+	var expiresAt *time.Time
+	if p.GetExpiresAt() > 0 {
+		t := time.Unix(p.GetExpiresAt(), 0)
+		expiresAt = &t
+	}
+	return oauth.Profile{
+		Provider:     p.GetProvider(),
+		ProviderUID:  p.GetProviderUserId(),
+		Email:        p.GetEmail(),
+		Nickname:     p.GetNickname(),
+		AvatarURL:    p.GetAvatarUrl(),
+		AccessToken:  p.GetAccessToken(),
+		RefreshToken: p.GetRefreshToken(),
+		ExpiresAt:    expiresAt,
+		Extra:        p.GetExtra(),
+	}
+}
+
+func parseUUID(s string) (uuid.UUID, error) {
+	id, err := uuid.Parse(s)
+	if err != nil {
+		return uuid.Nil, ErrInvalidUUID
+	}
+	return id, nil
+}
 
 // mapAdminError 将 RBAC / 管理后台业务错误映射为 gRPC status。
 func mapAdminError(err error) error {

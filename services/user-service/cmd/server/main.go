@@ -27,6 +27,7 @@ import (
 	"github.com/museflow/user-service/internal/service/admin"
 	"github.com/museflow/user-service/internal/service/audit"
 	"github.com/museflow/user-service/internal/service/auth"
+	"github.com/museflow/user-service/internal/service/oauth"
 	"github.com/museflow/user-service/internal/service/rbac"
 	"github.com/museflow/user-service/internal/service/token"
 )
@@ -60,12 +61,14 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	rbacRepo := repository.NewRBACRepository(db)
 	auditRepo := repository.NewAuditRepository(db)
+	oauthRepo := repository.NewOAuthRepository(db)
 	tokenStore := repository.NewTokenStore(rdb)
 	tokenManager := token.NewTokenManager(cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL)
 	// 权限缓存 TTL 与 Refresh Token 一致（7 天）
 	rbacService := rbac.NewService(rbacRepo, tokenStore, cfg.RefreshTTL)
 	auditService := audit.NewService(auditRepo)
-	authService := auth.NewAuthService(userRepo, tokenStore, tokenManager, rbacService, auditService, cfg.BcryptCost)
+	oauthService := oauth.NewService(oauthRepo, userRepo, rbacService, auditService)
+	authService := auth.NewAuthService(userRepo, tokenStore, tokenManager, rbacService, auditService, oauthService, cfg.BcryptCost)
 	adminService := admin.NewService(userRepo, rbacService, auditService)
 	userHandler := handler.NewUserHandler(authService, adminService)
 

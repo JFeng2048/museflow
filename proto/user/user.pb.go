@@ -3205,6 +3205,632 @@ func (x *ListAuditLogsResponse) GetTotal() int64 {
 	return 0
 }
 
+// OAuthProfile 第三方平台返回的账号资料。
+type OAuthProfile struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Provider       string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`                                     // 平台标识：github/google/wechat/qq/apple
+	ProviderUserId string                 `protobuf:"bytes,2,opt,name=provider_user_id,json=providerUserId,proto3" json:"provider_user_id,omitempty"` // 第三方用户唯一标识
+	Email          string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`                                           // 邮箱快照
+	Nickname       string                 `protobuf:"bytes,4,opt,name=nickname,proto3" json:"nickname,omitempty"`                                     // 昵称快照
+	AvatarUrl      string                 `protobuf:"bytes,5,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`                  // 头像快照
+	AccessToken    string                 `protobuf:"bytes,6,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`            // 第三方 access token
+	RefreshToken   string                 `protobuf:"bytes,7,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`         // 第三方 refresh token
+	ExpiresAt      int64                  `protobuf:"varint,8,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`                 // token 过期时间（Unix 秒，0 表示无）
+	Extra          string                 `protobuf:"bytes,9,opt,name=extra,proto3" json:"extra,omitempty"`                                           // 平台特有字段（JSON 字符串）
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *OAuthProfile) Reset() {
+	*x = OAuthProfile{}
+	mi := &file_proto_user_user_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OAuthProfile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OAuthProfile) ProtoMessage() {}
+
+func (x *OAuthProfile) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OAuthProfile.ProtoReflect.Descriptor instead.
+func (*OAuthProfile) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *OAuthProfile) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *OAuthProfile) GetProviderUserId() string {
+	if x != nil {
+		return x.ProviderUserId
+	}
+	return ""
+}
+
+func (x *OAuthProfile) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *OAuthProfile) GetNickname() string {
+	if x != nil {
+		return x.Nickname
+	}
+	return ""
+}
+
+func (x *OAuthProfile) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
+	}
+	return ""
+}
+
+func (x *OAuthProfile) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *OAuthProfile) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *OAuthProfile) GetExpiresAt() int64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
+func (x *OAuthProfile) GetExtra() string {
+	if x != nil {
+		return x.Extra
+	}
+	return ""
+}
+
+// OAuthBinding 已绑定的第三方账号（不含 token 等敏感信息）。
+type OAuthBinding struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Provider         string                 `protobuf:"bytes,1,opt,name=provider,proto3" json:"provider,omitempty"`
+	ProviderUserId   string                 `protobuf:"bytes,2,opt,name=provider_user_id,json=providerUserId,proto3" json:"provider_user_id,omitempty"`
+	ProviderEmail    string                 `protobuf:"bytes,3,opt,name=provider_email,json=providerEmail,proto3" json:"provider_email,omitempty"`
+	ProviderNickname string                 `protobuf:"bytes,4,opt,name=provider_nickname,json=providerNickname,proto3" json:"provider_nickname,omitempty"`
+	ProviderAvatar   string                 `protobuf:"bytes,5,opt,name=provider_avatar,json=providerAvatar,proto3" json:"provider_avatar,omitempty"`
+	LastLoginAt      int64                  `protobuf:"varint,6,opt,name=last_login_at,json=lastLoginAt,proto3" json:"last_login_at,omitempty"` // 最后登录时间（Unix 秒，0 表示从未登录）
+	CreatedAt        int64                  `protobuf:"varint,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`         // 绑定时间
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *OAuthBinding) Reset() {
+	*x = OAuthBinding{}
+	mi := &file_proto_user_user_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OAuthBinding) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OAuthBinding) ProtoMessage() {}
+
+func (x *OAuthBinding) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OAuthBinding.ProtoReflect.Descriptor instead.
+func (*OAuthBinding) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *OAuthBinding) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+func (x *OAuthBinding) GetProviderUserId() string {
+	if x != nil {
+		return x.ProviderUserId
+	}
+	return ""
+}
+
+func (x *OAuthBinding) GetProviderEmail() string {
+	if x != nil {
+		return x.ProviderEmail
+	}
+	return ""
+}
+
+func (x *OAuthBinding) GetProviderNickname() string {
+	if x != nil {
+		return x.ProviderNickname
+	}
+	return ""
+}
+
+func (x *OAuthBinding) GetProviderAvatar() string {
+	if x != nil {
+		return x.ProviderAvatar
+	}
+	return ""
+}
+
+func (x *OAuthBinding) GetLastLoginAt() int64 {
+	if x != nil {
+		return x.LastLoginAt
+	}
+	return 0
+}
+
+func (x *OAuthBinding) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+type BindOAuthRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"` // 当前登录用户 uuid
+	Profile       *OAuthProfile          `protobuf:"bytes,2,opt,name=profile,proto3" json:"profile,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BindOAuthRequest) Reset() {
+	*x = BindOAuthRequest{}
+	mi := &file_proto_user_user_proto_msgTypes[60]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BindOAuthRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BindOAuthRequest) ProtoMessage() {}
+
+func (x *BindOAuthRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[60]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BindOAuthRequest.ProtoReflect.Descriptor instead.
+func (*BindOAuthRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{60}
+}
+
+func (x *BindOAuthRequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+func (x *BindOAuthRequest) GetProfile() *OAuthProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+type BindOAuthResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BindOAuthResponse) Reset() {
+	*x = BindOAuthResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[61]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BindOAuthResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BindOAuthResponse) ProtoMessage() {}
+
+func (x *BindOAuthResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[61]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BindOAuthResponse.ProtoReflect.Descriptor instead.
+func (*BindOAuthResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{61}
+}
+
+func (x *BindOAuthResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type UnbindOAuthRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	Provider      string                 `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnbindOAuthRequest) Reset() {
+	*x = UnbindOAuthRequest{}
+	mi := &file_proto_user_user_proto_msgTypes[62]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnbindOAuthRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnbindOAuthRequest) ProtoMessage() {}
+
+func (x *UnbindOAuthRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[62]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnbindOAuthRequest.ProtoReflect.Descriptor instead.
+func (*UnbindOAuthRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{62}
+}
+
+func (x *UnbindOAuthRequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+func (x *UnbindOAuthRequest) GetProvider() string {
+	if x != nil {
+		return x.Provider
+	}
+	return ""
+}
+
+type UnbindOAuthResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UnbindOAuthResponse) Reset() {
+	*x = UnbindOAuthResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[63]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnbindOAuthResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnbindOAuthResponse) ProtoMessage() {}
+
+func (x *UnbindOAuthResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[63]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UnbindOAuthResponse.ProtoReflect.Descriptor instead.
+func (*UnbindOAuthResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{63}
+}
+
+func (x *UnbindOAuthResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+type ListOAuthBindingsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Uuid          string                 `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOAuthBindingsRequest) Reset() {
+	*x = ListOAuthBindingsRequest{}
+	mi := &file_proto_user_user_proto_msgTypes[64]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOAuthBindingsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOAuthBindingsRequest) ProtoMessage() {}
+
+func (x *ListOAuthBindingsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[64]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOAuthBindingsRequest.ProtoReflect.Descriptor instead.
+func (*ListOAuthBindingsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{64}
+}
+
+func (x *ListOAuthBindingsRequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+type ListOAuthBindingsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Bindings      []*OAuthBinding        `protobuf:"bytes,1,rep,name=bindings,proto3" json:"bindings,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListOAuthBindingsResponse) Reset() {
+	*x = ListOAuthBindingsResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[65]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListOAuthBindingsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListOAuthBindingsResponse) ProtoMessage() {}
+
+func (x *ListOAuthBindingsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[65]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListOAuthBindingsResponse.ProtoReflect.Descriptor instead.
+func (*ListOAuthBindingsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{65}
+}
+
+func (x *ListOAuthBindingsResponse) GetBindings() []*OAuthBinding {
+	if x != nil {
+		return x.Bindings
+	}
+	return nil
+}
+
+type OAuthLoginRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Profile       *OAuthProfile          `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
+	Device        *DeviceContext         `protobuf:"bytes,2,opt,name=device,proto3" json:"device,omitempty"` // 登录后签发双令牌所需的设备上下文
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OAuthLoginRequest) Reset() {
+	*x = OAuthLoginRequest{}
+	mi := &file_proto_user_user_proto_msgTypes[66]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OAuthLoginRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OAuthLoginRequest) ProtoMessage() {}
+
+func (x *OAuthLoginRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[66]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OAuthLoginRequest.ProtoReflect.Descriptor instead.
+func (*OAuthLoginRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{66}
+}
+
+func (x *OAuthLoginRequest) GetProfile() *OAuthProfile {
+	if x != nil {
+		return x.Profile
+	}
+	return nil
+}
+
+func (x *OAuthLoginRequest) GetDevice() *DeviceContext {
+	if x != nil {
+		return x.Device
+	}
+	return nil
+}
+
+type OAuthLoginResponse struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	AccessToken      string                 `protobuf:"bytes,1,opt,name=access_token,json=accessToken,proto3" json:"access_token,omitempty"`
+	RefreshToken     string                 `protobuf:"bytes,2,opt,name=refresh_token,json=refreshToken,proto3" json:"refresh_token,omitempty"`
+	DeviceId         string                 `protobuf:"bytes,3,opt,name=device_id,json=deviceId,proto3" json:"device_id,omitempty"`
+	ExpiresIn        int64                  `protobuf:"varint,4,opt,name=expires_in,json=expiresIn,proto3" json:"expires_in,omitempty"`
+	RefreshExpiresIn int64                  `protobuf:"varint,5,opt,name=refresh_expires_in,json=refreshExpiresIn,proto3" json:"refresh_expires_in,omitempty"`
+	User             *UserInfo              `protobuf:"bytes,6,opt,name=user,proto3" json:"user,omitempty"`
+	IsNewUser        bool                   `protobuf:"varint,7,opt,name=is_new_user,json=isNewUser,proto3" json:"is_new_user,omitempty"` // 是否为本次自动注册的新用户
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *OAuthLoginResponse) Reset() {
+	*x = OAuthLoginResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[67]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OAuthLoginResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OAuthLoginResponse) ProtoMessage() {}
+
+func (x *OAuthLoginResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[67]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OAuthLoginResponse.ProtoReflect.Descriptor instead.
+func (*OAuthLoginResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{67}
+}
+
+func (x *OAuthLoginResponse) GetAccessToken() string {
+	if x != nil {
+		return x.AccessToken
+	}
+	return ""
+}
+
+func (x *OAuthLoginResponse) GetRefreshToken() string {
+	if x != nil {
+		return x.RefreshToken
+	}
+	return ""
+}
+
+func (x *OAuthLoginResponse) GetDeviceId() string {
+	if x != nil {
+		return x.DeviceId
+	}
+	return ""
+}
+
+func (x *OAuthLoginResponse) GetExpiresIn() int64 {
+	if x != nil {
+		return x.ExpiresIn
+	}
+	return 0
+}
+
+func (x *OAuthLoginResponse) GetRefreshExpiresIn() int64 {
+	if x != nil {
+		return x.RefreshExpiresIn
+	}
+	return 0
+}
+
+func (x *OAuthLoginResponse) GetUser() *UserInfo {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *OAuthLoginResponse) GetIsNewUser() bool {
+	if x != nil {
+		return x.IsNewUser
+	}
+	return false
+}
+
 var File_proto_user_user_proto protoreflect.FileDescriptor
 
 const file_proto_user_user_proto_rawDesc = "" +
@@ -3428,7 +4054,54 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"\x02to\x18\x05 \x01(\x03R\x02to\"U\n" +
 	"\x15ListAuditLogsResponse\x12&\n" +
 	"\x04logs\x18\x01 \x03(\v2\x12.user.AuditLogItemR\x04logs\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x03R\x05total2\xea\r\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total\"\xa2\x02\n" +
+	"\fOAuthProfile\x12\x1a\n" +
+	"\bprovider\x18\x01 \x01(\tR\bprovider\x12(\n" +
+	"\x10provider_user_id\x18\x02 \x01(\tR\x0eproviderUserId\x12\x14\n" +
+	"\x05email\x18\x03 \x01(\tR\x05email\x12\x1a\n" +
+	"\bnickname\x18\x04 \x01(\tR\bnickname\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x05 \x01(\tR\tavatarUrl\x12!\n" +
+	"\faccess_token\x18\x06 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\a \x01(\tR\frefreshToken\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\b \x01(\x03R\texpiresAt\x12\x14\n" +
+	"\x05extra\x18\t \x01(\tR\x05extra\"\x94\x02\n" +
+	"\fOAuthBinding\x12\x1a\n" +
+	"\bprovider\x18\x01 \x01(\tR\bprovider\x12(\n" +
+	"\x10provider_user_id\x18\x02 \x01(\tR\x0eproviderUserId\x12%\n" +
+	"\x0eprovider_email\x18\x03 \x01(\tR\rproviderEmail\x12+\n" +
+	"\x11provider_nickname\x18\x04 \x01(\tR\x10providerNickname\x12'\n" +
+	"\x0fprovider_avatar\x18\x05 \x01(\tR\x0eproviderAvatar\x12\"\n" +
+	"\rlast_login_at\x18\x06 \x01(\x03R\vlastLoginAt\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\a \x01(\x03R\tcreatedAt\"T\n" +
+	"\x10BindOAuthRequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12,\n" +
+	"\aprofile\x18\x02 \x01(\v2\x12.user.OAuthProfileR\aprofile\"-\n" +
+	"\x11BindOAuthResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"D\n" +
+	"\x12UnbindOAuthRequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\x12\x1a\n" +
+	"\bprovider\x18\x02 \x01(\tR\bprovider\"/\n" +
+	"\x13UnbindOAuthResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\".\n" +
+	"\x18ListOAuthBindingsRequest\x12\x12\n" +
+	"\x04uuid\x18\x01 \x01(\tR\x04uuid\"K\n" +
+	"\x19ListOAuthBindingsResponse\x12.\n" +
+	"\bbindings\x18\x01 \x03(\v2\x12.user.OAuthBindingR\bbindings\"n\n" +
+	"\x11OAuthLoginRequest\x12,\n" +
+	"\aprofile\x18\x01 \x01(\v2\x12.user.OAuthProfileR\aprofile\x12+\n" +
+	"\x06device\x18\x02 \x01(\v2\x13.user.DeviceContextR\x06device\"\x8a\x02\n" +
+	"\x12OAuthLoginResponse\x12!\n" +
+	"\faccess_token\x18\x01 \x01(\tR\vaccessToken\x12#\n" +
+	"\rrefresh_token\x18\x02 \x01(\tR\frefreshToken\x12\x1b\n" +
+	"\tdevice_id\x18\x03 \x01(\tR\bdeviceId\x12\x1d\n" +
+	"\n" +
+	"expires_in\x18\x04 \x01(\x03R\texpiresIn\x12,\n" +
+	"\x12refresh_expires_in\x18\x05 \x01(\x03R\x10refreshExpiresIn\x12\"\n" +
+	"\x04user\x18\x06 \x01(\v2\x0e.user.UserInfoR\x04user\x12\x1e\n" +
+	"\vis_new_user\x18\a \x01(\bR\tisNewUser2\x83\x10\n" +
 	"\vUserService\x129\n" +
 	"\bRegister\x12\x15.user.RegisterRequest\x1a\x16.user.RegisterResponse\x120\n" +
 	"\x05Login\x12\x12.user.LoginRequest\x1a\x13.user.LoginResponse\x126\n" +
@@ -3459,7 +4132,12 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"DeleteRole\x12\x17.user.DeleteRoleRequest\x1a\x18.user.DeleteRoleResponse\x12N\n" +
 	"\x0fListPermissions\x12\x1c.user.ListPermissionsRequest\x1a\x1d.user.ListPermissionsResponse\x12W\n" +
 	"\x12SetRolePermissions\x12\x1f.user.SetRolePermissionsRequest\x1a .user.SetRolePermissionsResponse\x12H\n" +
-	"\rListAuditLogs\x12\x1a.user.ListAuditLogsRequest\x1a\x1b.user.ListAuditLogsResponseB'Z%github.com/museflow/proto/user;userpbb\x06proto3"
+	"\rListAuditLogs\x12\x1a.user.ListAuditLogsRequest\x1a\x1b.user.ListAuditLogsResponse\x12<\n" +
+	"\tBindOAuth\x12\x16.user.BindOAuthRequest\x1a\x17.user.BindOAuthResponse\x12B\n" +
+	"\vUnbindOAuth\x12\x18.user.UnbindOAuthRequest\x1a\x19.user.UnbindOAuthResponse\x12T\n" +
+	"\x11ListOAuthBindings\x12\x1e.user.ListOAuthBindingsRequest\x1a\x1f.user.ListOAuthBindingsResponse\x12?\n" +
+	"\n" +
+	"OAuthLogin\x12\x17.user.OAuthLoginRequest\x1a\x18.user.OAuthLoginResponseB'Z%github.com/museflow/proto/user;userpbb\x06proto3"
 
 var (
 	file_proto_user_user_proto_rawDescOnce sync.Once
@@ -3473,7 +4151,7 @@ func file_proto_user_user_proto_rawDescGZIP() []byte {
 	return file_proto_user_user_proto_rawDescData
 }
 
-var file_proto_user_user_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
+var file_proto_user_user_proto_msgTypes = make([]protoimpl.MessageInfo, 68)
 var file_proto_user_user_proto_goTypes = []any{
 	(*UserInfo)(nil),                   // 0: user.UserInfo
 	(*DeviceContext)(nil),              // 1: user.DeviceContext
@@ -3533,6 +4211,16 @@ var file_proto_user_user_proto_goTypes = []any{
 	(*AuditLogItem)(nil),               // 55: user.AuditLogItem
 	(*ListAuditLogsRequest)(nil),       // 56: user.ListAuditLogsRequest
 	(*ListAuditLogsResponse)(nil),      // 57: user.ListAuditLogsResponse
+	(*OAuthProfile)(nil),               // 58: user.OAuthProfile
+	(*OAuthBinding)(nil),               // 59: user.OAuthBinding
+	(*BindOAuthRequest)(nil),           // 60: user.BindOAuthRequest
+	(*BindOAuthResponse)(nil),          // 61: user.BindOAuthResponse
+	(*UnbindOAuthRequest)(nil),         // 62: user.UnbindOAuthRequest
+	(*UnbindOAuthResponse)(nil),        // 63: user.UnbindOAuthResponse
+	(*ListOAuthBindingsRequest)(nil),   // 64: user.ListOAuthBindingsRequest
+	(*ListOAuthBindingsResponse)(nil),  // 65: user.ListOAuthBindingsResponse
+	(*OAuthLoginRequest)(nil),          // 66: user.OAuthLoginRequest
+	(*OAuthLoginResponse)(nil),         // 67: user.OAuthLoginResponse
 }
 var file_proto_user_user_proto_depIdxs = []int32{
 	0,  // 0: user.RegisterResponse.user:type_name -> user.UserInfo
@@ -3552,61 +4240,74 @@ var file_proto_user_user_proto_depIdxs = []int32{
 	50, // 14: user.ListPermissionsResponse.permissions:type_name -> user.PermissionInfo
 	31, // 15: user.ListAuditLogsRequest.pagination:type_name -> user.Pagination
 	55, // 16: user.ListAuditLogsResponse.logs:type_name -> user.AuditLogItem
-	2,  // 17: user.UserService.Register:input_type -> user.RegisterRequest
-	4,  // 18: user.UserService.Login:input_type -> user.LoginRequest
-	6,  // 19: user.UserService.Refresh:input_type -> user.RefreshRequest
-	8,  // 20: user.UserService.Logout:input_type -> user.LogoutRequest
-	10, // 21: user.UserService.GetProfile:input_type -> user.GetProfileRequest
-	12, // 22: user.UserService.ValidateToken:input_type -> user.ValidateTokenRequest
-	14, // 23: user.UserService.UpdateProfile:input_type -> user.UpdateProfileRequest
-	16, // 24: user.UserService.ChangePassword:input_type -> user.ChangePasswordRequest
-	18, // 25: user.UserService.GetUserByUUID:input_type -> user.GetUserByUUIDRequest
-	20, // 26: user.UserService.GetUserPermissions:input_type -> user.GetUserPermissionsRequest
-	22, // 27: user.UserService.CheckPermission:input_type -> user.CheckPermissionRequest
-	24, // 28: user.UserService.ClearUserCache:input_type -> user.ClearUserCacheRequest
-	27, // 29: user.UserService.ListSessions:input_type -> user.ListSessionsRequest
-	29, // 30: user.UserService.RevokeSession:input_type -> user.RevokeSessionRequest
-	32, // 31: user.UserService.ListUsers:input_type -> user.ListUsersRequest
-	35, // 32: user.UserService.GetUserDetail:input_type -> user.GetUserDetailRequest
-	37, // 33: user.UserService.UpdateUserStatus:input_type -> user.UpdateUserStatusRequest
-	39, // 34: user.UserService.AssignRole:input_type -> user.AssignRoleRequest
-	42, // 35: user.UserService.ListRoles:input_type -> user.ListRolesRequest
-	44, // 36: user.UserService.CreateRole:input_type -> user.CreateRoleRequest
-	46, // 37: user.UserService.UpdateRole:input_type -> user.UpdateRoleRequest
-	48, // 38: user.UserService.DeleteRole:input_type -> user.DeleteRoleRequest
-	51, // 39: user.UserService.ListPermissions:input_type -> user.ListPermissionsRequest
-	53, // 40: user.UserService.SetRolePermissions:input_type -> user.SetRolePermissionsRequest
-	56, // 41: user.UserService.ListAuditLogs:input_type -> user.ListAuditLogsRequest
-	3,  // 42: user.UserService.Register:output_type -> user.RegisterResponse
-	5,  // 43: user.UserService.Login:output_type -> user.LoginResponse
-	7,  // 44: user.UserService.Refresh:output_type -> user.RefreshResponse
-	9,  // 45: user.UserService.Logout:output_type -> user.LogoutResponse
-	11, // 46: user.UserService.GetProfile:output_type -> user.GetProfileResponse
-	13, // 47: user.UserService.ValidateToken:output_type -> user.ValidateTokenResponse
-	15, // 48: user.UserService.UpdateProfile:output_type -> user.UpdateProfileResponse
-	17, // 49: user.UserService.ChangePassword:output_type -> user.ChangePasswordResponse
-	19, // 50: user.UserService.GetUserByUUID:output_type -> user.GetUserByUUIDResponse
-	21, // 51: user.UserService.GetUserPermissions:output_type -> user.GetUserPermissionsResponse
-	23, // 52: user.UserService.CheckPermission:output_type -> user.CheckPermissionResponse
-	25, // 53: user.UserService.ClearUserCache:output_type -> user.ClearUserCacheResponse
-	28, // 54: user.UserService.ListSessions:output_type -> user.ListSessionsResponse
-	30, // 55: user.UserService.RevokeSession:output_type -> user.RevokeSessionResponse
-	34, // 56: user.UserService.ListUsers:output_type -> user.ListUsersResponse
-	36, // 57: user.UserService.GetUserDetail:output_type -> user.GetUserDetailResponse
-	38, // 58: user.UserService.UpdateUserStatus:output_type -> user.UpdateUserStatusResponse
-	40, // 59: user.UserService.AssignRole:output_type -> user.AssignRoleResponse
-	43, // 60: user.UserService.ListRoles:output_type -> user.ListRolesResponse
-	45, // 61: user.UserService.CreateRole:output_type -> user.CreateRoleResponse
-	47, // 62: user.UserService.UpdateRole:output_type -> user.UpdateRoleResponse
-	49, // 63: user.UserService.DeleteRole:output_type -> user.DeleteRoleResponse
-	52, // 64: user.UserService.ListPermissions:output_type -> user.ListPermissionsResponse
-	54, // 65: user.UserService.SetRolePermissions:output_type -> user.SetRolePermissionsResponse
-	57, // 66: user.UserService.ListAuditLogs:output_type -> user.ListAuditLogsResponse
-	42, // [42:67] is the sub-list for method output_type
-	17, // [17:42] is the sub-list for method input_type
-	17, // [17:17] is the sub-list for extension type_name
-	17, // [17:17] is the sub-list for extension extendee
-	0,  // [0:17] is the sub-list for field type_name
+	58, // 17: user.BindOAuthRequest.profile:type_name -> user.OAuthProfile
+	59, // 18: user.ListOAuthBindingsResponse.bindings:type_name -> user.OAuthBinding
+	58, // 19: user.OAuthLoginRequest.profile:type_name -> user.OAuthProfile
+	1,  // 20: user.OAuthLoginRequest.device:type_name -> user.DeviceContext
+	0,  // 21: user.OAuthLoginResponse.user:type_name -> user.UserInfo
+	2,  // 22: user.UserService.Register:input_type -> user.RegisterRequest
+	4,  // 23: user.UserService.Login:input_type -> user.LoginRequest
+	6,  // 24: user.UserService.Refresh:input_type -> user.RefreshRequest
+	8,  // 25: user.UserService.Logout:input_type -> user.LogoutRequest
+	10, // 26: user.UserService.GetProfile:input_type -> user.GetProfileRequest
+	12, // 27: user.UserService.ValidateToken:input_type -> user.ValidateTokenRequest
+	14, // 28: user.UserService.UpdateProfile:input_type -> user.UpdateProfileRequest
+	16, // 29: user.UserService.ChangePassword:input_type -> user.ChangePasswordRequest
+	18, // 30: user.UserService.GetUserByUUID:input_type -> user.GetUserByUUIDRequest
+	20, // 31: user.UserService.GetUserPermissions:input_type -> user.GetUserPermissionsRequest
+	22, // 32: user.UserService.CheckPermission:input_type -> user.CheckPermissionRequest
+	24, // 33: user.UserService.ClearUserCache:input_type -> user.ClearUserCacheRequest
+	27, // 34: user.UserService.ListSessions:input_type -> user.ListSessionsRequest
+	29, // 35: user.UserService.RevokeSession:input_type -> user.RevokeSessionRequest
+	32, // 36: user.UserService.ListUsers:input_type -> user.ListUsersRequest
+	35, // 37: user.UserService.GetUserDetail:input_type -> user.GetUserDetailRequest
+	37, // 38: user.UserService.UpdateUserStatus:input_type -> user.UpdateUserStatusRequest
+	39, // 39: user.UserService.AssignRole:input_type -> user.AssignRoleRequest
+	42, // 40: user.UserService.ListRoles:input_type -> user.ListRolesRequest
+	44, // 41: user.UserService.CreateRole:input_type -> user.CreateRoleRequest
+	46, // 42: user.UserService.UpdateRole:input_type -> user.UpdateRoleRequest
+	48, // 43: user.UserService.DeleteRole:input_type -> user.DeleteRoleRequest
+	51, // 44: user.UserService.ListPermissions:input_type -> user.ListPermissionsRequest
+	53, // 45: user.UserService.SetRolePermissions:input_type -> user.SetRolePermissionsRequest
+	56, // 46: user.UserService.ListAuditLogs:input_type -> user.ListAuditLogsRequest
+	60, // 47: user.UserService.BindOAuth:input_type -> user.BindOAuthRequest
+	62, // 48: user.UserService.UnbindOAuth:input_type -> user.UnbindOAuthRequest
+	64, // 49: user.UserService.ListOAuthBindings:input_type -> user.ListOAuthBindingsRequest
+	66, // 50: user.UserService.OAuthLogin:input_type -> user.OAuthLoginRequest
+	3,  // 51: user.UserService.Register:output_type -> user.RegisterResponse
+	5,  // 52: user.UserService.Login:output_type -> user.LoginResponse
+	7,  // 53: user.UserService.Refresh:output_type -> user.RefreshResponse
+	9,  // 54: user.UserService.Logout:output_type -> user.LogoutResponse
+	11, // 55: user.UserService.GetProfile:output_type -> user.GetProfileResponse
+	13, // 56: user.UserService.ValidateToken:output_type -> user.ValidateTokenResponse
+	15, // 57: user.UserService.UpdateProfile:output_type -> user.UpdateProfileResponse
+	17, // 58: user.UserService.ChangePassword:output_type -> user.ChangePasswordResponse
+	19, // 59: user.UserService.GetUserByUUID:output_type -> user.GetUserByUUIDResponse
+	21, // 60: user.UserService.GetUserPermissions:output_type -> user.GetUserPermissionsResponse
+	23, // 61: user.UserService.CheckPermission:output_type -> user.CheckPermissionResponse
+	25, // 62: user.UserService.ClearUserCache:output_type -> user.ClearUserCacheResponse
+	28, // 63: user.UserService.ListSessions:output_type -> user.ListSessionsResponse
+	30, // 64: user.UserService.RevokeSession:output_type -> user.RevokeSessionResponse
+	34, // 65: user.UserService.ListUsers:output_type -> user.ListUsersResponse
+	36, // 66: user.UserService.GetUserDetail:output_type -> user.GetUserDetailResponse
+	38, // 67: user.UserService.UpdateUserStatus:output_type -> user.UpdateUserStatusResponse
+	40, // 68: user.UserService.AssignRole:output_type -> user.AssignRoleResponse
+	43, // 69: user.UserService.ListRoles:output_type -> user.ListRolesResponse
+	45, // 70: user.UserService.CreateRole:output_type -> user.CreateRoleResponse
+	47, // 71: user.UserService.UpdateRole:output_type -> user.UpdateRoleResponse
+	49, // 72: user.UserService.DeleteRole:output_type -> user.DeleteRoleResponse
+	52, // 73: user.UserService.ListPermissions:output_type -> user.ListPermissionsResponse
+	54, // 74: user.UserService.SetRolePermissions:output_type -> user.SetRolePermissionsResponse
+	57, // 75: user.UserService.ListAuditLogs:output_type -> user.ListAuditLogsResponse
+	61, // 76: user.UserService.BindOAuth:output_type -> user.BindOAuthResponse
+	63, // 77: user.UserService.UnbindOAuth:output_type -> user.UnbindOAuthResponse
+	65, // 78: user.UserService.ListOAuthBindings:output_type -> user.ListOAuthBindingsResponse
+	67, // 79: user.UserService.OAuthLogin:output_type -> user.OAuthLoginResponse
+	51, // [51:80] is the sub-list for method output_type
+	22, // [22:51] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_proto_user_user_proto_init() }
@@ -3620,7 +4321,7 @@ func file_proto_user_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_user_user_proto_rawDesc), len(file_proto_user_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   58,
+			NumMessages:   68,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

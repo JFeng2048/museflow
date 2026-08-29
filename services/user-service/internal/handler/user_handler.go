@@ -168,6 +168,10 @@ func mapError(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, auth.ErrAccountUnavailable):
 		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, auth.ErrAccountLocked):
+		return status.Error(codes.ResourceExhausted, err.Error())
+	case errors.Is(err, ErrInvalidUUID):
+		return status.Error(codes.InvalidArgument, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}
