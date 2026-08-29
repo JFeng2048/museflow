@@ -28,6 +28,29 @@
   --c-danger: #c25c5c;
   --c-info: #5b7b9b;
 
+  /* 多色 accent —— 装饰数据卡片等用 */
+  --c-accent-blue:   #5b8def;
+  --c-accent-violet: #7c6ff0;
+  --c-accent-amber:  #d4a05a;
+  --c-accent-green:  #5b8b6a;
+  --c-accent-rose:   #c77d8b;
+
+  /* 积分卡（活动 / 永久）渐变 + 数字色，满足 WCAG AA ≥ 4.5:1 */
+  --c-credit-active-bg-1: #fffaf0;
+  --c-credit-active-bg-2: #f7e8c8;
+  --c-credit-active-ink:  #946227;
+  --c-credit-perm-bg-1:   #f3faf7;
+  --c-credit-perm-bg-2:   #d6e8df;
+  --c-credit-perm-ink:    #2f6f5e;
+
+  /* 状态分布空卡图标 */
+  --c-stat-empty: #5b8def;
+
+  /* NTag default（中性）"芯片"色：让它从卡片底浮出，且文字 ≥AA */
+  --c-tag-default-bg: #efe9df;
+  --c-tag-default-ink: #2a3344;
+  --c-tag-default-border: #e6ded2;
+
   --font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', Georgia, serif;
   --font-sans: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system,
     'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -60,9 +83,29 @@
   --c-warn: #b08a3e;
   --c-danger: #c25c5c;
   --c-info: #5b7b9b;
+
+  --c-accent-blue:   #4f76d4;
+  --c-accent-violet: #6b5fc8;
+  --c-accent-amber:  #7faa5a;
+  --c-accent-green:  #4d7c5d;
+  --c-accent-rose:   #a86070;
+
+  --c-credit-active-bg-1: #eef3e6;
+  --c-credit-active-bg-2: #e3ebd9;
+  --c-credit-active-ink:  #5a7a3e;
+  --c-credit-perm-bg-1:   #e6f0e8;
+  --c-credit-perm-bg-2:   #d2e2d6;
+  --c-credit-perm-ink:    #3d5e4f;
+
+  --c-stat-empty: #4d7c5d;
   --shadow-sm: 0 2px 10px rgba(47, 58, 48, 0.06);
   --shadow-m: 0 8px 28px rgba(47, 58, 48, 0.1);
   --shadow-l: 0 18px 50px rgba(47, 58, 48, 0.14);
+
+  /* NTag default 主题化 */
+  --c-tag-default-bg: #e4ebda;
+  --c-tag-default-ink: #3d4a3e;
+  --c-tag-default-border: #d6e0cc;
 }
 
 /* 专注：中性灰，弱化强调 */
@@ -82,9 +125,29 @@
   --c-warn: #b08944;
   --c-danger: #c25c5c;
   --c-info: #5b7b9b;
+
+  --c-accent-blue:   #5b6e8a;
+  --c-accent-violet: #6b6680;
+  --c-accent-amber:  #8a9099;
+  --c-accent-green:  #5b6b5a;
+  --c-accent-rose:   #8a6868;
+
+  --c-credit-active-bg-1: #f4f5f7;
+  --c-credit-active-bg-2: #ecedef;
+  --c-credit-active-ink:  #4a525a;
+  --c-credit-perm-bg-1:   #eef0f2;
+  --c-credit-perm-bg-2:   #e3e5e8;
+  --c-credit-perm-ink:    #3d4a5a;
+
+  --c-stat-empty: #6b7280;
   --shadow-sm: 0 2px 10px rgba(32, 36, 43, 0.06);
   --shadow-m: 0 8px 28px rgba(32, 36, 43, 0.1);
   --shadow-l: 0 18px 50px rgba(32, 36, 43, 0.14);
+
+  /* NTag default 主题化 */
+  --c-tag-default-bg: #eceef1;
+  --c-tag-default-ink: #2c313a;
+  --c-tag-default-border: #e2e5e9;
 }
 
 /* 复古：羊皮纸 + 皮革棕 */
@@ -104,16 +167,36 @@
   --c-warn: #b08a3e;
   --c-danger: #b5504a;
   --c-info: #5b7b9b;
+
+  --c-accent-blue:   #3f5673;
+  --c-accent-violet: #5b4a8a;
+  --c-accent-amber:  #b0722f;
+  --c-accent-green:  #5b8b6a;
+  --c-accent-rose:   #a2565b;
+
+  --c-credit-active-bg-1: #f3e9d6;
+  --c-credit-active-bg-2: #e0d4b7;
+  --c-credit-active-ink:  #7a4d18;
+  --c-credit-perm-bg-1:   #e4e0c8;
+  --c-credit-perm-bg-2:   #d0cfae;
+  --c-credit-perm-ink:    #3a5240;
+
+  --c-stat-empty: #3f5673;
   --shadow-sm: 0 2px 10px rgba(58, 44, 30, 0.08);
   --shadow-m: 0 8px 28px rgba(58, 44, 30, 0.12);
   --shadow-l: 0 18px 50px rgba(58, 44, 30, 0.18);
+
+  /* NTag default 主题化 */
+  --c-tag-default-bg: #e9dcc3;
+  --c-tag-default-ink: #4d3a28;
+  --c-tag-default-border: #d8c4a3;
 }
 
 /* 暗夜：深蓝灰底 */
 [data-theme='dark'] {
   --c-ink: #e9ebf0;
   --c-ink-soft: #c2c7d2;
-  --c-ink-muted: #8a90a0;
+  --c-ink-muted: #a7adc0;
   --c-amber: #d4a05a;
   --c-amber-deep: #e0b06e;
   --c-amber-soft: #3a3326;
@@ -126,16 +209,36 @@
   --c-warn: #d09a4e;
   --c-danger: #d27272;
   --c-info: #7f9cc0;
+
+  --c-accent-blue:   #7b9cd9;
+  --c-accent-violet: #9d92e8;
+  --c-accent-amber:  #d4a05a;
+  --c-accent-green:  #6f9f80;
+  --c-accent-rose:   #d27282;
+
+  --c-credit-active-bg-1: #2a3344;
+  --c-credit-active-bg-2: #2c2a1f;
+  --c-credit-active-ink:  #e8c27d;
+  --c-credit-perm-bg-1:   #243236;
+  --c-credit-perm-bg-2:   #232e3a;
+  --c-credit-perm-ink:    #9fc7b3;
+
+  --c-stat-empty: #7b9cd9;
   --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
   --shadow-m: 0 8px 28px rgba(0, 0, 0, 0.4);
   --shadow-l: 0 18px 50px rgba(0, 0, 0, 0.5);
+
+  /* NTag default 主题化：暗底用更亮的色阶做"芯片"，从卡片浮出 */
+  --c-tag-default-bg: #2a3449;
+  --c-tag-default-ink: #dde2ee;
+  --c-tag-default-border: #3d4d6a;
 }
 
 /* 高级：近黑底 + 金 */
 [data-theme='premium'] {
   --c-ink: #ece6da;
   --c-ink-soft: #cfc6b6;
-  --c-ink-muted: #9a917f;
+  --c-ink-muted: #b3a892;
   --c-amber: #d9b066;
   --c-amber-deep: #e8c27d;
   --c-amber-soft: #3a3320;
@@ -148,9 +251,29 @@
   --c-warn: #d6a85a;
   --c-danger: #d27a72;
   --c-info: #8fa6c4;
+
+  --c-accent-blue:   #5e7bb0;
+  --c-accent-violet: #837aab;
+  --c-accent-amber:  #d9b066;
+  --c-accent-green:  #7f9f86;
+  --c-accent-rose:   #c0838a;
+
+  --c-credit-active-bg-1: #2a2316;
+  --c-credit-active-bg-2: #1f1a10;
+  --c-credit-active-ink:  #e8c27d;
+  --c-credit-perm-bg-1:   #1b2421;
+  --c-credit-perm-bg-2:   #161c18;
+  --c-credit-perm-ink:    #b6cdb9;
+
+  --c-stat-empty: #d9b066;
   --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.4);
   --shadow-m: 0 8px 28px rgba(0, 0, 0, 0.5);
   --shadow-l: 0 18px 50px rgba(0, 0, 0, 0.6);
+
+  /* NTag default 主题化：高级深底用偏金的暗色，金属质感"芯片" */
+  --c-tag-default-bg: #2c281f;
+  --c-tag-default-ink: #e6dec9;
+  --c-tag-default-border: #4a4030;
 }
 
 /* ------------------------------- 基础层 ------------------------------- */

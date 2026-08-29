@@ -2103,12 +2103,12 @@
   background: var(--c-paper);
 }
 .credit-stat.activity {
-  background: linear-gradient(140deg, #fffaf0 0%, #f7e8c8 100%);
-  border-color: rgba(185, 133, 63, 0.25);
+  background: linear-gradient(140deg, var(--c-credit-active-bg-1) 0%, var(--c-credit-active-bg-2) 100%);
+  border-color: color-mix(in srgb, var(--c-credit-active-ink) 25%, transparent);
 }
 .credit-stat.permanent {
-  background: linear-gradient(140deg, #f3faf7 0%, #d6e8df 100%);
-  border-color: rgba(47, 111, 94, 0.25);
+  background: linear-gradient(140deg, var(--c-credit-perm-bg-1) 0%, var(--c-credit-perm-bg-2) 100%);
+  border-color: color-mix(in srgb, var(--c-credit-perm-ink) 25%, transparent);
 }
 .credit-stat .big {
   font-size: 38px;
@@ -2119,10 +2119,10 @@
   font-feature-settings: 'tnum' 1;
 }
 .credit-stat.activity .big {
-  color: #b9853f;
+  color: var(--c-credit-active-ink);
 }
 .credit-stat.permanent .big {
-  color: #2f6f5e;
+  color: var(--c-credit-perm-ink);
 }
 .credit-stat .eyebrow {
   font-size: 12px;
@@ -2149,7 +2149,7 @@
 .credit-stat.permanent .exp::before {
   content: '∞';
   font-size: 14px;
-  color: #2f6f5e;
+  color: var(--c-credit-perm-ink);
 }
 .credit-stat::before {
   content: '';
@@ -2163,13 +2163,13 @@
   pointer-events: none;
 }
 .credit-stat.activity::before {
-  background: radial-gradient(circle, #b9853f 30%, transparent 70%);
+  background: radial-gradient(circle, var(--c-credit-active-ink) 30%, transparent 70%);
   border-radius: 50%;
 }
 .credit-stat.permanent::before {
   background:
-    linear-gradient(45deg, transparent 45%, #2f6f5e 45%, #2f6f5e 55%, transparent 55%),
-    linear-gradient(-45deg, transparent 45%, #2f6f5e 45%, #2f6f5e 55%, transparent 55%);
+    linear-gradient(45deg, transparent 45%, var(--c-credit-perm-ink) 45%, var(--c-credit-perm-ink) 55%, transparent 55%),
+    linear-gradient(-45deg, transparent 45%, var(--c-credit-perm-ink) 45%, var(--c-credit-perm-ink) 55%, transparent 55%);
 }
 
 /* 管理员身份选择弹窗 */
@@ -2245,6 +2245,17 @@
 }
 .identity-ico.admin {
   background: #2f6fb3;
+}
+
+/* ============ NTag 主题化（default 类型：让"芯片"从卡片底浮出） ============ */
+/* default 类型（即未指定 type 或 type=default）的标签：
+   - 背景：使用比卡片更浅的色阶（暖色主题）或更深一档（暗色主题），形成"卡中卡"层级
+   - 边框：用 1px 主题分隔线色，强化芯片识别
+   - 文字：保证 ≥AA 对比度 */
+.n-tag:not(.n-tag--info-type):not(.n-tag--success-type):not(.n-tag--warning-type):not(.n-tag--error-type) {
+  background-color: var(--c-tag-default-bg) !important;
+  color: var(--c-tag-default-ink) !important;
+  border: 1px solid var(--c-tag-default-border) !important;
 }
 .identity-text {
   display: flex;
