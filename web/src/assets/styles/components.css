@@ -1990,10 +1990,14 @@
   border-style: solid;
 }
 
-/* 充值卡 */
+/* 充值卡：渐变跟随主题金色 token，6 套主题各自呈现该调性的"金" */
 .recharge-card {
-  background: linear-gradient(180deg, #faf6ee 0%, #f3ead7 100%);
-  border: 1px solid var(--c-line);
+  background: linear-gradient(
+    180deg,
+    var(--c-amber-soft) 0%,
+    color-mix(in srgb, var(--c-amber-soft) 45%, var(--c-paper)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--c-amber) 35%, var(--c-line));
 }
 .recharge-sub {
   margin: 4px 0 0;
@@ -2042,12 +2046,13 @@
   color: var(--c-ink);
 }
 .pay-method-item.active {
-  border-color: #1677ff;
-  background: rgba(22, 119, 255, 0.06);
+  border-color: var(--c-amber);
+  background: var(--c-amber-soft);
 }
 .pay-method-ico {
   font-size: 20px;
 }
+/* 保留品牌色：支付宝蓝，仅作用于图标本身，便于一眼识别 */
 .pay-method-ico.alipay {
   color: #1677ff;
 }
@@ -2080,10 +2085,11 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  background: #fafafa;
+  background: var(--c-paper);
 }
 .pay-qr-ico {
   font-size: 56px;
+  /* 保留品牌色：支付宝蓝，仅作用于图标 */
   color: #1677ff;
 }
 .pay-qr-tip {
