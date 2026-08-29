@@ -8,11 +8,13 @@ package admin
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/museflow/user-service/internal/model"
 	"github.com/museflow/user-service/internal/repository"
+	"github.com/museflow/user-service/internal/service/audit"
 	"github.com/museflow/user-service/internal/service/rbac"
 )
 
@@ -20,11 +22,12 @@ import (
 type Service struct {
 	users repository.UserRepository
 	rbac  *rbac.Service
+	audit *audit.Service
 }
 
 // NewService 构造管理后台服务。
-func NewService(users repository.UserRepository, rbacSvc *rbac.Service) *Service {
-	return &Service{users: users, rbac: rbacSvc}
+func NewService(users repository.UserRepository, rbacSvc *rbac.Service, auditSvc *audit.Service) *Service {
+	return &Service{users: users, rbac: rbacSvc, audit: auditSvc}
 }
 
 // UserItem 管理后台用户列表项（用户 + 角色编码）。
@@ -86,6 +89,13 @@ func (s *Service) UpdateUserStatus(ctx context.Context, userUUID string, status 
 	if err := s.users.UpdateStatus(ctx, id, status); err != nil {
 		return fmt.Errorf("更新用户状态失败: %w", err)
 	}
+	s.audit.Record(ctx, audit.Entry{
+		UserUUID:   userUUID,
+		Action:     model.AuditActionUpdateStat,
+		Resource:   model.AuditResourceUser,
+		ResourceID: userUUID,
+		Detail:     map[string]int16{"status": status},
+	})
 	// 状态变更（如冻结）后清理权限缓存，确保下次校验按最新状态生效
 	return s.rbac.ClearUserCache(ctx, id)
 }
@@ -100,7 +110,17 @@ func (s *Service) AssignRole(ctx context.Context, targetUUID, roleCode, operator
 	if err != nil {
 		return err
 	}
-	return s.rbac.AssignRole(ctx, target, roleCode, operator)
+	if err := s.rbac.AssignRole(ctx, target, roleCode, operator); err != nil {
+		return err
+	}
+	s.audit.Record(ctx, audit.Entry{
+		UserUUID:   operatorUUID,
+		Action:     model.AuditActionAssignRole,
+		Resource:   model.AuditResourceRole,
+		ResourceID: roleCode,
+		Detail:     map[string]string{"target_uuid": targetUUID, "role_code": roleCode},
+	})
+	return nil
 }
 
 // ListRoles 列出角色。
@@ -114,17 +134,40 @@ func (s *Service) CreateRole(ctx context.Context, code, name, description string
 	if err := s.rbac.CreateRole(ctx, role); err != nil {
 		return nil, err
 	}
+	s.audit.Record(ctx, audit.Entry{
+		Action:     model.AuditActionCreateRole,
+		Resource:   model.AuditResourceRole,
+		ResourceID: code,
+		Detail:     map[string]string{"name": name},
+	})
 	return role, nil
 }
 
 // UpdateRole 编辑角色（系统角色不可改）。
 func (s *Service) UpdateRole(ctx context.Context, roleID int16, name, description string) error {
-	return s.rbac.UpdateRole(ctx, roleID, name, description)
+	if err := s.rbac.UpdateRole(ctx, roleID, name, description); err != nil {
+		return err
+	}
+	s.audit.Record(ctx, audit.Entry{
+		Action:     model.AuditActionUpdateRole,
+		Resource:   model.AuditResourceRole,
+		ResourceID: fmt.Sprintf("%d", roleID),
+		Detail:     map[string]string{"name": name},
+	})
+	return nil
 }
 
 // DeleteRole 删除角色（系统角色不可删，并清理相关用户缓存）。
 func (s *Service) DeleteRole(ctx context.Context, roleID int16) error {
-	return s.rbac.DeleteRole(ctx, roleID)
+	if err := s.rbac.DeleteRole(ctx, roleID); err != nil {
+		return err
+	}
+	s.audit.Record(ctx, audit.Entry{
+		Action:     model.AuditActionDeleteRole,
+		Resource:   model.AuditResourceRole,
+		ResourceID: fmt.Sprintf("%d", roleID),
+	})
+	return nil
 }
 
 // ListPermissions 列出权限。
@@ -134,7 +177,21 @@ func (s *Service) ListPermissions(ctx context.Context) ([]model.Permission, erro
 
 // SetRolePermissions 为角色分配权限（清理相关用户缓存）。
 func (s *Service) SetRolePermissions(ctx context.Context, roleID int16, permCodes []string) error {
-	return s.rbac.SetRolePermissions(ctx, roleID, permCodes)
+	if err := s.rbac.SetRolePermissions(ctx, roleID, permCodes); err != nil {
+		return err
+	}
+	s.audit.Record(ctx, audit.Entry{
+		Action:     model.AuditActionSetRolePerm,
+		Resource:   model.AuditResourcePerm,
+		ResourceID: fmt.Sprintf("%d", roleID),
+		Detail:     map[string]any{"role_id": roleID, "permissions": permCodes},
+	})
+	return nil
+}
+
+// ListAuditLogs 分页查询审计日志（按用户 / 操作类型 / 时间范围筛选）。
+func (s *Service) ListAuditLogs(ctx context.Context, userUUID, action string, from, to *time.Time, offset, limit int) ([]model.AuditLog, int64, error) {
+	return s.audit.List(ctx, userUUID, action, from, to, offset, limit)
 }
 
 func parseOptionalUUID(s string) (uuid.UUID, error) {

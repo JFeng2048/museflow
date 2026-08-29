@@ -2968,6 +2968,243 @@ func (x *SetRolePermissionsResponse) GetSuccess() bool {
 	return false
 }
 
+// AuditLogItem 单条审计日志。
+type AuditLogItem struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserUuid      string                 `protobuf:"bytes,2,opt,name=user_uuid,json=userUuid,proto3" json:"user_uuid,omitempty"` // 操作人，空表示系统操作
+	Action        string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`                     // 操作类型，如 login / change_password
+	Resource      string                 `protobuf:"bytes,4,opt,name=resource,proto3" json:"resource,omitempty"`                 // 资源类型，如 user / role
+	ResourceId    string                 `protobuf:"bytes,5,opt,name=resource_id,json=resourceId,proto3" json:"resource_id,omitempty"`
+	Ip            string                 `protobuf:"bytes,6,opt,name=ip,proto3" json:"ip,omitempty"`
+	UserAgent     string                 `protobuf:"bytes,7,opt,name=user_agent,json=userAgent,proto3" json:"user_agent,omitempty"`
+	Detail        string                 `protobuf:"bytes,8,opt,name=detail,proto3" json:"detail,omitempty"`                         // 详细数据（JSON 字符串）
+	CreatedAt     int64                  `protobuf:"varint,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"` // 操作时间（Unix 秒）
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AuditLogItem) Reset() {
+	*x = AuditLogItem{}
+	mi := &file_proto_user_user_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AuditLogItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AuditLogItem) ProtoMessage() {}
+
+func (x *AuditLogItem) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AuditLogItem.ProtoReflect.Descriptor instead.
+func (*AuditLogItem) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *AuditLogItem) GetId() int64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *AuditLogItem) GetUserUuid() string {
+	if x != nil {
+		return x.UserUuid
+	}
+	return ""
+}
+
+func (x *AuditLogItem) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *AuditLogItem) GetResource() string {
+	if x != nil {
+		return x.Resource
+	}
+	return ""
+}
+
+func (x *AuditLogItem) GetResourceId() string {
+	if x != nil {
+		return x.ResourceId
+	}
+	return ""
+}
+
+func (x *AuditLogItem) GetIp() string {
+	if x != nil {
+		return x.Ip
+	}
+	return ""
+}
+
+func (x *AuditLogItem) GetUserAgent() string {
+	if x != nil {
+		return x.UserAgent
+	}
+	return ""
+}
+
+func (x *AuditLogItem) GetDetail() string {
+	if x != nil {
+		return x.Detail
+	}
+	return ""
+}
+
+func (x *AuditLogItem) GetCreatedAt() int64 {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return 0
+}
+
+type ListAuditLogsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Pagination    *Pagination            `protobuf:"bytes,1,opt,name=pagination,proto3" json:"pagination,omitempty"`
+	UserUuid      string                 `protobuf:"bytes,2,opt,name=user_uuid,json=userUuid,proto3" json:"user_uuid,omitempty"` // 按操作人过滤，留空不过滤
+	Action        string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`                     // 按操作类型过滤，留空不过滤
+	From          int64                  `protobuf:"varint,4,opt,name=from,proto3" json:"from,omitempty"`                        // 起始时间（Unix 秒），0 表示不限
+	To            int64                  `protobuf:"varint,5,opt,name=to,proto3" json:"to,omitempty"`                            // 结束时间（Unix 秒），0 表示不限
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuditLogsRequest) Reset() {
+	*x = ListAuditLogsRequest{}
+	mi := &file_proto_user_user_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuditLogsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuditLogsRequest) ProtoMessage() {}
+
+func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuditLogsRequest.ProtoReflect.Descriptor instead.
+func (*ListAuditLogsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{56}
+}
+
+func (x *ListAuditLogsRequest) GetPagination() *Pagination {
+	if x != nil {
+		return x.Pagination
+	}
+	return nil
+}
+
+func (x *ListAuditLogsRequest) GetUserUuid() string {
+	if x != nil {
+		return x.UserUuid
+	}
+	return ""
+}
+
+func (x *ListAuditLogsRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *ListAuditLogsRequest) GetFrom() int64 {
+	if x != nil {
+		return x.From
+	}
+	return 0
+}
+
+func (x *ListAuditLogsRequest) GetTo() int64 {
+	if x != nil {
+		return x.To
+	}
+	return 0
+}
+
+type ListAuditLogsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Logs          []*AuditLogItem        `protobuf:"bytes,1,rep,name=logs,proto3" json:"logs,omitempty"`
+	Total         int64                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAuditLogsResponse) Reset() {
+	*x = ListAuditLogsResponse{}
+	mi := &file_proto_user_user_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAuditLogsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAuditLogsResponse) ProtoMessage() {}
+
+func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_user_user_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAuditLogsResponse.ProtoReflect.Descriptor instead.
+func (*ListAuditLogsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_user_user_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *ListAuditLogsResponse) GetLogs() []*AuditLogItem {
+	if x != nil {
+		return x.Logs
+	}
+	return nil
+}
+
+func (x *ListAuditLogsResponse) GetTotal() int64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 var File_proto_user_user_proto protoreflect.FileDescriptor
 
 const file_proto_user_user_proto_rawDesc = "" +
@@ -3167,7 +3404,31 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"\arole_id\x18\x01 \x01(\x05R\x06roleId\x12)\n" +
 	"\x10permission_codes\x18\x02 \x03(\tR\x0fpermissionCodes\"6\n" +
 	"\x1aSetRolePermissionsResponse\x12\x18\n" +
-	"\asuccess\x18\x01 \x01(\bR\asuccess2\xa0\r\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\"\xf6\x01\n" +
+	"\fAuditLogItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
+	"\tuser_uuid\x18\x02 \x01(\tR\buserUuid\x12\x16\n" +
+	"\x06action\x18\x03 \x01(\tR\x06action\x12\x1a\n" +
+	"\bresource\x18\x04 \x01(\tR\bresource\x12\x1f\n" +
+	"\vresource_id\x18\x05 \x01(\tR\n" +
+	"resourceId\x12\x0e\n" +
+	"\x02ip\x18\x06 \x01(\tR\x02ip\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18\a \x01(\tR\tuserAgent\x12\x16\n" +
+	"\x06detail\x18\b \x01(\tR\x06detail\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\t \x01(\x03R\tcreatedAt\"\xa1\x01\n" +
+	"\x14ListAuditLogsRequest\x120\n" +
+	"\n" +
+	"pagination\x18\x01 \x01(\v2\x10.user.PaginationR\n" +
+	"pagination\x12\x1b\n" +
+	"\tuser_uuid\x18\x02 \x01(\tR\buserUuid\x12\x16\n" +
+	"\x06action\x18\x03 \x01(\tR\x06action\x12\x12\n" +
+	"\x04from\x18\x04 \x01(\x03R\x04from\x12\x0e\n" +
+	"\x02to\x18\x05 \x01(\x03R\x02to\"U\n" +
+	"\x15ListAuditLogsResponse\x12&\n" +
+	"\x04logs\x18\x01 \x03(\v2\x12.user.AuditLogItemR\x04logs\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x03R\x05total2\xea\r\n" +
 	"\vUserService\x129\n" +
 	"\bRegister\x12\x15.user.RegisterRequest\x1a\x16.user.RegisterResponse\x120\n" +
 	"\x05Login\x12\x12.user.LoginRequest\x1a\x13.user.LoginResponse\x126\n" +
@@ -3197,7 +3458,8 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"\n" +
 	"DeleteRole\x12\x17.user.DeleteRoleRequest\x1a\x18.user.DeleteRoleResponse\x12N\n" +
 	"\x0fListPermissions\x12\x1c.user.ListPermissionsRequest\x1a\x1d.user.ListPermissionsResponse\x12W\n" +
-	"\x12SetRolePermissions\x12\x1f.user.SetRolePermissionsRequest\x1a .user.SetRolePermissionsResponseB'Z%github.com/museflow/proto/user;userpbb\x06proto3"
+	"\x12SetRolePermissions\x12\x1f.user.SetRolePermissionsRequest\x1a .user.SetRolePermissionsResponse\x12H\n" +
+	"\rListAuditLogs\x12\x1a.user.ListAuditLogsRequest\x1a\x1b.user.ListAuditLogsResponseB'Z%github.com/museflow/proto/user;userpbb\x06proto3"
 
 var (
 	file_proto_user_user_proto_rawDescOnce sync.Once
@@ -3211,7 +3473,7 @@ func file_proto_user_user_proto_rawDescGZIP() []byte {
 	return file_proto_user_user_proto_rawDescData
 }
 
-var file_proto_user_user_proto_msgTypes = make([]protoimpl.MessageInfo, 55)
+var file_proto_user_user_proto_msgTypes = make([]protoimpl.MessageInfo, 58)
 var file_proto_user_user_proto_goTypes = []any{
 	(*UserInfo)(nil),                   // 0: user.UserInfo
 	(*DeviceContext)(nil),              // 1: user.DeviceContext
@@ -3268,6 +3530,9 @@ var file_proto_user_user_proto_goTypes = []any{
 	(*ListPermissionsResponse)(nil),    // 52: user.ListPermissionsResponse
 	(*SetRolePermissionsRequest)(nil),  // 53: user.SetRolePermissionsRequest
 	(*SetRolePermissionsResponse)(nil), // 54: user.SetRolePermissionsResponse
+	(*AuditLogItem)(nil),               // 55: user.AuditLogItem
+	(*ListAuditLogsRequest)(nil),       // 56: user.ListAuditLogsRequest
+	(*ListAuditLogsResponse)(nil),      // 57: user.ListAuditLogsResponse
 }
 var file_proto_user_user_proto_depIdxs = []int32{
 	0,  // 0: user.RegisterResponse.user:type_name -> user.UserInfo
@@ -3285,59 +3550,63 @@ var file_proto_user_user_proto_depIdxs = []int32{
 	41, // 12: user.ListRolesResponse.roles:type_name -> user.RoleInfo
 	41, // 13: user.CreateRoleResponse.role:type_name -> user.RoleInfo
 	50, // 14: user.ListPermissionsResponse.permissions:type_name -> user.PermissionInfo
-	2,  // 15: user.UserService.Register:input_type -> user.RegisterRequest
-	4,  // 16: user.UserService.Login:input_type -> user.LoginRequest
-	6,  // 17: user.UserService.Refresh:input_type -> user.RefreshRequest
-	8,  // 18: user.UserService.Logout:input_type -> user.LogoutRequest
-	10, // 19: user.UserService.GetProfile:input_type -> user.GetProfileRequest
-	12, // 20: user.UserService.ValidateToken:input_type -> user.ValidateTokenRequest
-	14, // 21: user.UserService.UpdateProfile:input_type -> user.UpdateProfileRequest
-	16, // 22: user.UserService.ChangePassword:input_type -> user.ChangePasswordRequest
-	18, // 23: user.UserService.GetUserByUUID:input_type -> user.GetUserByUUIDRequest
-	20, // 24: user.UserService.GetUserPermissions:input_type -> user.GetUserPermissionsRequest
-	22, // 25: user.UserService.CheckPermission:input_type -> user.CheckPermissionRequest
-	24, // 26: user.UserService.ClearUserCache:input_type -> user.ClearUserCacheRequest
-	27, // 27: user.UserService.ListSessions:input_type -> user.ListSessionsRequest
-	29, // 28: user.UserService.RevokeSession:input_type -> user.RevokeSessionRequest
-	32, // 29: user.UserService.ListUsers:input_type -> user.ListUsersRequest
-	35, // 30: user.UserService.GetUserDetail:input_type -> user.GetUserDetailRequest
-	37, // 31: user.UserService.UpdateUserStatus:input_type -> user.UpdateUserStatusRequest
-	39, // 32: user.UserService.AssignRole:input_type -> user.AssignRoleRequest
-	42, // 33: user.UserService.ListRoles:input_type -> user.ListRolesRequest
-	44, // 34: user.UserService.CreateRole:input_type -> user.CreateRoleRequest
-	46, // 35: user.UserService.UpdateRole:input_type -> user.UpdateRoleRequest
-	48, // 36: user.UserService.DeleteRole:input_type -> user.DeleteRoleRequest
-	51, // 37: user.UserService.ListPermissions:input_type -> user.ListPermissionsRequest
-	53, // 38: user.UserService.SetRolePermissions:input_type -> user.SetRolePermissionsRequest
-	3,  // 39: user.UserService.Register:output_type -> user.RegisterResponse
-	5,  // 40: user.UserService.Login:output_type -> user.LoginResponse
-	7,  // 41: user.UserService.Refresh:output_type -> user.RefreshResponse
-	9,  // 42: user.UserService.Logout:output_type -> user.LogoutResponse
-	11, // 43: user.UserService.GetProfile:output_type -> user.GetProfileResponse
-	13, // 44: user.UserService.ValidateToken:output_type -> user.ValidateTokenResponse
-	15, // 45: user.UserService.UpdateProfile:output_type -> user.UpdateProfileResponse
-	17, // 46: user.UserService.ChangePassword:output_type -> user.ChangePasswordResponse
-	19, // 47: user.UserService.GetUserByUUID:output_type -> user.GetUserByUUIDResponse
-	21, // 48: user.UserService.GetUserPermissions:output_type -> user.GetUserPermissionsResponse
-	23, // 49: user.UserService.CheckPermission:output_type -> user.CheckPermissionResponse
-	25, // 50: user.UserService.ClearUserCache:output_type -> user.ClearUserCacheResponse
-	28, // 51: user.UserService.ListSessions:output_type -> user.ListSessionsResponse
-	30, // 52: user.UserService.RevokeSession:output_type -> user.RevokeSessionResponse
-	34, // 53: user.UserService.ListUsers:output_type -> user.ListUsersResponse
-	36, // 54: user.UserService.GetUserDetail:output_type -> user.GetUserDetailResponse
-	38, // 55: user.UserService.UpdateUserStatus:output_type -> user.UpdateUserStatusResponse
-	40, // 56: user.UserService.AssignRole:output_type -> user.AssignRoleResponse
-	43, // 57: user.UserService.ListRoles:output_type -> user.ListRolesResponse
-	45, // 58: user.UserService.CreateRole:output_type -> user.CreateRoleResponse
-	47, // 59: user.UserService.UpdateRole:output_type -> user.UpdateRoleResponse
-	49, // 60: user.UserService.DeleteRole:output_type -> user.DeleteRoleResponse
-	52, // 61: user.UserService.ListPermissions:output_type -> user.ListPermissionsResponse
-	54, // 62: user.UserService.SetRolePermissions:output_type -> user.SetRolePermissionsResponse
-	39, // [39:63] is the sub-list for method output_type
-	15, // [15:39] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	31, // 15: user.ListAuditLogsRequest.pagination:type_name -> user.Pagination
+	55, // 16: user.ListAuditLogsResponse.logs:type_name -> user.AuditLogItem
+	2,  // 17: user.UserService.Register:input_type -> user.RegisterRequest
+	4,  // 18: user.UserService.Login:input_type -> user.LoginRequest
+	6,  // 19: user.UserService.Refresh:input_type -> user.RefreshRequest
+	8,  // 20: user.UserService.Logout:input_type -> user.LogoutRequest
+	10, // 21: user.UserService.GetProfile:input_type -> user.GetProfileRequest
+	12, // 22: user.UserService.ValidateToken:input_type -> user.ValidateTokenRequest
+	14, // 23: user.UserService.UpdateProfile:input_type -> user.UpdateProfileRequest
+	16, // 24: user.UserService.ChangePassword:input_type -> user.ChangePasswordRequest
+	18, // 25: user.UserService.GetUserByUUID:input_type -> user.GetUserByUUIDRequest
+	20, // 26: user.UserService.GetUserPermissions:input_type -> user.GetUserPermissionsRequest
+	22, // 27: user.UserService.CheckPermission:input_type -> user.CheckPermissionRequest
+	24, // 28: user.UserService.ClearUserCache:input_type -> user.ClearUserCacheRequest
+	27, // 29: user.UserService.ListSessions:input_type -> user.ListSessionsRequest
+	29, // 30: user.UserService.RevokeSession:input_type -> user.RevokeSessionRequest
+	32, // 31: user.UserService.ListUsers:input_type -> user.ListUsersRequest
+	35, // 32: user.UserService.GetUserDetail:input_type -> user.GetUserDetailRequest
+	37, // 33: user.UserService.UpdateUserStatus:input_type -> user.UpdateUserStatusRequest
+	39, // 34: user.UserService.AssignRole:input_type -> user.AssignRoleRequest
+	42, // 35: user.UserService.ListRoles:input_type -> user.ListRolesRequest
+	44, // 36: user.UserService.CreateRole:input_type -> user.CreateRoleRequest
+	46, // 37: user.UserService.UpdateRole:input_type -> user.UpdateRoleRequest
+	48, // 38: user.UserService.DeleteRole:input_type -> user.DeleteRoleRequest
+	51, // 39: user.UserService.ListPermissions:input_type -> user.ListPermissionsRequest
+	53, // 40: user.UserService.SetRolePermissions:input_type -> user.SetRolePermissionsRequest
+	56, // 41: user.UserService.ListAuditLogs:input_type -> user.ListAuditLogsRequest
+	3,  // 42: user.UserService.Register:output_type -> user.RegisterResponse
+	5,  // 43: user.UserService.Login:output_type -> user.LoginResponse
+	7,  // 44: user.UserService.Refresh:output_type -> user.RefreshResponse
+	9,  // 45: user.UserService.Logout:output_type -> user.LogoutResponse
+	11, // 46: user.UserService.GetProfile:output_type -> user.GetProfileResponse
+	13, // 47: user.UserService.ValidateToken:output_type -> user.ValidateTokenResponse
+	15, // 48: user.UserService.UpdateProfile:output_type -> user.UpdateProfileResponse
+	17, // 49: user.UserService.ChangePassword:output_type -> user.ChangePasswordResponse
+	19, // 50: user.UserService.GetUserByUUID:output_type -> user.GetUserByUUIDResponse
+	21, // 51: user.UserService.GetUserPermissions:output_type -> user.GetUserPermissionsResponse
+	23, // 52: user.UserService.CheckPermission:output_type -> user.CheckPermissionResponse
+	25, // 53: user.UserService.ClearUserCache:output_type -> user.ClearUserCacheResponse
+	28, // 54: user.UserService.ListSessions:output_type -> user.ListSessionsResponse
+	30, // 55: user.UserService.RevokeSession:output_type -> user.RevokeSessionResponse
+	34, // 56: user.UserService.ListUsers:output_type -> user.ListUsersResponse
+	36, // 57: user.UserService.GetUserDetail:output_type -> user.GetUserDetailResponse
+	38, // 58: user.UserService.UpdateUserStatus:output_type -> user.UpdateUserStatusResponse
+	40, // 59: user.UserService.AssignRole:output_type -> user.AssignRoleResponse
+	43, // 60: user.UserService.ListRoles:output_type -> user.ListRolesResponse
+	45, // 61: user.UserService.CreateRole:output_type -> user.CreateRoleResponse
+	47, // 62: user.UserService.UpdateRole:output_type -> user.UpdateRoleResponse
+	49, // 63: user.UserService.DeleteRole:output_type -> user.DeleteRoleResponse
+	52, // 64: user.UserService.ListPermissions:output_type -> user.ListPermissionsResponse
+	54, // 65: user.UserService.SetRolePermissions:output_type -> user.SetRolePermissionsResponse
+	57, // 66: user.UserService.ListAuditLogs:output_type -> user.ListAuditLogsResponse
+	42, // [42:67] is the sub-list for method output_type
+	17, // [17:42] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_proto_user_user_proto_init() }
@@ -3351,7 +3620,7 @@ func file_proto_user_user_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_user_user_proto_rawDesc), len(file_proto_user_user_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   55,
+			NumMessages:   58,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

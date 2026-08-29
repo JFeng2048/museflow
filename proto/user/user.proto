@@ -90,6 +90,9 @@ service UserService {
 
   // SetRolePermissions 为角色分配权限（分配后清理相关用户权限缓存）
   rpc SetRolePermissions(SetRolePermissionsRequest) returns (SetRolePermissionsResponse);
+
+  // ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
 }
 
 // UserInfo 对外暴露的用户信息，使用 uuid 作为对外标识，不暴露自增 id。
@@ -390,4 +393,32 @@ message SetRolePermissionsRequest {
 
 message SetRolePermissionsResponse {
   bool success = 1;
+}
+
+// ==================== 审计日志 ====================
+
+// AuditLogItem 单条审计日志。
+message AuditLogItem {
+  int64 id = 1;
+  string user_uuid = 2;            // 操作人，空表示系统操作
+  string action = 3;               // 操作类型，如 login / change_password
+  string resource = 4;             // 资源类型，如 user / role
+  string resource_id = 5;
+  string ip = 6;
+  string user_agent = 7;
+  string detail = 8;               // 详细数据（JSON 字符串）
+  int64 created_at = 9;            // 操作时间（Unix 秒）
+}
+
+message ListAuditLogsRequest {
+  Pagination pagination = 1;
+  string user_uuid = 2;            // 按操作人过滤，留空不过滤
+  string action = 3;               // 按操作类型过滤，留空不过滤
+  int64 from = 4;                  // 起始时间（Unix 秒），0 表示不限
+  int64 to = 5;                    // 结束时间（Unix 秒），0 表示不限
+}
+
+message ListAuditLogsResponse {
+  repeated AuditLogItem logs = 1;
+  int64 total = 2;
 }

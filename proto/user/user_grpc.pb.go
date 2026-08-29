@@ -43,6 +43,7 @@ const (
 	UserService_DeleteRole_FullMethodName         = "/user.UserService/DeleteRole"
 	UserService_ListPermissions_FullMethodName    = "/user.UserService/ListPermissions"
 	UserService_SetRolePermissions_FullMethodName = "/user.UserService/SetRolePermissions"
+	UserService_ListAuditLogs_FullMethodName      = "/user.UserService/ListAuditLogs"
 )
 
 // UserServiceClient is the client API for UserService service.
@@ -103,6 +104,8 @@ type UserServiceClient interface {
 	ListPermissions(ctx context.Context, in *ListPermissionsRequest, opts ...grpc.CallOption) (*ListPermissionsResponse, error)
 	// SetRolePermissions 为角色分配权限（分配后清理相关用户权限缓存）
 	SetRolePermissions(ctx context.Context, in *SetRolePermissionsRequest, opts ...grpc.CallOption) (*SetRolePermissionsResponse, error)
+	// ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
+	ListAuditLogs(ctx context.Context, in *ListAuditLogsRequest, opts ...grpc.CallOption) (*ListAuditLogsResponse, error)
 }
 
 type userServiceClient struct {
@@ -353,6 +356,16 @@ func (c *userServiceClient) SetRolePermissions(ctx context.Context, in *SetRoleP
 	return out, nil
 }
 
+func (c *userServiceClient) ListAuditLogs(ctx context.Context, in *ListAuditLogsRequest, opts ...grpc.CallOption) (*ListAuditLogsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListAuditLogsResponse)
+	err := c.cc.Invoke(ctx, UserService_ListAuditLogs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UserServiceServer is the server API for UserService service.
 // All implementations must embed UnimplementedUserServiceServer
 // for forward compatibility.
@@ -411,6 +424,8 @@ type UserServiceServer interface {
 	ListPermissions(context.Context, *ListPermissionsRequest) (*ListPermissionsResponse, error)
 	// SetRolePermissions 为角色分配权限（分配后清理相关用户权限缓存）
 	SetRolePermissions(context.Context, *SetRolePermissionsRequest) (*SetRolePermissionsResponse, error)
+	// ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）
+	ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error)
 	mustEmbedUnimplementedUserServiceServer()
 }
 
@@ -492,6 +507,9 @@ func (UnimplementedUserServiceServer) ListPermissions(context.Context, *ListPerm
 }
 func (UnimplementedUserServiceServer) SetRolePermissions(context.Context, *SetRolePermissionsRequest) (*SetRolePermissionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetRolePermissions not implemented")
+}
+func (UnimplementedUserServiceServer) ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListAuditLogs not implemented")
 }
 func (UnimplementedUserServiceServer) mustEmbedUnimplementedUserServiceServer() {}
 func (UnimplementedUserServiceServer) testEmbeddedByValue()                     {}
@@ -946,6 +964,24 @@ func _UserService_SetRolePermissions_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserService_ListAuditLogs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListAuditLogsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ListAuditLogs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ListAuditLogs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ListAuditLogs(ctx, req.(*ListAuditLogsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UserService_ServiceDesc is the grpc.ServiceDesc for UserService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1048,6 +1084,10 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetRolePermissions",
 			Handler:    _UserService_SetRolePermissions_Handler,
+		},
+		{
+			MethodName: "ListAuditLogs",
+			Handler:    _UserService_ListAuditLogs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

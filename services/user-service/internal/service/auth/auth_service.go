@@ -14,6 +14,7 @@ import (
 	"github.com/museflow/pkg/logger"
 	"github.com/museflow/user-service/internal/model"
 	"github.com/museflow/user-service/internal/repository"
+	"github.com/museflow/user-service/internal/service/audit"
 	"github.com/museflow/user-service/internal/service/dto"
 	"github.com/museflow/user-service/internal/service/rbac"
 	"github.com/museflow/user-service/internal/service/token"
@@ -39,6 +40,7 @@ type AuthService struct {
 	tokens     repository.TokenStore
 	tm         *token.TokenManager
 	rbac       *rbac.Service
+	audit      *audit.Service
 	bcryptCost int
 }
 
@@ -48,9 +50,17 @@ func NewAuthService(
 	tokens repository.TokenStore,
 	tm *token.TokenManager,
 	rbacSvc *rbac.Service,
+	auditSvc *audit.Service,
 	bcryptCost int,
 ) *AuthService {
-	return &AuthService{users: users, tokens: tokens, tm: tm, rbac: rbacSvc, bcryptCost: bcryptCost}
+	return &AuthService{
+		users:      users,
+		tokens:     tokens,
+		tm:         tm,
+		rbac:       rbacSvc,
+		audit:      auditSvc,
+		bcryptCost: bcryptCost,
+	}
 }
 
 // Register 用户注册：校验邮箱唯一性后以 bcrypt 存储密码，并授予默认角色 user。
@@ -101,6 +111,14 @@ func (s *AuthService) Register(ctx context.Context, email, password, nickname st
 		}
 	}
 
+	s.audit.Record(ctx, audit.Entry{
+		UserUUID:   u.UUID.String(),
+		Action:     model.AuditActionRegister,
+		Resource:   model.AuditResourceUser,
+		ResourceID: u.UUID.String(),
+		Detail:     map[string]string{"email": u.Email},
+	})
+
 	return u, nil
 }
 
@@ -120,6 +138,15 @@ func (s *AuthService) Login(ctx context.Context, email, password string, dev dto
 
 	// 账号锁定检查（locked_until 未过期则拒绝）
 	if u.LockedUntil != nil && u.LockedUntil.After(time.Now()) {
+		s.audit.Record(ctx, audit.Entry{
+			UserUUID:   u.UUID.String(),
+			Action:     model.AuditActionLoginFail,
+			Resource:   model.AuditResourceAuth,
+			ResourceID: u.UUID.String(),
+			IP:         dev.IP,
+			UserAgent:  dev.UserAgent,
+			Detail:     map[string]string{"reason": "account_locked"},
+		})
 		return nil, nil, ErrAccountLocked
 	}
 
@@ -129,9 +156,18 @@ func (s *AuthService) Login(ctx context.Context, email, password string, dev dto
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(*u.PasswordHash), []byte(password)); err != nil {
 		// 密码错误：累加失败计数，达到阈值锁定
-		if failErr := s.recordLoginFailure(ctx, email); failErr == nil {
-			// 仅日志，不覆盖原错误
+		if _, failErr := s.users.IncrementLoginFails(ctx, email); failErr != nil {
+			logger.WarnContext(ctx, "累加登录失败计数失败", logger.UserUUID(u.UUID.String()), logger.Err(failErr))
 		}
+		s.audit.Record(ctx, audit.Entry{
+			UserUUID:   u.UUID.String(),
+			Action:     model.AuditActionLoginFail,
+			Resource:   model.AuditResourceAuth,
+			ResourceID: u.UUID.String(),
+			IP:         dev.IP,
+			UserAgent:  dev.UserAgent,
+			Detail:     map[string]string{"reason": "bad_password"},
+		})
 		return nil, nil, ErrInvalidCredentials
 	}
 
@@ -153,13 +189,17 @@ func (s *AuthService) Login(ctx context.Context, email, password string, dev dto
 		}
 	}
 
-	return pair, u, nil
-}
+	s.audit.Record(ctx, audit.Entry{
+		UserUUID:   u.UUID.String(),
+		Action:     model.AuditActionLogin,
+		Resource:   model.AuditResourceAuth,
+		ResourceID: u.UUID.String(),
+		IP:         dev.IP,
+		UserAgent:  dev.UserAgent,
+		Detail:     map[string]string{"device_id": dev.DeviceID},
+	})
 
-// recordLoginFailure 累加登录失败计数，失败达到阈值会锁定账号。
-func (s *AuthService) recordLoginFailure(ctx context.Context, email string) error {
-	_, err := s.users.IncrementLoginFails(ctx, email)
-	return err
+	return pair, u, nil
 }
 
 // issueTokens 生成 tokenId、签发双令牌并写入 Redis 白名单与设备列表。
@@ -287,6 +327,12 @@ func (s *AuthService) Logout(ctx context.Context, accessToken, refreshTokenStr s
 		if err := s.ClearUserCache(ctx, subject); err != nil {
 			logger.WarnContext(ctx, "清理用户权限缓存失败", logger.UserUUID(subject), logger.Err(err))
 		}
+		s.audit.Record(ctx, audit.Entry{
+			UserUUID:   subject,
+			Action:     model.AuditActionLogout,
+			Resource:   model.AuditResourceAuth,
+			ResourceID: subject,
+		})
 	}
 
 	return nil
@@ -378,6 +424,14 @@ func (s *AuthService) ChangePassword(ctx context.Context, userUUID, oldPassword,
 	if err := s.ClearUserCache(ctx, userUUID); err != nil {
 		logger.WarnContext(ctx, "改密后清理权限缓存失败", logger.UserUUID(userUUID), logger.Err(err))
 	}
+
+	s.audit.Record(ctx, audit.Entry{
+		UserUUID:   userUUID,
+		Action:     model.AuditActionChangePwd,
+		Resource:   model.AuditResourceUser,
+		ResourceID: userUUID,
+	})
+
 	return nil
 }
 

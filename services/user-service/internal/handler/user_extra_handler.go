@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -221,6 +222,44 @@ func (h *UserHandler) SetRolePermissions(ctx context.Context, req *userpb.SetRol
 	return &userpb.SetRolePermissionsResponse{Success: true}, nil
 }
 
+// ListAuditLogs 审计日志列表（按用户 / 操作类型 / 时间筛选，分页）。
+func (h *UserHandler) ListAuditLogs(ctx context.Context, req *userpb.ListAuditLogsRequest) (*userpb.ListAuditLogsResponse, error) {
+	page, pageSize := normalizePage(req.GetPagination())
+	offset := (page - 1) * pageSize
+
+	// Unix 秒转时间；0 表示不限
+	var from, to *time.Time
+	if req.GetFrom() > 0 {
+		t := time.Unix(req.GetFrom(), 0)
+		from = &t
+	}
+	if req.GetTo() > 0 {
+		t := time.Unix(req.GetTo(), 0)
+		to = &t
+	}
+
+	logs, total, err := h.admin.ListAuditLogs(ctx, req.GetUserUuid(), req.GetAction(), from, to, offset, pageSize)
+	if err != nil {
+		return nil, mapError(err)
+	}
+
+	items := make([]*userpb.AuditLogItem, 0, len(logs))
+	for _, l := range logs {
+		items = append(items, &userpb.AuditLogItem{
+			Id:         l.ID,
+			UserUuid:   l.UserUUID.String(),
+			Action:     l.Action,
+			Resource:   l.Resource,
+			ResourceId: l.ResourceID,
+			Ip:         derefString(l.IP),
+			UserAgent:  l.UserAgent,
+			Detail:     l.Detail,
+			CreatedAt:  l.CreatedAt.Unix(),
+		})
+	}
+	return &userpb.ListAuditLogsResponse{Logs: items, Total: total}, nil
+}
+
 // ==================== 辅助函数 ====================
 
 // mapAdminError 将 RBAC / 管理后台业务错误映射为 gRPC status。
@@ -236,6 +275,13 @@ func mapAdminError(err error) error {
 	default:
 		return status.Error(codes.FailedPrecondition, err.Error())
 	}
+}
+
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 func normalizePage(p *userpb.Pagination) (int, int) {
