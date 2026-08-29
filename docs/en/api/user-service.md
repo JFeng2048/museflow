@@ -6,17 +6,17 @@ The core user & authentication service (gRPC, `:5002`). Account management, dual
 
 - **Account lifecycle**: register, profile update, user/role admin queries.
 - **Dual-token auth**: login issues access (short-lived) + refresh (long-lived, HttpOnly Cookie); refresh, logout, per-device revocation.
-- **Email codes**: three scenes — register verification, catch-up verify, passwordless login — isolated per scene with resend cooldown.
+- **Email codes**: four scenes — register verification, passwordless login, password reset, change email — isolated per scene with resend cooldown.
 - **2FA**: enable/verify/disable TOTP, plus one-time recovery codes; returns `mfa_ticket` when enabled at login.
 - **Password & permissions**: change password, password reset (email code), RBAC roles & permissions (Redis-cached).
-- **Audit**: key operations (register, login, change password, email verify, 2FA changes, etc.) persisted to audit log.
+- **Audit**: key operations (register, login, change password, email verify, change email, 2FA changes, etc.) persisted to audit log.
 
 ## Interface (gRPC methods)
 
 Full contract in `proto/user/user.proto`. Main methods:
 
 - Auth: `Register` / `Login` / `RefreshToken` / `Logout` / `ChangePassword`
-- Email: `SendVerifyCode` / `VerifyEmail` / `LoginWithCode`
+- Email: `SendVerifyCode` / `LoginWithCode` / `ChangeEmail` (change email, requires login)
 - 2FA: `EnableMFA` / `VerifyMFA` / `DisableMFA` / `GenerateRecoveryCodes` / `RegenerateRecoveryCodes`
 - Sessions: `ListSessions` / `RevokeSession`
 - Admin: `ListUsers` / `GetUser` / `AssignRole` / `ListRoles`

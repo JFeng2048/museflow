@@ -33,7 +33,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "审计日志列表",
                 "parameters": [
@@ -113,7 +113,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "权限列表",
                 "parameters": [
@@ -163,7 +163,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "角色列表",
                 "responses": {
@@ -206,7 +206,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "创建角色",
                 "parameters": [
@@ -269,7 +269,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "编辑角色",
                 "parameters": [
@@ -322,7 +322,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "删除角色",
                 "parameters": [
@@ -371,7 +371,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "为角色分配权限",
                 "parameters": [
@@ -426,7 +426,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "用户列表",
                 "parameters": [
@@ -513,7 +513,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "用户详情",
                 "parameters": [
@@ -580,7 +580,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "分配用户角色",
                 "parameters": [
@@ -638,7 +638,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "管理后台"
+                    "admin-管理后台"
                 ],
                 "summary": "修改用户状态",
                 "parameters": [
@@ -681,92 +681,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/email/send-code": {
-            "post": {
-                "description": "按场景发送邮箱验证码：register（注册校验）/ verify（补验证邮箱）/ login（验证码登录）；避免账号枚举，邮箱不存在时也返回成功",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "认证"
-                ],
-                "summary": "发送邮箱验证码",
-                "parameters": [
-                    {
-                        "description": "邮箱与场景",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "发送成功",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "参数校验失败",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    },
-                    "429": {
-                        "description": "发送过于频繁",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/email/verify": {
-            "post": {
-                "description": "校验 verify 场景的邮箱验证码并标记邮箱已验证（兼容历史未验证账号）",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "认证"
-                ],
-                "summary": "校验邮箱验证码",
-                "parameters": [
-                    {
-                        "description": "邮箱与验证码",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyEmailRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "验证成功",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "验证码错误",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/auth/login": {
             "post": {
                 "description": "邮箱密码登录，成功后返回 access token（body）并将 refresh token 写入 HttpOnly Cookie",
@@ -777,7 +691,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "auth-认证"
                 ],
                 "summary": "用户登录",
                 "parameters": [
@@ -841,7 +755,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "auth-认证"
                 ],
                 "summary": "邮箱验证码登录",
                 "parameters": [
@@ -901,7 +815,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "auth-认证"
                 ],
                 "summary": "用户登出",
                 "responses": {
@@ -935,7 +849,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "双因素认证"
+                    "auth-双因素认证"
                 ],
                 "summary": "关闭 2FA",
                 "parameters": [
@@ -986,7 +900,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "双因素认证"
+                    "auth-双因素认证"
                 ],
                 "summary": "重新生成恢复码",
                 "parameters": [
@@ -1049,7 +963,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "双因素认证"
+                    "auth-双因素认证"
                 ],
                 "summary": "生成 2FA 密钥",
                 "responses": {
@@ -1092,7 +1006,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "双因素认证"
+                    "auth-双因素认证"
                 ],
                 "summary": "查询 2FA 状态",
                 "responses": {
@@ -1138,7 +1052,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "双因素认证"
+                    "auth-双因素认证"
                 ],
                 "summary": "启用 2FA",
                 "parameters": [
@@ -1196,7 +1110,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "auth-认证"
                 ],
                 "summary": "2FA 登录二次验证",
                 "parameters": [
@@ -1254,7 +1168,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "auth-认证"
                 ],
                 "summary": "通过邮箱验证码重置密码",
                 "parameters": [
@@ -1290,96 +1204,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/password/reset-code": {
-            "post": {
-                "description": "向邮箱发送 6 位数字验证码；为避免账号枚举，邮箱不存在时也返回成功",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "认证"
-                ],
-                "summary": "发送密码重置验证码",
-                "parameters": [
-                    {
-                        "description": "邮箱",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendResetCodeRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "发送成功",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "参数校验失败",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    },
-                    "429": {
-                        "description": "发送过于频繁",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/refresh": {
-            "post": {
-                "description": "从 Cookie 读取 refresh token 换取新的 access token，refresh token 本身不轮换",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "认证"
-                ],
-                "summary": "刷新访问令牌",
-                "responses": {
-                    "200": {
-                        "description": "刷新成功",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/errcode.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RefreshData"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "401": {
-                        "description": "刷新令牌无效或已过期",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    },
-                    "403": {
-                        "description": "设备校验失败",
-                        "schema": {
-                            "$ref": "#/definitions/errcode.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/auth/register": {
             "post": {
                 "description": "使用邮箱和密码注册新用户，密码以 bcrypt 加密存储",
@@ -1390,7 +1214,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "认证"
+                    "auth-认证"
                 ],
                 "summary": "用户注册",
                 "parameters": [
@@ -1444,6 +1268,147 @@ const docTemplate = `{
                 }
             }
         },
+        "/common/email/send-code": {
+            "post": {
+                "description": "按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "common-公共"
+                ],
+                "summary": "发送邮箱验证码",
+                "parameters": [
+                    {
+                        "description": "邮箱与场景",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "发送成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "参数校验失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "发送过于频繁",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/common/refresh": {
+            "post": {
+                "description": "从 Cookie 读取 refresh token 换取新的 access token，刷新后旧 refresh 轮转",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "common-公共"
+                ],
+                "summary": "刷新访问令牌",
+                "responses": {
+                    "200": {
+                        "description": "刷新成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RefreshData"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "刷新令牌无效或已过期",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "设备校验失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/email/change": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "校验新邮箱的 change_email 场景验证码后，将当前账号邮箱改为新邮箱并标记为已验证；需登录后调用",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user-用户"
+                ],
+                "summary": "修改邮箱",
+                "parameters": [
+                    {
+                        "description": "新邮箱与验证码",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.ChangeEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "修改成功",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "验证码错误或新邮箱已被占用",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/user/oauth": {
             "get": {
                 "security": [
@@ -1455,7 +1420,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户"
+                    "user-用户"
                 ],
                 "summary": "第三方账号绑定列表",
                 "responses": {
@@ -1497,7 +1462,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户"
+                    "user-用户"
                 ],
                 "summary": "解绑第三方账号",
                 "parameters": [
@@ -1546,7 +1511,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户"
+                    "user-用户"
                 ],
                 "summary": "修改当前用户密码",
                 "parameters": [
@@ -1594,7 +1559,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户"
+                    "user-用户"
                 ],
                 "summary": "获取当前用户权限",
                 "responses": {
@@ -1637,7 +1602,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户"
+                    "user-用户"
                 ],
                 "summary": "获取当前用户信息",
                 "responses": {
@@ -1687,7 +1652,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户"
+                    "user-用户"
                 ],
                 "summary": "更新当前用户信息",
                 "parameters": [
@@ -1747,7 +1712,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户"
+                    "user-用户"
                 ],
                 "summary": "获取当前用户会话列表",
                 "responses": {
@@ -1790,7 +1755,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "用户"
+                    "user-用户"
                 ],
                 "summary": "强制下线指定会话",
                 "parameters": [
@@ -2132,6 +2097,23 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_museflow_api-gateway_internal_dto_auth_dto.ChangeEmailRequest": {
+            "type": "object",
+            "required": [
+                "code",
+                "new_email"
+            ],
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "824913"
+                },
+                "new_email": {
+                    "type": "string",
+                    "example": "new@museflow.ai"
+                }
+            }
+        },
         "github_com_museflow_api-gateway_internal_dto_auth_dto.DisableMFARequest": {
             "type": "object",
             "required": [
@@ -2341,18 +2323,6 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_museflow_api-gateway_internal_dto_auth_dto.SendResetCodeRequest": {
-            "type": "object",
-            "required": [
-                "email"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "author@museflow.ai"
-                }
-            }
-        },
         "github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest": {
             "type": "object",
             "required": [
@@ -2368,27 +2338,11 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "register",
-                        "verify",
-                        "login"
+                        "login",
+                        "reset_password",
+                        "change_email"
                     ],
                     "example": "register"
-                }
-            }
-        },
-        "github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyEmailRequest": {
-            "type": "object",
-            "required": [
-                "code",
-                "email"
-            ],
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "example": "824913"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "author@museflow.ai"
                 }
             }
         },

@@ -220,6 +220,18 @@ definitions:
           $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_admin_dto.AdminUserItem'
         type: array
     type: object
+  github_com_museflow_api-gateway_internal_dto_auth_dto.ChangeEmailRequest:
+    properties:
+      code:
+        example: "824913"
+        type: string
+      new_email:
+        example: new@museflow.ai
+        type: string
+    required:
+    - code
+    - new_email
+    type: object
   github_com_museflow_api-gateway_internal_dto_auth_dto.DisableMFARequest:
     properties:
       code:
@@ -371,14 +383,6 @@ definitions:
     - email
     - new_password
     type: object
-  github_com_museflow_api-gateway_internal_dto_auth_dto.SendResetCodeRequest:
-    properties:
-      email:
-        example: author@museflow.ai
-        type: string
-    required:
-    - email
-    type: object
   github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest:
     properties:
       email:
@@ -387,25 +391,14 @@ definitions:
       scene:
         enum:
         - register
-        - verify
         - login
+        - reset_password
+        - change_email
         example: register
         type: string
     required:
     - email
     - scene
-    type: object
-  github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyEmailRequest:
-    properties:
-      code:
-        example: "824913"
-        type: string
-      email:
-        example: author@museflow.ai
-        type: string
-    required:
-    - code
-    - email
     type: object
   github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyMFALoginRequest:
     properties:
@@ -626,7 +619,7 @@ paths:
       - BearerAuth: []
       summary: 审计日志列表
       tags:
-      - 管理后台
+      - admin-管理后台
   /admin/permissions:
     get:
       parameters:
@@ -654,7 +647,7 @@ paths:
       - BearerAuth: []
       summary: 权限列表
       tags:
-      - 管理后台
+      - admin-管理后台
   /admin/roles:
     get:
       produces:
@@ -677,7 +670,7 @@ paths:
       - BearerAuth: []
       summary: 角色列表
       tags:
-      - 管理后台
+      - admin-管理后台
     post:
       consumes:
       - application/json
@@ -712,7 +705,7 @@ paths:
       - BearerAuth: []
       summary: 创建角色
       tags:
-      - 管理后台
+      - admin-管理后台
   /admin/roles/{id}:
     delete:
       description: 系统内置角色不可删除；删除后清理相关用户的权限缓存
@@ -741,7 +734,7 @@ paths:
       - BearerAuth: []
       summary: 删除角色
       tags:
-      - 管理后台
+      - admin-管理后台
     put:
       consumes:
       - application/json
@@ -777,7 +770,7 @@ paths:
       - BearerAuth: []
       summary: 编辑角色
       tags:
-      - 管理后台
+      - admin-管理后台
   /admin/roles/{id}/permissions:
     put:
       consumes:
@@ -814,7 +807,7 @@ paths:
       - BearerAuth: []
       summary: 为角色分配权限
       tags:
-      - 管理后台
+      - admin-管理后台
   /admin/users:
     get:
       description: 分页查询用户，支持关键字（邮箱 / 昵称）与状态筛选、排序
@@ -867,7 +860,7 @@ paths:
       - BearerAuth: []
       summary: 用户列表
       tags:
-      - 管理后台
+      - admin-管理后台
   /admin/users/{uuid}:
     get:
       description: 查看用户资料、角色与最终权限列表
@@ -905,7 +898,7 @@ paths:
       - BearerAuth: []
       summary: 用户详情
       tags:
-      - 管理后台
+      - admin-管理后台
   /admin/users/{uuid}/role:
     put:
       consumes:
@@ -942,7 +935,7 @@ paths:
       - BearerAuth: []
       summary: 分配用户角色
       tags:
-      - 管理后台
+      - admin-管理后台
   /admin/users/{uuid}/status:
     put:
       consumes:
@@ -979,63 +972,7 @@ paths:
       - BearerAuth: []
       summary: 修改用户状态
       tags:
-      - 管理后台
-  /auth/email/send-code:
-    post:
-      consumes:
-      - application/json
-      description: 按场景发送邮箱验证码：register（注册校验）/ verify（补验证邮箱）/ login（验证码登录）；避免账号枚举，邮箱不存在时也返回成功
-      parameters:
-      - description: 邮箱与场景
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 发送成功
-          schema:
-            $ref: '#/definitions/errcode.Response'
-        "400":
-          description: 参数校验失败
-          schema:
-            $ref: '#/definitions/errcode.Response'
-        "429":
-          description: 发送过于频繁
-          schema:
-            $ref: '#/definitions/errcode.Response'
-      summary: 发送邮箱验证码
-      tags:
-      - 认证
-  /auth/email/verify:
-    post:
-      consumes:
-      - application/json
-      description: 校验 verify 场景的邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
-      parameters:
-      - description: 邮箱与验证码
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.VerifyEmailRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 验证成功
-          schema:
-            $ref: '#/definitions/errcode.Response'
-        "400":
-          description: 验证码错误
-          schema:
-            $ref: '#/definitions/errcode.Response'
-      summary: 校验邮箱验证码
-      tags:
-      - 认证
+      - admin-管理后台
   /auth/login:
     post:
       consumes:
@@ -1074,7 +1011,7 @@ paths:
             $ref: '#/definitions/errcode.Response'
       summary: 用户登录
       tags:
-      - 认证
+      - auth-认证
   /auth/login/code:
     post:
       consumes:
@@ -1109,7 +1046,7 @@ paths:
             $ref: '#/definitions/errcode.Response'
       summary: 邮箱验证码登录
       tags:
-      - 认证
+      - auth-认证
   /auth/logout:
     post:
       description: 删除 Redis 中的 refresh token 白名单、将当前 access token 加入黑名单，并清除 Cookie
@@ -1128,7 +1065,7 @@ paths:
       - BearerAuth: []
       summary: 用户登出
       tags:
-      - 认证
+      - auth-认证
   /auth/mfa/disable:
     post:
       consumes:
@@ -1160,7 +1097,7 @@ paths:
       - BearerAuth: []
       summary: 关闭 2FA
       tags:
-      - 双因素认证
+      - auth-双因素认证
   /auth/mfa/recovery-codes:
     post:
       consumes:
@@ -1197,7 +1134,7 @@ paths:
       - BearerAuth: []
       summary: 重新生成恢复码
       tags:
-      - 双因素认证
+      - auth-双因素认证
   /auth/mfa/setup:
     post:
       consumes:
@@ -1223,7 +1160,7 @@ paths:
       - BearerAuth: []
       summary: 生成 2FA 密钥
       tags:
-      - 双因素认证
+      - auth-双因素认证
   /auth/mfa/status:
     get:
       description: 返回是否已启用 2FA 及剩余恢复码数量；需登录后调用
@@ -1247,7 +1184,7 @@ paths:
       - BearerAuth: []
       summary: 查询 2FA 状态
       tags:
-      - 双因素认证
+      - auth-双因素认证
   /auth/mfa/verify:
     post:
       consumes:
@@ -1284,7 +1221,7 @@ paths:
       - BearerAuth: []
       summary: 启用 2FA
       tags:
-      - 双因素认证
+      - auth-双因素认证
   /auth/mfa/verify-login:
     post:
       consumes:
@@ -1319,7 +1256,7 @@ paths:
             $ref: '#/definitions/errcode.Response'
       summary: 2FA 登录二次验证
       tags:
-      - 认证
+      - auth-认证
   /auth/password/reset:
     post:
       consumes:
@@ -1349,63 +1286,7 @@ paths:
             $ref: '#/definitions/errcode.Response'
       summary: 通过邮箱验证码重置密码
       tags:
-      - 认证
-  /auth/password/reset-code:
-    post:
-      consumes:
-      - application/json
-      description: 向邮箱发送 6 位数字验证码；为避免账号枚举，邮箱不存在时也返回成功
-      parameters:
-      - description: 邮箱
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendResetCodeRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 发送成功
-          schema:
-            $ref: '#/definitions/errcode.Response'
-        "400":
-          description: 参数校验失败
-          schema:
-            $ref: '#/definitions/errcode.Response'
-        "429":
-          description: 发送过于频繁
-          schema:
-            $ref: '#/definitions/errcode.Response'
-      summary: 发送密码重置验证码
-      tags:
-      - 认证
-  /auth/refresh:
-    post:
-      description: 从 Cookie 读取 refresh token 换取新的 access token，refresh token 本身不轮换
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 刷新成功
-          schema:
-            allOf:
-            - $ref: '#/definitions/errcode.Response'
-            - properties:
-                data:
-                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RefreshData'
-              type: object
-        "401":
-          description: 刷新令牌无效或已过期
-          schema:
-            $ref: '#/definitions/errcode.Response'
-        "403":
-          description: 设备校验失败
-          schema:
-            $ref: '#/definitions/errcode.Response'
-      summary: 刷新访问令牌
-      tags:
-      - 认证
+      - auth-认证
   /auth/register:
     post:
       consumes:
@@ -1444,7 +1325,96 @@ paths:
             $ref: '#/definitions/errcode.Response'
       summary: 用户注册
       tags:
-      - 认证
+      - auth-认证
+  /common/email/send-code:
+    post:
+      consumes:
+      - application/json
+      description: 按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/
+        change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功
+      parameters:
+      - description: 邮箱与场景
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.SendVerifyCodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 发送成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 参数校验失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "429":
+          description: 发送过于频繁
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 发送邮箱验证码
+      tags:
+      - common-公共
+  /common/refresh:
+    post:
+      description: 从 Cookie 读取 refresh token 换取新的 access token，刷新后旧 refresh 轮转
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 刷新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.RefreshData'
+              type: object
+        "401":
+          description: 刷新令牌无效或已过期
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 设备校验失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 刷新访问令牌
+      tags:
+      - common-公共
+  /user/email/change:
+    post:
+      consumes:
+      - application/json
+      description: 校验新邮箱的 change_email 场景验证码后，将当前账号邮箱改为新邮箱并标记为已验证；需登录后调用
+      parameters:
+      - description: 新邮箱与验证码
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_auth_dto.ChangeEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 修改成功
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "400":
+          description: 验证码错误或新邮箱已被占用
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 修改邮箱
+      tags:
+      - user-用户
   /user/oauth:
     get:
       produces:
@@ -1467,7 +1437,7 @@ paths:
       - BearerAuth: []
       summary: 第三方账号绑定列表
       tags:
-      - 用户
+      - user-用户
   /user/oauth/{provider}:
     delete:
       parameters:
@@ -1495,7 +1465,7 @@ paths:
       - BearerAuth: []
       summary: 解绑第三方账号
       tags:
-      - 用户
+      - user-用户
   /user/password:
     put:
       consumes:
@@ -1527,7 +1497,7 @@ paths:
       - BearerAuth: []
       summary: 修改当前用户密码
       tags:
-      - 用户
+      - user-用户
   /user/permissions:
     get:
       description: 返回当前用户拥有的全部权限编码，供前端做菜单与按钮级控制
@@ -1551,7 +1521,7 @@ paths:
       - BearerAuth: []
       summary: 获取当前用户权限
       tags:
-      - 用户
+      - user-用户
   /user/profile:
     get:
       description: 根据 access token 中的用户标识返回当前登录用户的详细信息
@@ -1579,7 +1549,7 @@ paths:
       - BearerAuth: []
       summary: 获取当前用户信息
       tags:
-      - 用户
+      - user-用户
     put:
       consumes:
       - application/json
@@ -1615,7 +1585,7 @@ paths:
       - BearerAuth: []
       summary: 更新当前用户信息
       tags:
-      - 用户
+      - user-用户
   /user/sessions:
     get:
       description: 返回当前账号的登录设备与登录时间，可据此强制下线指定设备
@@ -1639,7 +1609,7 @@ paths:
       - BearerAuth: []
       summary: 获取当前用户会话列表
       tags:
-      - 用户
+      - user-用户
   /user/sessions/{token}:
     delete:
       description: 吊销指定设备的刷新令牌，使其 access token 到期后无法续期
@@ -1664,7 +1634,7 @@ paths:
       - BearerAuth: []
       summary: 强制下线指定会话
       tags:
-      - 用户
+      - user-用户
 schemes:
 - http
 - https

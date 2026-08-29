@@ -43,17 +43,16 @@ proto/user/                与 user-service 共享的契约
 | --- | --- | --- | --- |
 | POST | `/auth/register` | 注册（需邮箱验证码） | 否 |
 | POST | `/auth/login` | 密码登录（可能触发 2FA） | 否 |
-| POST | `/auth/refresh` | 用 refresh Cookie 换新 access | 否 |
 | POST | `/auth/logout` | 登出并吊销令牌 | 否 |
-| POST | `/auth/change-password` | 改密 | 是 |
 | POST | `/auth/mfa/*` | 2FA 启用/校验/恢复码 | 是 |
-| POST | `/auth/password/reset-code` | 发送重置验证码 | 否 |
-| POST | `/auth/password/reset` | 验证码重置密码 | 否 |
-| POST | `/auth/email/send-code` | 发送邮箱验证码（register/verify/login） | 否 |
-| POST | `/auth/email/verify` | 校验邮箱（补验证） | 否 |
+| POST | `/auth/password/reset` | 验证码重置密码（码经 `/common/email/send-code` scene=reset_password 获取） | 否 |
+| POST | `/auth/email/send-code` | 发送邮箱验证码（register/login/reset_password/change_email） | 否 |
 | POST | `/auth/login/code` | 邮箱验证码免密登录 | 否 |
 | GET | `/auth/sessions` | 会话列表 | 是 |
 | DELETE | `/auth/sessions/:id` | 吊销会话 | 是 |
+| POST | `/common/email/send-code` | 公开发送邮箱验证码（同 `/auth/email/send-code`） | 否 |
+| POST | `/common/refresh` | 用 refresh Cookie 换新 access | 否 |
+| POST | `/user/email/change` | 修改邮箱（需登录，先取 change_email 码） | 是 |
 | GET | `/user/profile` | 当前用户资料 | 是 |
 
 完整字段与示例见 Swagger（`/swagger/index.html`）。

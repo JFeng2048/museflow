@@ -43,17 +43,16 @@ proto/user/                Contract shared with user-service
 | --- | --- | --- | --- |
 | POST | `/auth/register` | Register (requires email code) | No |
 | POST | `/auth/login` | Password login (may trigger 2FA) | No |
-| POST | `/auth/refresh` | Refresh access via refresh Cookie | No |
 | POST | `/auth/logout` | Logout and revoke tokens | No |
-| POST | `/auth/change-password` | Change password | Yes |
 | POST | `/auth/mfa/*` | 2FA enable/verify/recovery | Yes |
-| POST | `/auth/password/reset-code` | Send reset code | No |
-| POST | `/auth/password/reset` | Reset password with code | No |
-| POST | `/auth/email/send-code` | Send email code (register/verify/login) | No |
-| POST | `/auth/email/verify` | Verify email (catch-up) | No |
+| POST | `/auth/password/reset` | Reset password with code (code via `/common/email/send-code` scene=reset_password) | No |
+| POST | `/auth/email/send-code` | Send email code (register/login/reset_password/change_email) | No |
 | POST | `/auth/login/code` | Passwordless email-code login | No |
 | GET | `/auth/sessions` | List sessions | Yes |
 | DELETE | `/auth/sessions/:id` | Revoke a session | Yes |
+| POST | `/common/email/send-code` | Public email-code endpoint (same as `/auth/email/send-code`) | No |
+| POST | `/common/refresh` | Refresh access via refresh Cookie | No |
+| POST | `/user/email/change` | Change email (login required, get change_email code first) | Yes |
 | GET | `/user/profile` | Current user profile | Yes |
 
 Full fields and examples are in Swagger (`/swagger/index.html`).
