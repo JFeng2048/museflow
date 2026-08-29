@@ -19,11 +19,8 @@ service UserService {
 
   // ---- 邮箱验证与验证码登录 ----
 
-  // SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 补验证邮箱）
+  // SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 密码重置 / 修改邮箱）
   rpc SendVerifyCode(SendVerifyCodeRequest) returns (SendVerifyCodeResponse);
-
-  // VerifyEmail 校验邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
-  rpc VerifyEmail(VerifyEmailRequest) returns (VerifyEmailResponse);
 
   // LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
   rpc LoginWithCode(LoginWithCodeRequest) returns (LoginResponse);
@@ -48,11 +45,11 @@ service UserService {
   // ChangePassword 修改密码（需验证旧密码，成功后清理权限缓存）
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
 
-  // SendResetCode 发送密码重置验证码到邮箱（邮箱不存在时静默成功，避免账号枚举）
-  rpc SendResetCode(SendResetCodeRequest) returns (SendResetCodeResponse);
-
   // ResetPassword 校验验证码并重置密码（验证码一次性使用）
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
+
+  // ChangeEmail 校验新邮箱验证码并将账号邮箱改为新邮箱（需登录，走 change_email 场景验证码）
+  rpc ChangeEmail(ChangeEmailRequest) returns (ChangeEmailResponse);
 
   // GetUserByUUID 根据 UUID 查询用户（供其他服务调用）
   rpc GetUserByUUID(GetUserByUUIDRequest) returns (GetUserByUUIDResponse);
@@ -203,21 +200,13 @@ message LoginResponse {
 }
 
 // SendVerifyCodeRequest 发送邮箱验证码请求。
-// scene 取值：register（注册校验）/ login（验证码登录）/ verify（补验证邮箱）。
+// scene 取值：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）。
 message SendVerifyCodeRequest {
   string email = 1;                // 邮箱，必填
   string scene = 2;                // 用途场景，必填
 }
 
 message SendVerifyCodeResponse {}
-
-// VerifyEmailRequest 校验邮箱验证码并标记已验证请求。
-message VerifyEmailRequest {
-  string email = 1;                // 邮箱，必填
-  string code = 2;                 // 验证码，必填
-}
-
-message VerifyEmailResponse {}
 
 // LoginWithCodeRequest 邮箱验证码登录请求。
 message LoginWithCodeRequest {
@@ -287,14 +276,6 @@ message ChangePasswordResponse {
 
 // ---- 密码重置（邮箱验证码）----
 
-message SendResetCodeRequest {
-  string email = 1;                // 接收验证码的邮箱
-}
-
-message SendResetCodeResponse {
-  bool success = 1;
-}
-
 message ResetPasswordRequest {
   string email = 1;
   string code = 2;                 // 邮箱收到的验证码
@@ -302,6 +283,18 @@ message ResetPasswordRequest {
 }
 
 message ResetPasswordResponse {
+  bool success = 1;
+}
+
+// ---- 修改邮箱（需登录，邮箱验证码）----
+
+message ChangeEmailRequest {
+  string uuid = 1;                 // 用户 uuid（网关从 token 解析）
+  string new_email = 2;            // 新邮箱，必填
+  string code = 3;                 // 新邮箱收到的 change_email 场景验证码
+}
+
+message ChangeEmailResponse {
   bool success = 1;
 }
 

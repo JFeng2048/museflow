@@ -22,7 +22,6 @@ const (
 	UserService_Register_FullMethodName                = "/user.UserService/Register"
 	UserService_Login_FullMethodName                   = "/user.UserService/Login"
 	UserService_SendVerifyCode_FullMethodName          = "/user.UserService/SendVerifyCode"
-	UserService_VerifyEmail_FullMethodName             = "/user.UserService/VerifyEmail"
 	UserService_LoginWithCode_FullMethodName           = "/user.UserService/LoginWithCode"
 	UserService_Refresh_FullMethodName                 = "/user.UserService/Refresh"
 	UserService_Logout_FullMethodName                  = "/user.UserService/Logout"
@@ -30,8 +29,8 @@ const (
 	UserService_ValidateToken_FullMethodName           = "/user.UserService/ValidateToken"
 	UserService_UpdateProfile_FullMethodName           = "/user.UserService/UpdateProfile"
 	UserService_ChangePassword_FullMethodName          = "/user.UserService/ChangePassword"
-	UserService_SendResetCode_FullMethodName           = "/user.UserService/SendResetCode"
 	UserService_ResetPassword_FullMethodName           = "/user.UserService/ResetPassword"
+	UserService_ChangeEmail_FullMethodName             = "/user.UserService/ChangeEmail"
 	UserService_GetUserByUUID_FullMethodName           = "/user.UserService/GetUserByUUID"
 	UserService_GetUserPermissions_FullMethodName      = "/user.UserService/GetUserPermissions"
 	UserService_CheckPermission_FullMethodName         = "/user.UserService/CheckPermission"
@@ -75,10 +74,8 @@ type UserServiceClient interface {
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 	// Login 用户登录，签发 access + refresh 双令牌
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
-	// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 补验证邮箱）
+	// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 密码重置 / 修改邮箱）
 	SendVerifyCode(ctx context.Context, in *SendVerifyCodeRequest, opts ...grpc.CallOption) (*SendVerifyCodeResponse, error)
-	// VerifyEmail 校验邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
-	VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error)
 	// LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
 	LoginWithCode(ctx context.Context, in *LoginWithCodeRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	// Refresh 使用 refresh token 换取新的 access token（refresh 不轮换）
@@ -93,10 +90,10 @@ type UserServiceClient interface {
 	UpdateProfile(ctx context.Context, in *UpdateProfileRequest, opts ...grpc.CallOption) (*UpdateProfileResponse, error)
 	// ChangePassword 修改密码（需验证旧密码，成功后清理权限缓存）
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
-	// SendResetCode 发送密码重置验证码到邮箱（邮箱不存在时静默成功，避免账号枚举）
-	SendResetCode(ctx context.Context, in *SendResetCodeRequest, opts ...grpc.CallOption) (*SendResetCodeResponse, error)
 	// ResetPassword 校验验证码并重置密码（验证码一次性使用）
 	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
+	// ChangeEmail 校验新邮箱验证码并将账号邮箱改为新邮箱（需登录，走 change_email 场景验证码）
+	ChangeEmail(ctx context.Context, in *ChangeEmailRequest, opts ...grpc.CallOption) (*ChangeEmailResponse, error)
 	// GetUserByUUID 根据 UUID 查询用户（供其他服务调用）
 	GetUserByUUID(ctx context.Context, in *GetUserByUUIDRequest, opts ...grpc.CallOption) (*GetUserByUUIDResponse, error)
 	// GetUserPermissions 获取用户权限编码列表（缓存优先，未命中查库后回填）
@@ -191,16 +188,6 @@ func (c *userServiceClient) SendVerifyCode(ctx context.Context, in *SendVerifyCo
 	return out, nil
 }
 
-func (c *userServiceClient) VerifyEmail(ctx context.Context, in *VerifyEmailRequest, opts ...grpc.CallOption) (*VerifyEmailResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(VerifyEmailResponse)
-	err := c.cc.Invoke(ctx, UserService_VerifyEmail_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *userServiceClient) LoginWithCode(ctx context.Context, in *LoginWithCodeRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LoginResponse)
@@ -271,20 +258,20 @@ func (c *userServiceClient) ChangePassword(ctx context.Context, in *ChangePasswo
 	return out, nil
 }
 
-func (c *userServiceClient) SendResetCode(ctx context.Context, in *SendResetCodeRequest, opts ...grpc.CallOption) (*SendResetCodeResponse, error) {
+func (c *userServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendResetCodeResponse)
-	err := c.cc.Invoke(ctx, UserService_SendResetCode_FullMethodName, in, out, cOpts...)
+	out := new(ResetPasswordResponse)
+	err := c.cc.Invoke(ctx, UserService_ResetPassword_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *userServiceClient) ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error) {
+func (c *userServiceClient) ChangeEmail(ctx context.Context, in *ChangeEmailRequest, opts ...grpc.CallOption) (*ChangeEmailResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ResetPasswordResponse)
-	err := c.cc.Invoke(ctx, UserService_ResetPassword_FullMethodName, in, out, cOpts...)
+	out := new(ChangeEmailResponse)
+	err := c.cc.Invoke(ctx, UserService_ChangeEmail_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -575,10 +562,8 @@ type UserServiceServer interface {
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	// Login 用户登录，签发 access + refresh 双令牌
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
-	// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 补验证邮箱）
+	// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 密码重置 / 修改邮箱）
 	SendVerifyCode(context.Context, *SendVerifyCodeRequest) (*SendVerifyCodeResponse, error)
-	// VerifyEmail 校验邮箱验证码并标记邮箱已验证（兼容历史未验证账号）
-	VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error)
 	// LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
 	LoginWithCode(context.Context, *LoginWithCodeRequest) (*LoginResponse, error)
 	// Refresh 使用 refresh token 换取新的 access token（refresh 不轮换）
@@ -593,10 +578,10 @@ type UserServiceServer interface {
 	UpdateProfile(context.Context, *UpdateProfileRequest) (*UpdateProfileResponse, error)
 	// ChangePassword 修改密码（需验证旧密码，成功后清理权限缓存）
 	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
-	// SendResetCode 发送密码重置验证码到邮箱（邮箱不存在时静默成功，避免账号枚举）
-	SendResetCode(context.Context, *SendResetCodeRequest) (*SendResetCodeResponse, error)
 	// ResetPassword 校验验证码并重置密码（验证码一次性使用）
 	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
+	// ChangeEmail 校验新邮箱验证码并将账号邮箱改为新邮箱（需登录，走 change_email 场景验证码）
+	ChangeEmail(context.Context, *ChangeEmailRequest) (*ChangeEmailResponse, error)
 	// GetUserByUUID 根据 UUID 查询用户（供其他服务调用）
 	GetUserByUUID(context.Context, *GetUserByUUIDRequest) (*GetUserByUUIDResponse, error)
 	// GetUserPermissions 获取用户权限编码列表（缓存优先，未命中查库后回填）
@@ -670,9 +655,6 @@ func (UnimplementedUserServiceServer) Login(context.Context, *LoginRequest) (*Lo
 func (UnimplementedUserServiceServer) SendVerifyCode(context.Context, *SendVerifyCodeRequest) (*SendVerifyCodeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendVerifyCode not implemented")
 }
-func (UnimplementedUserServiceServer) VerifyEmail(context.Context, *VerifyEmailRequest) (*VerifyEmailResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method VerifyEmail not implemented")
-}
 func (UnimplementedUserServiceServer) LoginWithCode(context.Context, *LoginWithCodeRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LoginWithCode not implemented")
 }
@@ -694,11 +676,11 @@ func (UnimplementedUserServiceServer) UpdateProfile(context.Context, *UpdateProf
 func (UnimplementedUserServiceServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChangePassword not implemented")
 }
-func (UnimplementedUserServiceServer) SendResetCode(context.Context, *SendResetCodeRequest) (*SendResetCodeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SendResetCode not implemented")
-}
 func (UnimplementedUserServiceServer) ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResetPassword not implemented")
+}
+func (UnimplementedUserServiceServer) ChangeEmail(context.Context, *ChangeEmailRequest) (*ChangeEmailResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChangeEmail not implemented")
 }
 func (UnimplementedUserServiceServer) GetUserByUUID(context.Context, *GetUserByUUIDRequest) (*GetUserByUUIDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserByUUID not implemented")
@@ -856,24 +838,6 @@ func _UserService_SendVerifyCode_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_VerifyEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(VerifyEmailRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServiceServer).VerifyEmail(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserService_VerifyEmail_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).VerifyEmail(ctx, req.(*VerifyEmailRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _UserService_LoginWithCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LoginWithCodeRequest)
 	if err := dec(in); err != nil {
@@ -1000,24 +964,6 @@ func _UserService_ChangePassword_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _UserService_SendResetCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendResetCodeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(UserServiceServer).SendResetCode(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: UserService_SendResetCode_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UserServiceServer).SendResetCode(ctx, req.(*SendResetCodeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _UserService_ResetPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResetPasswordRequest)
 	if err := dec(in); err != nil {
@@ -1032,6 +978,24 @@ func _UserService_ResetPassword_Handler(srv interface{}, ctx context.Context, de
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UserServiceServer).ResetPassword(ctx, req.(*ResetPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserService_ChangeEmail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangeEmailRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserServiceServer).ChangeEmail(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserService_ChangeEmail_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserServiceServer).ChangeEmail(ctx, req.(*ChangeEmailRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1542,10 +1506,6 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_SendVerifyCode_Handler,
 		},
 		{
-			MethodName: "VerifyEmail",
-			Handler:    _UserService_VerifyEmail_Handler,
-		},
-		{
 			MethodName: "LoginWithCode",
 			Handler:    _UserService_LoginWithCode_Handler,
 		},
@@ -1574,12 +1534,12 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_ChangePassword_Handler,
 		},
 		{
-			MethodName: "SendResetCode",
-			Handler:    _UserService_SendResetCode_Handler,
-		},
-		{
 			MethodName: "ResetPassword",
 			Handler:    _UserService_ResetPassword_Handler,
+		},
+		{
+			MethodName: "ChangeEmail",
+			Handler:    _UserService_ChangeEmail_Handler,
 		},
 		{
 			MethodName: "GetUserByUUID",
