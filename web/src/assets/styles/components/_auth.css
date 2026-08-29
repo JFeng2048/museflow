@@ -1,0 +1,422 @@
+/* 登录/注册/找回密码 新增交互样式：登录方式切换、验证码、2FA 弹层、安全设置 */
+
+/* 登录方式切换：表单内分段控件（不是按钮）。
+ * 选中态用底部细线表达，整行极轻，不跟主登录按钮抢视觉。 */
+.auth-method {
+  margin: 6px 0 4px;
+  display: flex;
+  gap: 22px;
+  border-bottom: 1px solid var(--c-line);
+}
+.auth-method-tab {
+  position: relative;
+  padding: 8px 0;
+  font-size: 13.5px;
+  color: var(--c-ink-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+.auth-method-tab:hover {
+  color: var(--c-ink-soft);
+}
+.auth-method-tab.active {
+  color: var(--c-ink);
+  font-weight: 600;
+}
+.auth-method-tab.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--c-amber-deep);
+  border-radius: 2px 2px 0 0;
+}
+
+/* 底部注册引导：单行居中，平静的小字（不再有切换按钮同行抢空间） */
+.auth-secondary {
+  margin: 18px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--c-ink-muted);
+  line-height: 1.5;
+}
+.auth-secondary-q {
+  color: var(--c-ink-muted);
+}
+.auth-secondary-link {
+  color: var(--c-ink-soft);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px dashed var(--c-line);
+  padding-bottom: 1px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.auth-secondary-link:hover {
+  color: var(--c-amber-deep);
+  border-bottom-color: var(--c-amber-deep);
+}
+
+/* Mock 模式页内演示入口：仅在演示环境出现，作为可见的「这是 demo」信号 */
+.auth-demo-helper {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--c-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--c-ink-muted);
+}
+.auth-demo-lbl {
+  color: var(--c-ink-muted);
+}
+.auth-demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  background: var(--c-paper);
+  color: var(--c-ink-soft);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+.auth-demo-chip:hover {
+  border-color: var(--c-amber);
+  color: var(--c-amber-deep);
+  background: var(--c-amber-soft);
+}
+.auth-code-row {
+  display: flex;
+  gap: 8px;
+}
+.auth-code-row input {
+  flex: 1;
+}
+.auth-code-btn {
+  flex: none;
+  padding: 0 14px;
+  border: 1px solid var(--c-line);
+  border-radius: 10px;
+  background: var(--c-paper);
+  color: var(--c-amber-deep);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.auth-code-btn:hover:not(:disabled) {
+  border-color: var(--c-amber);
+}
+.auth-code-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.auth-link {
+  font-size: 13px;
+  color: var(--c-amber-deep);
+  text-decoration: none;
+}
+.auth-link:hover {
+  text-decoration: underline;
+}
+/* 切换登录方式：行 2 右对齐小按钮，带图标与浅色 hover 背景 */
+/* (已弃用：切换改用表单内分段控件 .auth-method) */.auth-link-btn {
+  display: block;
+  margin: 12px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--c-amber-deep);
+  font-size: 13px;
+  cursor: pointer;
+}
+.auth-back {
+  margin: 14px 0 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--c-ink-muted);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+}
+
+/* 简易居中卡片（找回/重置密码） */
+.auth-simple {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.auth-card-center {
+  max-width: 420px;
+  width: 100%;
+}
+.auth-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  border: none;
+  background: none;
+  color: var(--c-ink-muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.auth-back-link:hover {
+  color: var(--c-amber-deep);
+}
+
+/* 2FA 二次验证弹层 */
+.mfa-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 22, 16, 0.45);
+  backdrop-filter: blur(3px);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+  padding: 20px;
+}
+.mfa-card {
+  width: 380px;
+  max-width: 100%;
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 18px;
+  padding: 26px 24px;
+  box-shadow: 0 18px 50px rgba(43, 33, 24, 0.25);
+}
+.mfa-card h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: var(--c-ink);
+  font-family: var(--font-serif);
+}
+.mfa-sub {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--c-ink-muted);
+  line-height: 1.6;
+}
+.mfa-card .auth-field {
+  margin-bottom: 12px;
+}
+.mfa-card .auth-link-btn {
+  margin: 4px 0 16px;
+  text-align: left;
+}
+
+/* 安全设置面板 */
+.security-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 720px;
+}
+.security-card {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 16px;
+  padding: 20px 22px;
+}
+.security-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.security-ico {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--c-amber-soft);
+  color: var(--c-amber-deep);
+  flex: none;
+}
+.security-ico.on {
+  background: rgba(70, 180, 106, 0.14);
+  color: #2f9e5f;
+}
+.security-head h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--c-ink);
+  font-family: var(--font-serif);
+}
+.security-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--c-ink-muted);
+}
+.security-switch {
+  margin-left: auto;
+}
+.security-head .n-tag {
+  margin-left: auto;
+}
+.security-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.recovery-box {
+  margin-top: 14px;
+  padding: 14px;
+  background: var(--c-warm);
+  border: 1px dashed var(--c-line);
+  border-radius: 12px;
+}
+.recovery-tip {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  color: var(--c-ink-soft);
+}
+.recovery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.recovery-grid code {
+  font-family: var(--font-mono, monospace);
+  font-size: 12.5px;
+  letter-spacing: 1px;
+  color: var(--c-ink);
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  text-align: center;
+}
+.session-list {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+}
+.session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--c-line);
+}
+.session-row:last-child {
+  border-bottom: none;
+}
+.session-row strong {
+  display: block;
+  font-size: 14px;
+  color: var(--c-ink);
+}
+.session-row small {
+  font-size: 12px;
+  color: var(--c-ink-muted);
+}
+.session-empty {
+  padding: 16px 0;
+  color: var(--c-ink-muted);
+  font-size: 13px;
+}
+.mfa-setup p {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--c-ink-soft);
+  line-height: 1.6;
+}
+.qr-zone {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.qr-img {
+  width: 140px;
+  height: 140px;
+  border-radius: 12px;
+  border: 1px solid var(--c-line);
+  background: #fff;
+  flex: none;
+}
+.secret-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.secret-lbl {
+  font-size: 12px;
+  color: var(--c-ink-muted);
+}
+.secret-box code {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  letter-spacing: 1px;
+  background: var(--c-warm);
+  border: 1px solid var(--c-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  word-break: break-all;
+}
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* 修改密码面板 */
+.pw-panel {
+  max-width: 480px;
+}
+.pw-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.pw-ico {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--c-amber-soft);
+  color: var(--c-amber-deep);
+  flex: none;
+}
+.pw-head h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--c-ink);
+  font-family: var(--font-serif);
+}
+.pw-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--c-ink-muted);
+}
+.pw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pw-form .auth-field {
+  margin-bottom: 10px;
+}
+.pw-submit {
+  margin-top: 6px;
+  align-self: flex-start;
+}
