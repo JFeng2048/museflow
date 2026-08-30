@@ -8,6 +8,7 @@
 - **双令牌认证**：登录签发 access（短效）+ refresh（长效，HttpOnly Cookie）；刷新、登出、按设备吊销。
 - **邮箱验证码**：注册校验（`register`）、免密登录（`login`）、密码重置（`reset_password`）、修改邮箱（`change_email`）四类场景，验证码按场景隔离并设重发冷却。
 - **异步邮件与进度订阅**：邮件发送经 asynq 队列异步化，`SendVerifyCode` 只生成验证码并入队（返回 `task_id`），由独立 Worker 进程消费；`WatchTask`（服务端流）用于订阅发送进度，供网关转 SSE。
+- **人机验证**：`SendVerifyCode` 是易被脚本刷的接口，服务端在生成验证码前用 Cloudflare Turnstile 核验 `captcha_token`（`internal/pkg/turnstile`）。未通过则不生成验证码、不占冷却、不入队；未配置密钥时降级为跳过，校验服务故障时 fail-closed。
 - **两步验证**：开启/校验/关闭 TOTP，提供一次性恢复码；登录启用后返回 `mfa_ticket`。
 - **密码与权限**：改密、密码重置（邮箱验证码）、RBAC 角色与权限（带 Redis 缓存）。
 - **审计**：关键操作（注册、登录、改密、邮箱验证、修改邮箱、2FA 变更等）落库审计。

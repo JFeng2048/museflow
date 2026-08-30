@@ -30,6 +30,7 @@ internal/
   pkg/
     email/                   邮件能力：SMTP 客户端 + 内嵌模板（HTML/纯文本）
     queue/                   Asynq 封装：任务定义、生产者客户端、任务状态模型
+    turnstile/               Cloudflare Turnstile 人机验证（siteverify 客户端）
   service/
     auth/                    注册/登录/刷新/登出/改密/2FA/邮箱验证码（核心）
     token/                   TokenManager、claims、设备指纹
@@ -53,6 +54,7 @@ Dockerfile.worker            Worker 镜像
 - **双令牌认证**：access token（默认 1h，响应体返回） + refresh token（默认 30d，HttpOnly Cookie）。refresh 白名单存 Redis，登出即吊销；access 进入黑名单。
 - **两步验证（TOTP）**：基于 RFC 6238，开启后登录第一步返回 `mfa_ticket`，第二步用 TOTP 换取令牌；提供一次性恢复码。
 - **邮箱验证码**：场景化（register/login/reset_password/change_email），Redis 键前缀隔离 + `SetNX` 重发冷却；注册校验通过后标记 `email_verified`；修改邮箱走 `change_email` 场景。
+- **人机验证（Cloudflare Turnstile）**：发送验证码是易被脚本刷的接口，发送前服务端调用 siteverify 核验一次性令牌（`internal/pkg/turnstile`）。校验位于最前置——未通过时不生成验证码、不占重发冷却、不入队，避免机器人把冷却期刷满导致真实用户发不出验证码。未配置密钥时降级为跳过（仅适用于本地开发，启动会有告警）；校验服务故障时 **fail-closed**（拒绝而非放行）。
 - **邮件异步化 + 进度可订阅**：SMTP 是慢速外部依赖，放在 gRPC 请求链路内会拖慢接口。现在 `SendVerifyCode` 只生成验证码并把发信任务投递到 asynq 队列（返回 `task_id`），由独立 Worker 进程并发消费；Worker 把 `pending → sending → retrying → success/failed` 写入 Redis 并通过 Pub/Sub 广播，网关经 `WatchTask` 流式 RPC 转 SSE 推送给前端。
 - **入队失败的补偿**：投递失败时回滚已写入的验证码与重发冷却锁，避免用户白等一个冷却周期。
 - **邮箱免密登录**：`LoginWithCode` 复用双令牌签发，兼容 2FA。
@@ -74,6 +76,10 @@ Dockerfile.worker            Worker 镜像
 | `USER_BCRYPT_COST` | `10` | bcrypt 成本 |
 | `USER_MFA_*` | — | 2FA 发行方/偏移/恢复码数量与长度 |
 | `USER_CODE_TTL_SECONDS`/`CODE_LENGTH`/`CODE_RESEND_COOLDOWN_SECONDS` | `600`/`6`/`60` | 验证码参数 |
+| `USER_TURNSTILE_SECRET` | — | Turnstile **密钥（Secret Key）**，服务端专用；未配置则人机验证降级为跳过 |
+| `USER_TURNSTILE_ENDPOINT` | Cloudflare 官方地址 | siteverify 地址 |
+| `USER_TURNSTILE_TIMEOUT_SECONDS` | `5` | 单次人机校验超时 |
+| `USER_TURNSTILE_ALLOWED_HOSTNAMES` | — | 来源域名白名单（逗号分隔），留空表示不校验 |
 | `USER_SMTP_*` | — | 邮件发送（未配置则日志降级） |
 | `USER_QUEUE_NAME` | `email` | 异步任务队列名 |
 | `USER_QUEUE_MAX_RETRY` | `3` | 任务失败最大重试次数 |
@@ -127,4 +133,4 @@ docker build -f services/user-service/Dockerfile.worker -t museflow/user-service
 
 ## 测试
 
-`internal/service/auth` 为主覆盖包，使用内存 `UserRepository`/`TokenStore`/`VerifyCodeStore` 替身（fake）隔离测试，`oauth` 包另有独立替身；邮件与 Worker 侧同样用替身覆盖：`internal/pkg/email`（模板渲染与 MIME 组装）、`internal/worker/handlers`（状态流转与重试策略）、`internal/service/task`（进度订阅时序）。提交前需通过 `go test ./...` 与 `go vet ./...`。
+`internal/service/auth` 为主覆盖包，使用内存 `UserRepository`/`TokenStore`/`VerifyCodeStore` 替身（fake）隔离测试，`oauth` 包另有独立替身；邮件与 Worker 侧同样用替身覆盖：`internal/pkg/email`（模板渲染与 MIME 组装）、`internal/worker/handlers`（状态流转与重试策略）、`internal/service/task`（进度订阅时序）、`internal/pkg/turnstile`（用 `httptest` 模拟 siteverify，覆盖 action/hostname 校验与 fail-closed 行为）。提交前需通过 `go test ./...` 与 `go vet ./...`。

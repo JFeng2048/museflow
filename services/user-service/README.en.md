@@ -30,6 +30,7 @@ internal/
   pkg/
     email/                   Email: SMTP client + embedded templates (HTML/plain text)
     queue/                   Asynq wrapper: task defs, producer client, task status model
+    turnstile/               Cloudflare Turnstile captcha (siteverify client)
   service/
     auth/                    register/login/refresh/logout/change-password/2FA/email codes (core)
     token/                   TokenManager, claims, device fingerprint
@@ -53,6 +54,7 @@ Dockerfile.worker            Worker image
 - **Dual tokens**: access token (default 1h, returned in body) + refresh token (default 30d, HttpOnly Cookie). Refresh tokens live in a Redis allow-list; logout revokes them and access tokens go to a deny-list.
 - **TOTP 2FA**: RFC 6238. After enabling, login step 1 returns an `mfa_ticket`; step 2 exchanges it for tokens via TOTP. One-time recovery codes are provided.
 - **Email verification codes**: scene-aware (register/login/reset_password/change_email) with Redis key prefixes + `SetNX` resend cooldown; register marks `email_verified` on success; change email uses the `change_email` scene.
+- **Captcha (Cloudflare Turnstile)**: sending a code is a prime abuse target, so the server verifies a single-use token via siteverify before doing anything (`internal/pkg/turnstile`). Verification runs first — on failure no code is generated, no resend cooldown is consumed and nothing is enqueued, so bots cannot exhaust the cooldown and lock out real users. Unset secret degrades to skip (local dev only, warned at startup); verification outages are **fail-closed**.
 - **Async email delivery with observable progress**: SMTP is a slow external dependency, so keeping it inside the gRPC request path would stall the API. `SendVerifyCode` now only generates the code and enqueues an Asynq task (returning a `task_id`); a separate worker process consumes the queue concurrently. The worker writes `pending → sending → retrying → success/failed` to Redis and broadcasts it over Pub/Sub; the gateway relays it via the `WatchTask` streaming RPC as SSE.
 - **Compensation on enqueue failure**: if enqueueing fails, both the stored code and the resend cooldown lock are rolled back so the user does not wait out a useless cooldown.
 - **Passwordless email login**: `LoginWithCode` reuses dual-token issuance and is compatible with 2FA.
@@ -74,6 +76,10 @@ Loaded via `pkg/envloader` with layered priority: system env > service `.env` > 
 | `USER_BCRYPT_COST` | `10` | bcrypt cost |
 | `USER_MFA_*` | — | 2FA issuer/skew/recovery code count & length |
 | `USER_CODE_TTL_SECONDS`/`CODE_LENGTH`/`CODE_RESEND_COOLDOWN_SECONDS` | `600`/`6`/`60` | code params |
+| `USER_TURNSTILE_SECRET` | — | Turnstile **secret key** (server-side only); unset degrades to skip |
+| `USER_TURNSTILE_ENDPOINT` | Cloudflare default | siteverify endpoint |
+| `USER_TURNSTILE_TIMEOUT_SECONDS` | `5` | Per-verification timeout |
+| `USER_TURNSTILE_ALLOWED_HOSTNAMES` | — | Hostname allow-list (comma separated); empty disables the check |
 | `USER_SMTP_*` | — | SMTP (logs if unconfigured) |
 | `USER_QUEUE_NAME` | `email` | Async queue name |
 | `USER_QUEUE_MAX_RETRY` | `3` | Max retries per task |
@@ -127,4 +133,4 @@ Database schema is maintained by `services/user-service/database/user_svc.sql` (
 
 ## Testing
 
-`internal/service/auth` is the primary coverage package, using in-memory fakes for `UserRepository`/`TokenStore`/`VerifyCodeStore`; `oauth` has its own fakes. The email and worker sides are covered with fakes too: `internal/pkg/email` (template rendering and MIME assembly), `internal/worker/handlers` (status transitions and retry policy), `internal/service/task` (progress subscription ordering). Run `go test ./...` and `go vet ./...` before committing.
+`internal/service/auth` is the primary coverage package, using in-memory fakes for `UserRepository`/`TokenStore`/`VerifyCodeStore`; `oauth` has its own fakes. The email and worker sides are covered with fakes too: `internal/pkg/email` (template rendering and MIME assembly), `internal/worker/handlers` (status transitions and retry policy), `internal/service/task` (progress subscription ordering), `internal/pkg/turnstile` (siteverify mocked with `httptest`, covering action/hostname checks and fail-closed behaviour). Run `go test ./...` and `go vet ./...` before committing.

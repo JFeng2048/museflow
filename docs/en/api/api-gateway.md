@@ -27,7 +27,7 @@ Prefix `/api/v1`. Full fields and examples in the gateway Swagger (`/swagger/ind
 | POST | `/api/v1/auth/password/reset` | No | Reset password with code; code is single-use. Get the code via `send-code` (`scene=reset_password`) first |
 | GET  | `/api/v1/auth/sessions` | Yes | Active session (device) list for current user |
 | DELETE | `/api/v1/auth/sessions/:id` | Yes | Revoke a session (device) |
-| POST | `/api/v1/common/email/send-code` | No | Send email code; `scene` is `register`/`login`/`reset_password`/`change_email`, with resend cooldown, avoids enumeration. Delivery is async: returns `202` + `task_id` (and `expires_in`, the code TTL in seconds) |
+| POST | `/api/v1/common/email/send-code` | No | Send email code; `scene` is `register`/`login`/`reset_password`/`change_email`, with resend cooldown, avoids enumeration. Requires `captcha_token` (Cloudflare Turnstile, single-use). Delivery is async: returns `202` + `task_id` (and `expires_in`, the code TTL in seconds) |
 | GET | `/api/v1/common/tasks/{task_id}/stream` | No | SSE stream of delivery progress; event names are `pending`/`sending`/`retrying`/`success`/`failed`. The server closes the connection after a terminal event |
 | POST | `/api/v1/common/refresh` | No (Cookie) | Exchange refresh Cookie for a new access token; refresh is rotated |
 | GET  | `/api/v1/user/profile` | Yes | Get current user profile |
@@ -36,6 +36,30 @@ Prefix `/api/v1`. Full fields and examples in the gateway Swagger (`/swagger/ind
 | GET  | `/swagger/index.html` | No | Swagger UI |
 
 > The gateway holds no user data itself; all business checks and token issuance happen in user-service. Interfaces marked `Yes` in the `Auth` column require `Authorization: Bearer <access_token>` in the request header.
+
+## Captcha (Cloudflare Turnstile)
+
+`POST /common/email/send-code` is protected by captcha: the body must carry `captcha_token`, and the backend calls Cloudflare siteverify before generating any code.
+
+```jsonc
+{
+  "email": "author@museflow.ai",
+  "scene": "register",
+  "captcha_token": "0.xxxxxxxxxxxxxxxxxxxxxxxx..."   // single-use, from the frontend widget
+}
+```
+
+Behaviour:
+
+| Case | HTTP | Notes |
+| :--- | :--- | :--- |
+| Missing token | 403 | Frontend must render the widget for the user |
+| Invalid / already-used token | 403 | Tokens are **single-use**: re-fetch and reset the widget for every send |
+| Action or hostname mismatch | 403 | Token was not minted for this site/scene |
+| Verification service down | 503 | Fail-closed, safe to retry |
+
+A failed captcha means no code is generated, no resend cooldown is consumed and nothing is enqueued.
+With no secret configured the check is skipped (local dev only; warned at startup).
 
 ## Email delivery progress (SSE)
 

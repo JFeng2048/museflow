@@ -27,7 +27,7 @@
 | POST | `/api/v1/auth/password/reset` | No | 用验证码重置密码；验证码一次性消费。验证码需先经 `send-code`（`scene=reset_password`）获取 |
 | GET  | `/api/v1/auth/sessions` | Yes | 当前用户的活跃会话（设备）列表 |
 | DELETE | `/api/v1/auth/sessions/:id` | Yes | 吊销指定会话（设备） |
-| POST | `/api/v1/common/email/send-code` | No | 发送邮箱验证码；`scene` 取 `register`/`login`/`reset_password`/`change_email`，带重发冷却，避免账号枚举。邮件异步发送，返回 `202` + `task_id`（`expires_in` 为验证码有效期秒数） |
+| POST | `/api/v1/common/email/send-code` | No | 发送邮箱验证码；`scene` 取 `register`/`login`/`reset_password`/`change_email`，带重发冷却，避免账号枚举。需携带 `captcha_token`（Cloudflare Turnstile，一次性）。邮件异步发送，返回 `202` + `task_id`（`expires_in` 为验证码有效期秒数） |
 | GET | `/api/v1/common/tasks/{task_id}/stream` | No | SSE 订阅发送进度；事件名为 `pending`/`sending`/`retrying`/`success`/`failed`，收到终态后服务端关闭连接 |
 | POST | `/api/v1/common/refresh` | No (Cookie) | 用 refresh Cookie 换取新 access token；刷新后旧 refresh 轮转 |
 | GET  | `/api/v1/user/profile` | Yes | 获取当前用户资料 |
@@ -36,6 +36,30 @@
 | GET  | `/swagger/index.html` | No | Swagger 文档 UI |
 
 > 网关本身不持有用户数据，所有业务校验与令牌签发均在 user-service 完成；`Auth` 列标注 `Yes` 的接口需在请求头携带 `Authorization: Bearer <access_token>`。
+
+## 人机验证（Cloudflare Turnstile）
+
+`POST /common/email/send-code` 受人机验证保护：请求体需携带 `captcha_token`，后端在生成验证码前调用 Cloudflare siteverify 核验。
+
+```jsonc
+{
+  "email": "author@museflow.ai",
+  "scene": "register",
+  "captcha_token": "0.xxxxxxxxxxxxxxxxxxxxxxxx..."   // 一次性，来自前端 widget
+}
+```
+
+行为要点：
+
+| 场景 | HTTP | 说明 |
+| :--- | :--- | :--- |
+| 令牌缺失 | 403 | 前端需拉起 widget 让用户验证 |
+| 令牌无效 / 已用过 | 403 | 令牌**一次性**，前端每次发送都必须重新获取并重置 widget |
+| action 或 hostname 不匹配 | 403 | 令牌非本站本次场景产生 |
+| 校验服务不可用 | 503 | fail-closed，可重试 |
+
+未通过人机验证时不会生成验证码、不会占用重发冷却、不会投递发信任务。
+服务端未配置密钥时降级为跳过（仅适用于本地开发，启动会输出告警）。
 
 ## 邮件发送进度（SSE）
 

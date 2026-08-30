@@ -8,6 +8,7 @@ The core user & authentication service (gRPC, `:5002`). Account management, dual
 - **Dual-token auth**: login issues access (short-lived) + refresh (long-lived, HttpOnly Cookie); refresh, logout, per-device revocation.
 - **Email codes**: four scenes — register verification, passwordless login, password reset, change email — isolated per scene with resend cooldown.
 - **Async delivery & progress**: email sending is offloaded to an Asynq queue; `SendVerifyCode` only generates the code and enqueues a task (returning a `task_id`) that a separate worker process consumes. `WatchTask` (server stream) subscribes to delivery progress so the gateway can relay it as SSE.
+- **Captcha**: `SendVerifyCode` is a prime abuse target, so the server verifies `captcha_token` against Cloudflare Turnstile before generating any code (`internal/pkg/turnstile`). On failure nothing is generated, no cooldown is consumed and nothing is enqueued; with no secret configured the check is skipped, and verification outages fail closed.
 - **2FA**: enable/verify/disable TOTP, plus one-time recovery codes; returns `mfa_ticket` when enabled at login.
 - **Password & permissions**: change password, password reset (email code), RBAC roles & permissions (Redis-cached).
 - **Audit**: key operations (register, login, change password, email verify, change email, 2FA changes, etc.) persisted to audit log.
