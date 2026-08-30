@@ -41,19 +41,26 @@ const showMockCode = ref(false)
 const tsRef = ref<TurnstileWidgetExposed | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
 async function onSendCode() {
+  if (loading.value) return
   if (!email.value) {
     message.warning(t('auth.fillBoth'))
     return
   }
+  loading.value = true
   // 发送验证码前完成人机验证（mock 环境降级跳过）
   let tsToken: string | null = null
   try {
     tsToken = await tsRef.value?.ensureToken() ?? null
   } catch {
     message.warning(t('auth.turnstileRequired'))
+    loading.value = false
     return
   }
-  await sendCode({ email: email.value, scene: 'register', turnstileToken: tsToken ?? undefined })
+  try {
+    await sendCode({ email: email.value, scene: 'register', turnstileToken: tsToken ?? undefined })
+  } finally {
+    loading.value = false
+  }
   code.value = MOCK_CODE
   if (ui.mockMode) {
     showMockCode.value = true
@@ -140,8 +147,11 @@ async function onSubmit() {
             {{ countDown > 0 ? t('auth.resendIn', { s: countDown }) : t('auth.sendCode') }}
           </button>
         </div>
-        <TurnstileWidget ref="tsRef" action="register" :allow-fallback="ui.mockMode" />
       </label>
+
+      <!-- 人机验证：置于第一步表单内，填表时即可完成，发送验证码前必须校验。
+           组件始终挂载（v-show 仅控制可见），保证两个步骤点发送都能取到 token。 -->
+      <TurnstileWidget v-show="step === 'form'" ref="tsRef" action="register" :allow-fallback="ui.mockMode" />
 
       <button class="auth-primary" :disabled="loading || (step === 'form' && !valid)" type="submit">
         {{ loading ? t('auth.registering') : step === 'form' ? t('auth.sendCode') : t('auth.registerBtn') }}
