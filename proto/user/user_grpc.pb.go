@@ -22,6 +22,7 @@ const (
 	UserService_Register_FullMethodName                = "/user.UserService/Register"
 	UserService_Login_FullMethodName                   = "/user.UserService/Login"
 	UserService_SendVerifyCode_FullMethodName          = "/user.UserService/SendVerifyCode"
+	UserService_WatchTask_FullMethodName               = "/user.UserService/WatchTask"
 	UserService_LoginWithCode_FullMethodName           = "/user.UserService/LoginWithCode"
 	UserService_Refresh_FullMethodName                 = "/user.UserService/Refresh"
 	UserService_Logout_FullMethodName                  = "/user.UserService/Logout"
@@ -75,7 +76,12 @@ type UserServiceClient interface {
 	// Login 用户登录，签发 access + refresh 双令牌
 	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 密码重置 / 修改邮箱）
+	// 邮件通过异步队列投递，接口只负责生成验证码并入队，立即返回 task_id；
+	// 客户端可用 WatchTask 订阅发送进度。
 	SendVerifyCode(ctx context.Context, in *SendVerifyCodeRequest, opts ...grpc.CallOption) (*SendVerifyCodeResponse, error)
+	// WatchTask 订阅异步任务进度（服务端流式推送），供网关转 SSE 给前端。
+	// 任务进入 success / failed 终态后服务端主动结束流。
+	WatchTask(ctx context.Context, in *WatchTaskRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TaskEvent], error)
 	// LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
 	LoginWithCode(ctx context.Context, in *LoginWithCodeRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 	// Refresh 使用 refresh token 换取新的 access token（refresh 不轮换）
@@ -187,6 +193,25 @@ func (c *userServiceClient) SendVerifyCode(ctx context.Context, in *SendVerifyCo
 	}
 	return out, nil
 }
+
+func (c *userServiceClient) WatchTask(ctx context.Context, in *WatchTaskRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TaskEvent], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &UserService_ServiceDesc.Streams[0], UserService_WatchTask_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[WatchTaskRequest, TaskEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type UserService_WatchTaskClient = grpc.ServerStreamingClient[TaskEvent]
 
 func (c *userServiceClient) LoginWithCode(ctx context.Context, in *LoginWithCodeRequest, opts ...grpc.CallOption) (*LoginResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -563,7 +588,12 @@ type UserServiceServer interface {
 	// Login 用户登录，签发 access + refresh 双令牌
 	Login(context.Context, *LoginRequest) (*LoginResponse, error)
 	// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 密码重置 / 修改邮箱）
+	// 邮件通过异步队列投递，接口只负责生成验证码并入队，立即返回 task_id；
+	// 客户端可用 WatchTask 订阅发送进度。
 	SendVerifyCode(context.Context, *SendVerifyCodeRequest) (*SendVerifyCodeResponse, error)
+	// WatchTask 订阅异步任务进度（服务端流式推送），供网关转 SSE 给前端。
+	// 任务进入 success / failed 终态后服务端主动结束流。
+	WatchTask(*WatchTaskRequest, grpc.ServerStreamingServer[TaskEvent]) error
 	// LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
 	LoginWithCode(context.Context, *LoginWithCodeRequest) (*LoginResponse, error)
 	// Refresh 使用 refresh token 换取新的 access token（refresh 不轮换）
@@ -654,6 +684,9 @@ func (UnimplementedUserServiceServer) Login(context.Context, *LoginRequest) (*Lo
 }
 func (UnimplementedUserServiceServer) SendVerifyCode(context.Context, *SendVerifyCodeRequest) (*SendVerifyCodeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SendVerifyCode not implemented")
+}
+func (UnimplementedUserServiceServer) WatchTask(*WatchTaskRequest, grpc.ServerStreamingServer[TaskEvent]) error {
+	return status.Error(codes.Unimplemented, "method WatchTask not implemented")
 }
 func (UnimplementedUserServiceServer) LoginWithCode(context.Context, *LoginWithCodeRequest) (*LoginResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method LoginWithCode not implemented")
@@ -837,6 +870,17 @@ func _UserService_SendVerifyCode_Handler(srv interface{}, ctx context.Context, d
 	}
 	return interceptor(ctx, in, info, handler)
 }
+
+func _UserService_WatchTask_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchTaskRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(UserServiceServer).WatchTask(m, &grpc.GenericServerStream[WatchTaskRequest, TaskEvent]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type UserService_WatchTaskServer = grpc.ServerStreamingServer[TaskEvent]
 
 func _UserService_LoginWithCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(LoginWithCodeRequest)
@@ -1650,6 +1694,12 @@ var UserService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _UserService_OAuthLogin_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "WatchTask",
+			Handler:       _UserService_WatchTask_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "proto/user/user.proto",
 }

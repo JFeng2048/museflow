@@ -20,7 +20,13 @@ service UserService {
   // ---- 邮箱验证与验证码登录 ----
 
   // SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 密码重置 / 修改邮箱）
+  // 邮件通过异步队列投递，接口只负责生成验证码并入队，立即返回 task_id；
+  // 客户端可用 WatchTask 订阅发送进度。
   rpc SendVerifyCode(SendVerifyCodeRequest) returns (SendVerifyCodeResponse);
+
+  // WatchTask 订阅异步任务进度（服务端流式推送），供网关转 SSE 给前端。
+  // 任务进入 success / failed 终态后服务端主动结束流。
+  rpc WatchTask(WatchTaskRequest) returns (stream TaskEvent);
 
   // LoginWithCode 邮箱验证码登录（免密），校验通过后签发双令牌；开启 2FA 时返回 mfa_ticket
   rpc LoginWithCode(LoginWithCodeRequest) returns (LoginResponse);
@@ -206,7 +212,27 @@ message SendVerifyCodeRequest {
   string scene = 2;                // 用途场景，必填
 }
 
-message SendVerifyCodeResponse {}
+message SendVerifyCodeResponse {
+  // task_id 异步任务 ID，可用 WatchTask 订阅发送进度（网关对应 SSE 端点）。
+  string task_id = 1;
+  // expires_in 验证码有效期（秒）。
+  int64 expires_in = 2;
+}
+
+// WatchTaskRequest 订阅任务进度请求。
+message WatchTaskRequest {
+  string task_id = 1;              // SendVerifyCode 返回的任务 ID
+}
+
+// TaskEvent 任务进度事件。status 为终态（success / failed）后流结束。
+message TaskEvent {
+  string task_id = 1;
+  // status 任务状态：pending（已入队）/ sending（发送中）/ retrying（重试中）/ success / failed
+  string status = 2;
+  // message 面向用户的友好提示，可直接展示
+  string message = 3;
+  int64 updated_at = 4;            // 状态更新时间（Unix 秒）
+}
 
 // LoginWithCodeRequest 邮箱验证码登录请求。
 message LoginWithCodeRequest {
