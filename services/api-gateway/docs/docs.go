@@ -1270,7 +1270,7 @@ const docTemplate = `{
         },
         "/common/email/send-code": {
             "post": {
-                "description": "按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功\n邮件通过异步队列发送，接口只负责生成验证码并入队，立即返回 task_id（HTTP 202）；\n客户端可用 task_id 订阅 GET /common/tasks/{task_id}/stream 获取实时发送进度。",
+                "description": "按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功\n邮件通过异步队列发送，接口只负责生成验证码并入队，立即返回 task_id（HTTP 202）；\n客户端可用 task_id 订阅 GET /common/tasks/{task_id}/stream 获取实时发送进度。\n请求需携带 Cloudflare Turnstile 令牌（captcha_token）；令牌一次性，每次发送都要重新获取。",
                 "consumes": [
                     "application/json"
                 ],
@@ -1283,7 +1283,7 @@ const docTemplate = `{
                 "summary": "发送邮箱验证码",
                 "parameters": [
                     {
-                        "description": "邮箱与场景",
+                        "description": "邮箱、场景与人机验证令牌",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -1317,8 +1317,20 @@ const docTemplate = `{
                             "$ref": "#/definitions/errcode.Response"
                         }
                     },
+                    "403": {
+                        "description": "人机验证未通过，请重新完成验证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
                     "429": {
                         "description": "发送过于频繁",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "503": {
+                        "description": "人机验证服务暂时不可用",
                         "schema": {
                             "$ref": "#/definitions/errcode.Response"
                         }
@@ -2383,6 +2395,12 @@ const docTemplate = `{
                 "scene"
             ],
             "properties": {
+                "captcha_token": {
+                    "description": "CaptchaToken Cloudflare Turnstile 人机验证令牌，一次性。\n服务端启用人机验证后必填；未启用时可省略。\n注意：令牌使用一次即失效，前端每次发送都必须重新获取。",
+                    "type": "string",
+                    "maxLength": 2048,
+                    "example": "0.XXXXXXXXXXXXXXXXXXXXXX...."
+                },
                 "email": {
                     "type": "string",
                     "example": "author@museflow.ai"
