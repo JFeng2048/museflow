@@ -125,19 +125,26 @@ const showMockCode = ref(false)
 const tsRef = ref<TurnstileWidgetExposed | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
 async function   onSendCode() {
+  if (loading.value) return
   if (!email.value) {
     message.warning(t('auth.fillBoth'))
     return
   }
+  loading.value = true
   // 发送验证码前完成人机验证（mock 环境降级跳过）
   let tsToken: string | null = null
   try {
     tsToken = await tsRef.value?.ensureToken() ?? null
   } catch {
     message.warning(t('auth.turnstileRequired'))
+    loading.value = false
     return
   }
-  await sendCode({ email: email.value, scene: 'login', turnstileToken: tsToken ?? undefined })
+  try {
+    await sendCode({ email: email.value, scene: 'login', turnstileToken: tsToken ?? undefined })
+  } finally {
+    loading.value = false
+  }
   code.value = MOCK_CODE
   if (ui.mockMode) {
     // 演示环境：弹出提示并显示验证码，无需真实邮箱。
@@ -210,10 +217,11 @@ async function   onSendCode() {
         </div>
         <div class="auth-code-row">
           <input v-model="code" :placeholder="t('auth.codePlaceholder')" autocomplete="one-time-code" />
-          <button class="auth-code-btn" type="button" :disabled="countDown > 0" @click="onSendCode">
+          <button class="auth-code-btn" type="button" :disabled="loading || countDown > 0" @click="onSendCode">
             {{ countDown > 0 ? t('auth.resendIn', { s: countDown }) : t('auth.sendCode') }}
           </button>
         </div>
+        <!-- 人机验证：点击「发送验证码」时才弹出校验 -->
         <TurnstileWidget ref="tsRef" action="login" :allow-fallback="ui.mockMode" />
       </label>
 

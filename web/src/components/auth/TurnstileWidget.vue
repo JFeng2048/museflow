@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useUiStore } from '@/stores/ui'
 import { loadTurnstileScript, isTurnstileAvailable } from '@/composables/useTurnstileScript'
 
@@ -18,12 +18,13 @@ const emit = defineEmits<{ (e: 'update:token', v: string | null): void }>()
 const ui = useUiStore()
 const el = ref<HTMLDivElement | null>(null)
 const token = ref<string | null>(null)
-const ready = ref(false)
+const visible = ref(false) // 仅在点击发送验证码时才显示 widget
 const error = ref(false)
 
 let widgetId: string | undefined
+let scriptReady = false
 
-// 等待用户完成验证的 pending resolver（点发送时若还没过，则挂起）
+// 等待用户完成验证的 pending resolver（点击发送时若还没过，则挂起）
 let pending: ((t: string | null) => void) | null = null
 
 function theme(): 'light' | 'dark' {
@@ -40,6 +41,7 @@ function renderWidget() {
     callback: (t: string) => {
       token.value = t
       emit('update:token', t)
+      visible.value = false // 验证通过后收起，不打扰后续操作
       if (pending) {
         pending(t)
         pending = null
@@ -53,17 +55,23 @@ function renderWidget() {
       error.value = true
     },
   })
-  ready.value = true
 }
 
-/** 取一个有效令牌：已通过直接返回；否则等待用户完成（mock/无脚本时降级为 null）。 */
+/**
+ * 取一个有效令牌：
+ * - 已有（本次会话内通过过）直接返回；
+ * - 否则显示 widget 并等待用户完成（mock/无脚本时按 allowFallback 降级为 null）。
+ * 即「点击发送验证码时」才进行人机验证。
+ */
 async function ensureToken(): Promise<string | null> {
   if (token.value) return token.value
-  if (!isTurnstileAvailable()) {
-    // 脚本未加载：mock / 开发环境，按 allowFallback 降级
+  if (!scriptReady || !isTurnstileAvailable()) {
     return props.allowFallback ? null : Promise.reject(new Error('turnstile_unavailable'))
   }
-  // 挂起，等 callback 触发
+  // 显示 widget 并等待 callback
+  visible.value = true
+  await nextTick()
+  renderWidget()
   return new Promise<string | null>((resolve) => {
     pending = resolve
   })
@@ -72,15 +80,18 @@ async function ensureToken(): Promise<string | null> {
 function reset() {
   token.value = null
   emit('update:token', null)
-  if (widgetId && window.turnstile) window.turnstile.reset(widgetId)
+  visible.value = false
+  if (widgetId && window.turnstile) {
+    window.turnstile.remove(widgetId)
+    widgetId = undefined
+  }
 }
 
 onMounted(async () => {
   try {
     await loadTurnstileScript()
-    renderWidget()
+    scriptReady = true
   } catch {
-    // 加载失败：若允许降级则保持不可用态，由 ensureToken 返回 null
     if (!props.allowFallback) error.value = true
   }
 })
@@ -88,7 +99,7 @@ onMounted(async () => {
 watch(
   () => ui.themeId,
   () => {
-    // 主题切换时重建 widget 以更新明暗
+    // 主题切换时若 widget 已存在则重建以更新明暗
     if (widgetId && window.turnstile) {
       window.turnstile.remove(widgetId)
       widgetId = undefined
@@ -110,8 +121,9 @@ defineExpose<TurnstileWidgetExposed>({ ensureToken, reset })
 </script>
 
 <template>
-  <div class="ts-wrap">
+  <div v-show="visible" class="ts-wrap">
     <div ref="el" class="cf-turnstile" :data-theme="theme()" :data-action="action"></div>
+    <p class="ts-hint">请完成人机验证后继续发送验证码</p>
     <p v-if="error" class="ts-error">
       {{ '人机验证组件加载失败，请刷新页面后重试' }}
     </p>
@@ -120,7 +132,13 @@ defineExpose<TurnstileWidgetExposed>({ ensureToken, reset })
 
 <style scoped>
 .ts-wrap {
-  margin: 10px 0 2px;
+  margin: 12px 0 4px;
+  text-align: center;
+}
+.ts-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--c-ink-muted, #6b7280);
 }
 .ts-error {
   margin-top: 6px;

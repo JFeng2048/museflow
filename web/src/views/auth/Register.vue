@@ -143,15 +143,14 @@ async function onSubmit() {
         </div>
         <div class="auth-code-row">
           <input v-model="code" :placeholder="t('auth.codePlaceholder')" autocomplete="one-time-code" />
-          <button class="auth-code-btn" type="button" :disabled="countDown > 0" @click="onSendCode">
+          <button class="auth-code-btn" type="button" :disabled="loading || countDown > 0" @click="onSendCode">
             {{ countDown > 0 ? t('auth.resendIn', { s: countDown }) : t('auth.sendCode') }}
           </button>
         </div>
       </label>
 
-      <!-- 人机验证：置于第一步表单内，填表时即可完成，发送验证码前必须校验。
-           组件始终挂载（v-show 仅控制可见），保证两个步骤点发送都能取到 token。 -->
-      <TurnstileWidget v-show="step === 'form'" ref="tsRef" action="register" :allow-fallback="ui.mockMode" />
+      <!-- 人机验证：平时隐藏，点击「发送验证码」时才弹出校验（组件内部 visible 控制） -->
+      <TurnstileWidget ref="tsRef" action="register" :allow-fallback="ui.mockMode" />
 
       <button class="auth-primary" :disabled="loading || (step === 'form' && !valid)" type="submit">
         {{ loading ? t('auth.registering') : step === 'form' ? t('auth.sendCode') : t('auth.registerBtn') }}
