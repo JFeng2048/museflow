@@ -1,20 +1,34 @@
 # Air 热重载配置 —— user-service worker（asynq 消费端）
 # 用法：在 services/user-service 目录执行 `air -c .air.worker.toml`
+#      或仓库根目录执行 `dev.bat worker`
+#
+# 与 gRPC 服务（.air.toml）是两个独立进程，各自用自己的临时目录（tmp / tmp-worker），
+# 互不干扰；两者都需要 Redis。
 root = "."
 tmp_dir = "tmp-worker"
 
 [build]
-  # 构建并运行入口：异步任务消费端，与服务主进程分开进程热重载
-  cmd = "go run ./cmd/worker"
-  # 仅构建（air 用此命令做增量编译校验）
-  bin = "./tmp-worker/user-service-worker"
+  # 只构建不运行：`go run` 会把进程退出码误当成构建结果（详见 .air.toml 注释）
+  cmd = "go build -o ./tmp-worker/worker ./cmd/worker"
+  # entrypoint 取代已废弃的 bin
+  entrypoint = ["./tmp-worker/worker"]
   include_ext = ["go", "mod", "sum"]
-  exclude_dir = ["tmp", "tmp-worker", "docs", "bin", "test"]
-  exclude_file = []
+  # 排除两个实例各自的临时目录，避免二进制写入触发重载
+  exclude_dir = ["tmp", "tmp-worker", "docs", "bin", "test", "logs"]
   exclude_regex = ["_test\\.go"]
   include_dir = ["internal", "cmd", "../../proto"]
   delay = 1000
-  stop_on_error = false
+  stop_on_error = true
+  exclude_unchanged = true
+  # Worker 强依赖 Redis：Redis 未启动时它会 fail-fast 退出。
+  # 开启自动重跑，Redis 就绪后无需手动重启。
+  rerun = true
+  rerun_delay = 3000
+
+# Windows 平台覆盖：可执行文件必须是 .exe
+[build.windows]
+  cmd = "go build -o ./tmp-worker/worker.exe ./cmd/worker"
+  entrypoint = ["./tmp-worker/worker.exe"]
 
 [log]
   time = true

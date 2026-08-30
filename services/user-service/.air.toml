@@ -1,25 +1,35 @@
-# Air 热重载配置 —— user-service
+# Air 热重载配置 —— user-service（gRPC 服务）
 # 用法：在 services/user-service 目录执行 `air`
+#      或仓库根目录执行 `dev.bat user`
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  # 构建并运行入口
-  cmd = "go run ./cmd/server"
-  # 仅构建（air 用此命令做增量编译校验）
-  bin = "./tmp/user-service"
-  # 监听以下文件变化触发重载
+  # 构建命令必须「只构建、不运行」。
+  # 若写成 `go run`，air 会把进程的退出码当成构建结果：服务因 DB/Redis
+  # 未就绪而退出 1 时，air 会误报 "failed to build"，随后去运行一个
+  # 根本没被生成的二进制，报 “无法将 … 识别为 cmdlet”。
+  cmd = "go build -o ./tmp/user-service ./cmd/server"
+  # entrypoint 取代已废弃的 bin：首项是可执行文件，其余为默认参数
+  entrypoint = ["./tmp/user-service"]
   include_ext = ["go", "mod", "sum"]
-  # 排除目录
-  exclude_dir = ["tmp", "docs", "bin", "test"]
-  # 排除文件
-  exclude_file = []
-  # 排除正则
+  # 同时排除 worker 实例（.air.worker.toml）的临时目录，避免两个 air 互相触发
+  exclude_dir = ["tmp", "tmp-worker", "docs", "bin", "test", "logs"]
   exclude_regex = ["_test\\.go"]
-  # 依赖变更（go.mod / proto）时也重建
   include_dir = ["internal", "cmd", "../../proto"]
   delay = 1000
-  stop_on_error = false
+  # 构建失败时不再启动旧二进制，否则会掩盖编译错误
+  stop_on_error = true
+  exclude_unchanged = true
+  # 启动依赖（PostgreSQL / Redis）可能还没就绪：退出后自动重试，
+  # 而不是直接躺平，配合 dev.bat 一键启动全部服务时更好用
+  rerun = true
+  rerun_delay = 3000
+
+# Windows 平台覆盖：可执行文件必须是 .exe，否则 cmd.exe 无法识别
+[build.windows]
+  cmd = "go build -o ./tmp/user-service.exe ./cmd/server"
+  entrypoint = ["./tmp/user-service.exe"]
 
 [log]
   time = true

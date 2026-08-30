@@ -1,19 +1,31 @@
 # Air 热重载配置 —— api-gateway
 # 用法：在 services/api-gateway 目录执行 `air`
+#      或仓库根目录执行 `dev.bat gateway`
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go run ./cmd/server"
-  bin = "./tmp/api-gateway"
+  # 只构建不运行：`go run` 会把进程退出码误当成构建结果（详见
+  # services/user-service/.air.toml 中的说明）
+  cmd = "go build -o ./tmp/api-gateway ./cmd/server"
+  # entrypoint 取代已废弃的 bin
+  entrypoint = ["./tmp/api-gateway"]
   include_ext = ["go", "mod", "sum"]
-  exclude_dir = ["tmp", "docs", "bin", "test"]
-  exclude_file = []
-  # swag 文档变更也触发重载，便于 Swagger 注解即时生效
+  exclude_dir = ["tmp", "docs", "bin", "test", "logs"]
+  # swag 生成的 docs/*.go 变更不触发重载，避免 Swagger 与代码互相打架
   exclude_regex = ["_test\\.go", "docs/.*\\.go"]
   include_dir = ["internal", "cmd", "../../proto"]
   delay = 1000
-  stop_on_error = false
+  stop_on_error = true
+  exclude_unchanged = true
+  # user-service 客户端在建连失败时会退出，开启重跑让上游就绪后自动恢复
+  rerun = true
+  rerun_delay = 3000
+
+# Windows 平台覆盖：可执行文件必须是 .exe
+[build.windows]
+  cmd = "go build -o ./tmp/api-gateway.exe ./cmd/server"
+  entrypoint = ["./tmp/api-gateway.exe"]
 
 [log]
   time = true
