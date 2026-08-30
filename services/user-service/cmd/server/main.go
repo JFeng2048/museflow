@@ -24,6 +24,7 @@ import (
 	"github.com/museflow/user-service/internal/config"
 	"github.com/museflow/user-service/internal/handler"
 	"github.com/museflow/user-service/internal/pkg/queue"
+	"github.com/museflow/user-service/internal/pkg/turnstile"
 	"github.com/museflow/user-service/internal/repository"
 	"github.com/museflow/user-service/internal/service/admin"
 	"github.com/museflow/user-service/internal/service/audit"
@@ -70,6 +71,8 @@ func main() {
 	// 邮件等慢速操作走 asynq 队列：这里的客户端只负责投递，消费在 cmd/worker
 	queueClient := queue.New(cfg.Queue, taskStore)
 	defer queueClient.Close()
+	// 人机验证：未配置密钥时返回恒通过的客户端（开发态自动跳过）
+	captcha := captchaVerifier(cfg.Turnstile)
 	taskService := task.NewService(taskStore)
 	tokenManager := token.NewTokenManager(cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL, cfg.MFATicketTTL)
 	// 权限缓存 TTL 与 Refresh Token 一致（7 天）
@@ -79,7 +82,7 @@ func main() {
 	authService := auth.NewAuthService(
 		userRepo, tokenStore, tokenManager,
 		rbacService, auditService, oauthService,
-		codeStore, queueClient,
+		codeStore, queueClient, captcha,
 		auth.ResetServiceConfig{
 			CodeTTL:      cfg.CodeTTL,
 			CodeLength:   cfg.CodeLength,
@@ -140,6 +143,19 @@ func main() {
 		logger.Error("gRPC 服务异常退出", logger.Err(err))
 		log.Fatalf("gRPC 服务异常退出: %v", err)
 	}
+}
+
+// captchaVerifier 构造人机验证器。
+//
+// 未配置密钥时返回一个恒通过的客户端：本地开发没有 Cloudflare 配置也能走通流程，
+// 但此时发送验证码接口不受保护，启动时会有明确告警。
+func captchaVerifier(cfg turnstile.Config) auth.CaptchaVerifier {
+	if !cfg.Enabled() {
+		logger.Warn("人机验证未配置（USER_TURNSTILE_SECRET 为空），发送验证码接口将不受保护；生产环境必须配置")
+		return turnstile.NewNoop()
+	}
+	logger.Info("人机验证已启用", "endpoint", cfg.Endpoint, "timeout", cfg.Timeout.String())
+	return turnstile.New(cfg)
 }
 
 // initDB 初始化 GORM 连接池。

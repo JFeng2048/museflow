@@ -15,6 +15,7 @@ import (
 	userpb "github.com/museflow/proto/user"
 	"github.com/museflow/user-service/internal/model"
 	"github.com/museflow/user-service/internal/pkg/queue"
+	"github.com/museflow/user-service/internal/pkg/turnstile"
 	"github.com/museflow/user-service/internal/service/admin"
 	"github.com/museflow/user-service/internal/service/auth"
 	"github.com/museflow/user-service/internal/service/dto"
@@ -108,7 +109,12 @@ func (h *UserHandler) VerifyMFALogin(ctx context.Context, req *userpb.VerifyMFAL
 //
 // 只做入队，不阻塞等待 SMTP；返回 task_id 供客户端订阅发送进度。
 func (h *UserHandler) SendVerifyCode(ctx context.Context, req *userpb.SendVerifyCodeRequest) (*userpb.SendVerifyCodeResponse, error) {
-	taskID, expiresIn, err := h.auth.SendVerifyCode(ctx, req.GetEmail(), req.GetScene())
+	taskID, expiresIn, err := h.auth.SendVerifyCode(ctx, auth.SendVerifyCodeInput{
+		Email:        req.GetEmail(),
+		Scene:        req.GetScene(),
+		CaptchaToken: req.GetCaptchaToken(),
+		ClientIP:     req.GetClientIp(),
+	})
 	if err != nil {
 		return nil, mapError(err)
 	}
@@ -291,6 +297,15 @@ func mapError(err error) error {
 		return status.Error(codes.FailedPrecondition, err.Error())
 	case errors.Is(err, auth.ErrAccountLocked):
 		return status.Error(codes.ResourceExhausted, err.Error())
+	// 人机验证未通过：403 让前端知道要重新拉起 widget，而不是重试同一个令牌
+	case errors.Is(err, turnstile.ErrTokenMissing),
+		errors.Is(err, turnstile.ErrTokenInvalid),
+		errors.Is(err, turnstile.ErrActionMismatch),
+		errors.Is(err, turnstile.ErrHostnameMismatch):
+		return status.Error(codes.PermissionDenied, err.Error())
+	// 校验服务不可用：让客户端可重试
+	case errors.Is(err, turnstile.ErrServiceUnavailable):
+		return status.Error(codes.Unavailable, err.Error())
 	case errors.Is(err, ErrInvalidUUID):
 		return status.Error(codes.InvalidArgument, err.Error())
 	default:

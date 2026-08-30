@@ -7,12 +7,14 @@ package config
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/museflow/pkg/envloader"
 	"github.com/museflow/pkg/logger"
 	"github.com/museflow/user-service/internal/pkg/email"
 	"github.com/museflow/user-service/internal/pkg/queue"
+	"github.com/museflow/user-service/internal/pkg/turnstile"
 )
 
 // Config user-service 运行配置。
@@ -31,19 +33,22 @@ type Config struct {
 	MFATicketTTL time.Duration // 2FA 中间票据有效期（登录第一步到第二步）
 
 	// 2FA 参数
-	MFAIssuer            string // 发行方名称，展示在验证器 App 中
-	MFASkew              int    // 允许的时钟偏移步数（每步 30 秒）
-	MFARecoveryCodes     int    // 恢复码数量
-	MFARecoveryCodeLen   int    // 单个恢复码长度
+	MFAIssuer          string // 发行方名称，展示在验证器 App 中
+	MFASkew            int    // 允许的时钟偏移步数（每步 30 秒）
+	MFARecoveryCodes   int    // 恢复码数量
+	MFARecoveryCodeLen int    // 单个恢复码长度
 
 	// 验证码与邮件
-	CodeTTL      time.Duration // 验证码有效期
-	CodeLength   int           // 验证码位数
-	CodeResendCD time.Duration // 重发冷却时间，防止短时间重复发送
+	CodeTTL      time.Duration    // 验证码有效期
+	CodeLength   int              // 验证码位数
+	CodeResendCD time.Duration    // 重发冷却时间，防止短时间重复发送
 	SMTP         email.SMTPConfig // 邮件发送配置，未配置主机时降级为日志模式
 
 	// 异步任务队列（asynq，基于 Redis）
 	Queue queue.Config
+
+	// 人机验证（Cloudflare Turnstile），用于保护发送验证码等易被刷的接口
+	Turnstile turnstile.Config
 
 	Log *logger.Config // 日志配置（由 LOG_ 前缀读取）
 }
@@ -105,6 +110,13 @@ func Load() (*Config, error) {
 			Retention:   env.GetDuration("QUEUE_RETENTION_SECONDS", time.Hour),
 			StatusTTL:   env.GetDuration("QUEUE_STATUS_TTL_SECONDS", 10*time.Minute),
 		},
+		Turnstile: turnstile.Config{
+			// 密钥属于服务端机密，只从环境变量读取，绝不进仓库
+			Secret:           env.Get("TURNSTILE_SECRET", ""),
+			Endpoint:         env.Get("TURNSTILE_ENDPOINT", turnstile.DefaultEndpoint),
+			Timeout:          env.GetDuration("TURNSTILE_TIMEOUT_SECONDS", 5*time.Second),
+			AllowedHostnames: splitList(env.Get("TURNSTILE_ALLOWED_HOSTNAMES", "")),
+		},
 		Log: loadLogConfig(env),
 	}
 
@@ -116,6 +128,24 @@ func Load() (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// splitList 把逗号分隔的配置值拆成切片，自动去空白并丢弃空项。
+//
+// 用于 TURNSTILE_ALLOWED_HOSTNAMES 这类列表型配置；未配置时返回 nil，
+// 由调用方按「空列表表示不限制」处理。
+func splitList(v string) []string {
+	if strings.TrimSpace(v) == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if s := strings.TrimSpace(p); s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // buildPostgresDSN 由分体参数拼装 PostgreSQL 连接串。
@@ -131,14 +161,14 @@ func loadLogConfig(env *envloader.Loader) *logger.Config {
 		compress, _ = strconv.ParseBool(v)
 	}
 	return &logger.Config{
-		Level:      env.Get("LOG_LEVEL", "info"),
-		Format:     env.Get("LOG_FORMAT", "json"),
-		OutputPath: env.Get("LOG_OUTPUT_PATH", "./logs"),
+		Level:       env.Get("LOG_LEVEL", "info"),
+		Format:      env.Get("LOG_FORMAT", "json"),
+		OutputPath:  env.Get("LOG_OUTPUT_PATH", "./logs"),
 		ServiceName: env.Get("LOG_SERVICE_NAME", "user-service"),
-		Console:    env.GetBool("LOG_CONSOLE", true),
-		MaxSize:    env.GetInt("LOG_MAX_SIZE", 0),
-		MaxBackups: env.GetInt("LOG_MAX_BACKUPS", 0),
-		MaxAge:     env.GetInt("LOG_MAX_AGE", 0),
-		Compress:   compress,
+		Console:     env.GetBool("LOG_CONSOLE", true),
+		MaxSize:     env.GetInt("LOG_MAX_SIZE", 0),
+		MaxBackups:  env.GetInt("LOG_MAX_BACKUPS", 0),
+		MaxAge:      env.GetInt("LOG_MAX_AGE", 0),
+		Compress:    compress,
 	}
 }

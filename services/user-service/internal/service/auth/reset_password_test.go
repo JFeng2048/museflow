@@ -92,6 +92,26 @@ func (q *fakeQueue) lastVerifyCode() *queue.EmailVerifyCodePayload {
 	return &q.verifyCodes[len(q.verifyCodes)-1]
 }
 
+// stubCaptcha 人机验证替身：按 failErr 决定放行或拒绝。
+//
+// failErr 为 nil 时放行（模拟未启用或校验通过）；
+// 同时记录调用参数，便于断言令牌与 IP 是否被正确透传。
+type stubCaptcha struct {
+	failErr  error
+	lastTok  string
+	lastIP   string
+	lastAct  string
+	verified int
+}
+
+func (c *stubCaptcha) Verify(_ context.Context, token, remoteIP, expectedAction string) error {
+	c.lastTok = token
+	c.lastIP = remoteIP
+	c.lastAct = expectedAction
+	c.verified++
+	return c.failErr
+}
+
 // testMFAConfig 返回测试用 2FA 配置（使用默认值）。
 func testMFAConfig() MFAConfig { return MFAConfig{} }
 
@@ -106,27 +126,30 @@ func testResetConfig() ResetServiceConfig {
 	}
 }
 
-// newResetTestService 构造带验证码存储与队列替身的测试服务。
-func newResetTestService() (*AuthService, *fakeCodeStore, *fakeQueue) {
+// newResetTestService 构造带验证码存储、队列与人机验证替身的测试服务。
+//
+// 返回的 captcha 替身默认放行（failErr=nil），用例可修改 failErr 模拟校验失败。
+func newResetTestService() (*AuthService, *fakeCodeStore, *fakeQueue, *stubCaptcha) {
 	store := newFakeCodeStore()
 	producer := newFakeQueue()
+	captcha := &stubCaptcha{}
 	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute)
 	svc := NewAuthService(
 		newFakeUserRepo(), newFakeTokenStore(), tm,
 		nil, nil, nil, // rbac / audit / oauth 传 nil
-		store, producer, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
+		store, producer, captcha, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
 	)
-	return svc, store, producer
+	return svc, store, producer, captcha
 }
 
 // ---- 用例 ----
 
 func TestResetPasswordRejectsWrongCode(t *testing.T) {
-	svc, store, _ := newResetTestService()
+	svc, store, _, _ := newResetTestService()
 	ctx := context.Background()
 
 	registerOK(t, svc, store, "reset2@museflow.ai", "oldpass1234", "n")
-	if _, _, err := svc.SendVerifyCode(ctx, "reset2@museflow.ai", "reset_password"); err != nil {
+	if _, _, err := svc.SendVerifyCode(ctx, SendVerifyCodeInput{Email: "reset2@museflow.ai", Scene: "reset_password"}); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
 	// 取出正确验证码后改写为错误值
@@ -140,7 +163,7 @@ func TestResetPasswordRejectsWrongCode(t *testing.T) {
 }
 
 func TestResetPasswordRejectsMissingCode(t *testing.T) {
-	svc, codes, _ := newResetTestService()
+	svc, codes, _, _ := newResetTestService()
 	ctx := context.Background()
 
 	registerOK(t, svc, codes, "reset3@museflow.ai", "oldpass1234", "n")
@@ -152,11 +175,11 @@ func TestResetPasswordRejectsMissingCode(t *testing.T) {
 }
 
 func TestResetPasswordConsumesCodeAndAllowsNewLogin(t *testing.T) {
-	svc, store, _ := newResetTestService()
+	svc, store, _, _ := newResetTestService()
 	ctx := context.Background()
 
 	registerOK(t, svc, store, "reset4@museflow.ai", "oldpass1234", "n")
-	if _, _, err := svc.SendVerifyCode(ctx, "reset4@museflow.ai", "reset_password"); err != nil {
+	if _, _, err := svc.SendVerifyCode(ctx, SendVerifyCodeInput{Email: "reset4@museflow.ai", Scene: "reset_password"}); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
 	code, _ := store.GetCode(ctx, "reset_password", "reset4@museflow.ai")
@@ -187,15 +210,15 @@ func TestSendVerifyCodeEnforcesResendCooldown(t *testing.T) {
 	withCD := NewAuthService(
 		newFakeUserRepo(), newFakeTokenStore(),
 		token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute),
-		nil, nil, nil, codes, newFakeQueue(),
+		nil, nil, nil, codes, newFakeQueue(), &stubCaptcha{},
 		ResetServiceConfig{CodeTTL: 10 * time.Minute, CodeLength: 6, CodeResendCD: time.Minute},
 		testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
 	)
 
-	if _, _, err := withCD.SendVerifyCode(ctx, "cooldown@museflow.ai", "reset_password"); err != nil {
+	if _, _, err := withCD.SendVerifyCode(ctx, SendVerifyCodeInput{Email: "cooldown@museflow.ai", Scene: "reset_password"}); err != nil {
 		t.Fatalf("首次发送失败: %v", err)
 	}
-	if _, _, err := withCD.SendVerifyCode(ctx, "cooldown@museflow.ai", "reset_password"); !errors.Is(err, ErrResendTooSoon) {
+	if _, _, err := withCD.SendVerifyCode(ctx, SendVerifyCodeInput{Email: "cooldown@museflow.ai", Scene: "reset_password"}); !errors.Is(err, ErrResendTooSoon) {
 		t.Errorf("冷却期内重复发送应被拒绝，实际: %v", err)
 	}
 }

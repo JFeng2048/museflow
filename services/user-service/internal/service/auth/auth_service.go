@@ -48,6 +48,28 @@ type TaskProducer interface {
 	EnqueueEmailWelcome(ctx context.Context, p queue.EmailWelcomePayload) (string, error)
 }
 
+// CaptchaVerifier 人机验证抽象（由 internal/pkg/turnstile.Client 实现）。
+//
+// 只有 Verify 一个方法，依赖抽象可让单测注入替身，不必真的访问 Cloudflare。
+type CaptchaVerifier interface {
+	Verify(ctx context.Context, token, remoteIP, expectedAction string) error
+}
+
+// SendVerifyCodeInput 发送邮箱验证码的入参。
+//
+// 单独成结构体而非逐个传参：除了 email/scene，还要带人机验证令牌与客户端 IP
+// 用于服务端核验，位置参数容易传错。
+type SendVerifyCodeInput struct {
+	// Email 目标邮箱，内部会规范化为小写。
+	Email string
+	// Scene 业务场景：register/login/reset_password/change_email。
+	Scene string
+	// CaptchaToken Cloudflare Turnstile 令牌，一次性。
+	CaptchaToken string
+	// ClientIP 客户端 IP，随令牌一并提交给校验服务。
+	ClientIP string
+}
+
 // AuthService 认证业务逻辑。
 type AuthService struct {
 	users      repository.UserRepository
@@ -58,6 +80,7 @@ type AuthService struct {
 	oauth      *oauth.Service
 	codes      repository.VerifyCodeStore // 验证码存储（密码重置 / 注册校验 / 验证码登录）
 	producer   TaskProducer               // 异步任务投递（邮件等慢速操作）
+	captcha    CaptchaVerifier            // 人机验证（防脚本刷验证码），未启用时为 nil
 	reset      ResetServiceConfig         // 密码重置配置
 	emailCfg   EmailCodeConfig            // 邮箱验证码（注册校验 / 验证码登录）配置
 	mfaCfg     MFAConfig                  // 2FA 配置
@@ -74,6 +97,7 @@ func NewAuthService(
 	oauthSvc *oauth.Service,
 	codes repository.VerifyCodeStore,
 	producer TaskProducer,
+	captcha CaptchaVerifier,
 	reset ResetServiceConfig,
 	emailCfg EmailCodeConfig,
 	mfaCfg MFAConfig,
@@ -90,6 +114,7 @@ func NewAuthService(
 		oauth:      oauthSvc,
 		codes:      codes,
 		producer:   producer,
+		captcha:    captcha,
 		reset:      reset,
 		emailCfg:   emailCfg,
 		mfaCfg:     mfaCfg,
@@ -503,8 +528,9 @@ func (c *EmailCodeConfig) applyDefaults() {
 //
 // 这里不直接调用 SMTP：邮件发送被下沉到 asynq 队列由独立 Worker 并发消费，
 // 请求链路只保留 Redis 读写与一次入队，耗时从「数百毫秒到数秒」降到毫秒级。
-func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) (string, int64, error) {
-	email = normalizeEmail(email)
+func (s *AuthService) SendVerifyCode(ctx context.Context, in SendVerifyCodeInput) (string, int64, error) {
+	email := normalizeEmail(in.Email)
+	scene := in.Scene
 	if email == "" {
 		return "", 0, fmt.Errorf("邮箱不能为空")
 	}
@@ -513,6 +539,15 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) (
 	}
 	if s.producer == nil {
 		return "", 0, fmt.Errorf("异步任务队列未初始化")
+	}
+
+	// 人机验证放在最前面：未通过就不生成验证码、不占用重发冷却，
+	// 避免机器人把冷却期刷满导致真实用户发不出验证码。
+	if s.captcha != nil {
+		// 用场景名作为 action，与前端 widget 的 action 保持一致（widget 未设置时后端跳过该校验）
+		if err := s.captcha.Verify(ctx, in.CaptchaToken, in.ClientIP, scene); err != nil {
+			return "", 0, fmt.Errorf("%w", err)
+		}
 	}
 
 	ok, err := s.codes.TryLockResend(ctx, scene, email, s.emailCfg.CodeResendCD)
