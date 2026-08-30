@@ -57,6 +57,8 @@ export type CodeScene = 'register' | 'login' | 'verify'
 export interface SendCodePayload {
   email: string
   scene: CodeScene
+  /** Cloudflare Turnstile 人机验证令牌，真实环境必填。 */
+  turnstileToken?: string
 }
 
 export interface LoginWithCodePayload {

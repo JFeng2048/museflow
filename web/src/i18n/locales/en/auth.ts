@@ -58,6 +58,7 @@ export default {
   sendCode: 'Send code',
   codeSent: 'Code sent',
   resendIn: 'Resend ({s}s)',
+  turnstileRequired: 'Please complete the human verification first (the box above)',
   mockCode: 'Demo code: 123456',
   mockCodeTip: 'Demo mode: code auto-filled, you can sign in directly (code 123456)',
   mockCodeEnv: 'Demo mode, code auto-filled: ',

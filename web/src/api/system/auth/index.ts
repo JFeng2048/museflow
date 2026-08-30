@@ -148,7 +148,9 @@ function mockRegister(payload: RegisterPayload): Promise<AuthResult> {
 /** 发送邮箱验证码（注册 / 免密登录 / 补验证）。 */
 export function sendCode(payload: SendCodePayload): Promise<void> {
   if (MOCK) return Promise.resolve()
-  return request.post<void>('/auth/email/send-code', payload).catch(() => undefined)
+  return request
+    .post<void>('/auth/email/send-code', payload)
+    .catch(() => undefined)
 }
 
 export function fetchProfile(): Promise<User> {

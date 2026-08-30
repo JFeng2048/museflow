@@ -22,6 +22,8 @@ import {
 } from '@/api/system/auth'
 import type { AuthResult } from '@/types/system/auth'
 import IdentityPicker from '@/components/common/IdentityPicker.vue'
+import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
+import type { TurnstileWidgetExposed } from '@/components/auth/TurnstileWidget.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -120,13 +122,22 @@ function chooseIdentity(view: 'user' | 'admin') {
 
 const countDown = ref(0)
 const showMockCode = ref(false)
+const tsRef = ref<TurnstileWidgetExposed | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
 async function   onSendCode() {
   if (!email.value) {
     message.warning(t('auth.fillBoth'))
     return
   }
-  await sendCode({ email: email.value, scene: 'login' })
+  // 发送验证码前完成人机验证（mock 环境降级跳过）
+  let tsToken: string | null = null
+  try {
+    tsToken = await tsRef.value?.ensureToken() ?? null
+  } catch {
+    message.warning(t('auth.turnstileRequired'))
+    return
+  }
+  await sendCode({ email: email.value, scene: 'login', turnstileToken: tsToken ?? undefined })
   code.value = MOCK_CODE
   if (ui.mockMode) {
     // 演示环境：弹出提示并显示验证码，无需真实邮箱。
@@ -203,6 +214,7 @@ async function   onSendCode() {
             {{ countDown > 0 ? t('auth.resendIn', { s: countDown }) : t('auth.sendCode') }}
           </button>
         </div>
+        <TurnstileWidget ref="tsRef" action="login" :allow-fallback="ui.mockMode" />
       </label>
 
       <button class="auth-primary" :disabled="loading" type="submit">

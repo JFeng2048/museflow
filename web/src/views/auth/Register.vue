@@ -12,6 +12,8 @@ import {
 import { useUserStore } from '@/stores/system/user'
 import { useUiStore } from '@/stores/ui'
 import { register as registerApi, sendCode, MOCK_CODE } from '@/api/system/auth'
+import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
+import type { TurnstileWidgetExposed } from '@/components/auth/TurnstileWidget.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -36,13 +38,22 @@ const valid = computed(
 
 const countDown = ref(0)
 const showMockCode = ref(false)
+const tsRef = ref<TurnstileWidgetExposed | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
 async function onSendCode() {
   if (!email.value) {
     message.warning(t('auth.fillBoth'))
     return
   }
-  await sendCode({ email: email.value, scene: 'register' })
+  // 发送验证码前完成人机验证（mock 环境降级跳过）
+  let tsToken: string | null = null
+  try {
+    tsToken = await tsRef.value?.ensureToken() ?? null
+  } catch {
+    message.warning(t('auth.turnstileRequired'))
+    return
+  }
+  await sendCode({ email: email.value, scene: 'register', turnstileToken: tsToken ?? undefined })
   code.value = MOCK_CODE
   if (ui.mockMode) {
     showMockCode.value = true
@@ -129,6 +140,7 @@ async function onSubmit() {
             {{ countDown > 0 ? t('auth.resendIn', { s: countDown }) : t('auth.sendCode') }}
           </button>
         </div>
+        <TurnstileWidget ref="tsRef" action="register" :allow-fallback="ui.mockMode" />
       </label>
 
       <button class="auth-primary" :disabled="loading || (step === 'form' && !valid)" type="submit">

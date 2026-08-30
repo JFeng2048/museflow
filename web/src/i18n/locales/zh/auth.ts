@@ -58,6 +58,7 @@ export default {
   sendCode: '发送验证码',
   codeSent: '验证码已发送',
   resendIn: '重新发送（{s}s）',
+  turnstileRequired: '请先完成人机验证（点击上方验证框）',
   mockCode: '演示验证码：123456',
   mockCodeTip: '演示环境：验证码已自动填入，可直接登录（验证码 123456）',
   mockCodeEnv: '演示环境，验证码已自动填入：',
