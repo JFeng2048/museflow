@@ -210,6 +210,11 @@ message LoginResponse {
 message SendVerifyCodeRequest {
   string email = 1;                // 邮箱，必填
   string scene = 2;                // 用途场景，必填
+  // captcha_token 人机验证令牌（Cloudflare Turnstile），一次性；
+  // 服务端未启用人机验证时可为空
+  string captcha_token = 3;
+  // client_ip 客户端 IP，随人机验证令牌一并提交给校验服务
+  string client_ip = 4;
 }
 
 message SendVerifyCodeResponse {

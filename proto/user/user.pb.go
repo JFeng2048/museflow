@@ -502,9 +502,14 @@ func (x *LoginResponse) GetMfaTicket() string {
 // SendVerifyCodeRequest 发送邮箱验证码请求。
 // scene 取值：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）。
 type SendVerifyCodeRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"` // 邮箱，必填
-	Scene         string                 `protobuf:"bytes,2,opt,name=scene,proto3" json:"scene,omitempty"` // 用途场景，必填
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Email string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"` // 邮箱，必填
+	Scene string                 `protobuf:"bytes,2,opt,name=scene,proto3" json:"scene,omitempty"` // 用途场景，必填
+	// captcha_token 人机验证令牌（Cloudflare Turnstile），一次性；
+	// 服务端未启用人机验证时可为空
+	CaptchaToken string `protobuf:"bytes,3,opt,name=captcha_token,json=captchaToken,proto3" json:"captcha_token,omitempty"`
+	// client_ip 客户端 IP，随人机验证令牌一并提交给校验服务
+	ClientIp      string `protobuf:"bytes,4,opt,name=client_ip,json=clientIp,proto3" json:"client_ip,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -549,6 +554,20 @@ func (x *SendVerifyCodeRequest) GetEmail() string {
 func (x *SendVerifyCodeRequest) GetScene() string {
 	if x != nil {
 		return x.Scene
+	}
+	return ""
+}
+
+func (x *SendVerifyCodeRequest) GetCaptchaToken() string {
+	if x != nil {
+		return x.CaptchaToken
+	}
+	return ""
+}
+
+func (x *SendVerifyCodeRequest) GetClientIp() string {
+	if x != nil {
+		return x.ClientIp
 	}
 	return ""
 }
@@ -4950,10 +4969,12 @@ const file_proto_user_user_proto_rawDesc = "" +
 	"\x04user\x18\x06 \x01(\v2\x0e.user.UserInfoR\x04user\x12!\n" +
 	"\frequires_mfa\x18\a \x01(\bR\vrequiresMfa\x12\x1d\n" +
 	"\n" +
-	"mfa_ticket\x18\b \x01(\tR\tmfaTicket\"C\n" +
+	"mfa_ticket\x18\b \x01(\tR\tmfaTicket\"\x85\x01\n" +
 	"\x15SendVerifyCodeRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x14\n" +
-	"\x05scene\x18\x02 \x01(\tR\x05scene\"P\n" +
+	"\x05scene\x18\x02 \x01(\tR\x05scene\x12#\n" +
+	"\rcaptcha_token\x18\x03 \x01(\tR\fcaptchaToken\x12\x1b\n" +
+	"\tclient_ip\x18\x04 \x01(\tR\bclientIp\"P\n" +
 	"\x16SendVerifyCodeResponse\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x1d\n" +
 	"\n" +
