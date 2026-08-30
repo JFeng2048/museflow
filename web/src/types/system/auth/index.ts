@@ -51,8 +51,8 @@ export interface RegisterPayload {
   code?: string
 }
 
-/** 验证码场景：注册校验 / 免密登录 / 补验证邮箱。 */
-export type CodeScene = 'register' | 'login' | 'verify'
+/** 验证码场景：注册 / 免密登录 / 重置密码 / 变更邮箱。 */
+export type CodeScene = 'register' | 'login' | 'reset_password' | 'change_email'
 
 export interface SendCodePayload {
   email: string

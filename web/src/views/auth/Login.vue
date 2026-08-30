@@ -124,11 +124,11 @@ const countDown = ref(0)
 const showMockCode = ref(false)
 const tsRef = ref<TurnstileWidgetExposed | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
-async function   onSendCode() {
-  if (loading.value) return
+async function onSendCode(): Promise<boolean> {
+  if (loading.value) return false
   if (!email.value) {
     message.warning(t('auth.fillBoth'))
-    return
+    return false
   }
   loading.value = true
   // 发送验证码前完成人机验证（mock 环境降级跳过）
@@ -138,13 +138,17 @@ async function   onSendCode() {
   } catch {
     message.warning(t('auth.turnstileRequired'))
     loading.value = false
-    return
+    return false
   }
   try {
     await sendCode({ email: email.value, scene: 'login', turnstileToken: tsToken ?? undefined })
-  } finally {
+  } catch {
+    tsRef.value?.reset()
     loading.value = false
+    return false
   }
+  tsRef.value?.reset() // Turnstile 令牌一次性，成功也要重置
+  loading.value = false
   code.value = MOCK_CODE
   if (ui.mockMode) {
     // 演示环境：弹出提示并显示验证码，无需真实邮箱。
@@ -158,7 +162,8 @@ async function   onSendCode() {
     countDown.value--
     if (countDown.value <= 0 && timer) clearInterval(timer)
   }, 1000)
-  }
+  return true
+}
 
   function onWechat() {
   message.info(t('auth.socialDevTip'))

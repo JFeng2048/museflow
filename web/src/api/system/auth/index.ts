@@ -145,12 +145,14 @@ function mockRegister(payload: RegisterPayload): Promise<AuthResult> {
   return Promise.resolve({ token: `mock-token-${registered.id}`, user })
 }
 
-/** 发送邮箱验证码（注册 / 免密登录 / 补验证）。 */
+/** 发送邮箱验证码（注册 / 免密登录 / 重置密码 / 变更邮箱）。 */
 export function sendCode(payload: SendCodePayload): Promise<void> {
   if (MOCK) return Promise.resolve()
-  return request
-    .post<void>('/auth/email/send-code', payload)
-    .catch(() => undefined)
+  return request.post<void>('/common/email/send-code', {
+    email: payload.email,
+    scene: payload.scene,
+    captcha_token: payload.turnstileToken,
+  })
 }
 
 export function fetchProfile(): Promise<User> {
