@@ -19,7 +19,6 @@ Prefix `/api/v1`. Full fields and examples in the gateway Swagger (`/swagger/ind
 | POST | `/api/v1/auth/register` | No | Register; body needs email code `code` (get it from `send-code` first); account marked verified on success |
 | POST | `/api/v1/auth/login` | No | Password login; issues access (body) + refresh (HttpOnly Cookie). Returns `mfa_ticket` instead of tokens when 2FA is on |
 | POST | `/api/v1/auth/logout` | No (Cookie) | Logout; revoke current device's refresh and add access to deny-list |
-| POST | `/api/v1/auth/email/send-code` | No | Send email code; `scene` is `register`/`login`/`reset_password`/`change_email`, with resend cooldown, avoids enumeration |
 | POST | `/api/v1/auth/login/code` | No | Passwordless email-code login; reuses dual-token issuance, compatible with 2FA ticket |
 | POST | `/api/v1/auth/mfa/enable` | Yes | Enable 2FA; returns TOTP secret + QR URI, needs `verify` to confirm |
 | POST | `/api/v1/auth/mfa/verify` | Yes | Verify TOTP or one-time recovery code; confirms enable/disable, or exchanges ticket during login |
@@ -28,7 +27,8 @@ Prefix `/api/v1`. Full fields and examples in the gateway Swagger (`/swagger/ind
 | POST | `/api/v1/auth/password/reset` | No | Reset password with code; code is single-use. Get the code via `send-code` (`scene=reset_password`) first |
 | GET  | `/api/v1/auth/sessions` | Yes | Active session (device) list for current user |
 | DELETE | `/api/v1/auth/sessions/:id` | Yes | Revoke a session (device) |
-| POST | `/api/v1/common/email/send-code` | No | Public email-code endpoint (same source as `/auth/email/send-code`, grouped under `/common` for convenience) |
+| POST | `/api/v1/common/email/send-code` | No | Send email code; `scene` is `register`/`login`/`reset_password`/`change_email`, with resend cooldown, avoids enumeration. Delivery is async: returns `202` + `task_id` (and `expires_in`, the code TTL in seconds) |
+| GET | `/api/v1/common/tasks/{task_id}/stream` | No | SSE stream of delivery progress; event names are `pending`/`sending`/`retrying`/`success`/`failed`. The server closes the connection after a terminal event |
 | POST | `/api/v1/common/refresh` | No (Cookie) | Exchange refresh Cookie for a new access token; refresh is rotated |
 | GET  | `/api/v1/user/profile` | Yes | Get current user profile |
 | POST | `/api/v1/user/email/change` | Yes | Change email; get a code via `send-code` (`scene=change_email`) to the new email first, then verify to update email and mark verified; new email must not be used by another account |
@@ -36,3 +36,24 @@ Prefix `/api/v1`. Full fields and examples in the gateway Swagger (`/swagger/ind
 | GET  | `/swagger/index.html` | No | Swagger UI |
 
 > The gateway holds no user data itself; all business checks and token issuance happen in user-service. Interfaces marked `Yes` in the `Auth` column require `Authorization: Bearer <access_token>` in the request header.
+
+## Email delivery progress (SSE)
+
+Sending a code is asynchronous: the endpoint enqueues an Asynq task and returns `202` immediately, while the user-service worker delivers the mail concurrently. The frontend can subscribe to progress with the returned `task_id`:
+
+```js
+const { task_id } = await sendCode({ email, scene })
+
+const es = new EventSource(`/api/v1/common/tasks/${task_id}/stream`)
+es.addEventListener('success', (e) => {
+  const data = JSON.parse(e.data) // { task_id, status, message, updated_at }
+  showTip(data.message)           // Code sent, check your inbox
+  es.close()
+})
+es.addEventListener('failed', (e) => {
+  showError(JSON.parse(e.data).message) // Delivery failed, please retry
+  es.close()
+})
+```
+
+Event fields: `task_id`, `status`, `message` (display-ready), `updated_at`. The server sends a comment heartbeat every 15s to keep intermediaries from closing the connection, and browsers auto-reconnect per the `retry` field (3s).

@@ -425,6 +425,17 @@ definitions:
     required:
     - code
     type: object
+  github_com_museflow_api-gateway_internal_dto_common_dto.SendVerifyCodeData:
+    properties:
+      expires_in:
+        description: ExpiresIn 验证码有效期（秒）。
+        example: 600
+        type: integer
+      task_id:
+        description: TaskID 异步任务 ID，用于订阅发送进度（GET /common/tasks/{task_id}/stream）。
+        example: 8f2c1e5a-3b7d-4a1e-9c0f-2d6b8a4e1f30
+        type: string
+    type: object
   github_com_museflow_api-gateway_internal_dto_user_dto.ChangePasswordRequest:
     properties:
       new_password:
@@ -1330,8 +1341,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: 按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/
-        change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功
+      description: |-
+        按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功
+        邮件通过异步队列发送，接口只负责生成验证码并入队，立即返回 task_id（HTTP 202）；
+        客户端可用 task_id 订阅 GET /common/tasks/{task_id}/stream 获取实时发送进度。
       parameters:
       - description: 邮箱与场景
         in: body
@@ -1342,10 +1355,15 @@ paths:
       produces:
       - application/json
       responses:
-        "200":
-          description: 发送成功
+        "202":
+          description: 已受理，异步发送中
           schema:
-            $ref: '#/definitions/errcode.Response'
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_common_dto.SendVerifyCodeData'
+              type: object
         "400":
           description: 参数校验失败
           schema:
@@ -1381,6 +1399,36 @@ paths:
           schema:
             $ref: '#/definitions/errcode.Response'
       summary: 刷新访问令牌
+      tags:
+      - common-公共
+  /common/tasks/{task_id}/stream:
+    get:
+      description: |-
+        以 Server-Sent Events 持续推送任务状态，供前端展示「发送中 / 已发送 / 发送失败」。
+        事件名即任务状态：pending（已入队）/ sending（发送中）/ retrying（重试中）/ success / failed；
+        收到 success 或 failed 后服务端关闭连接。建议用 EventSource 接入。
+      parameters:
+      - description: 任务 ID，来自 /common/email/send-code 的返回
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: '事件流：event: <status> / data: {\"task_id\":..,\"status\":..,\"message\":..}'
+          schema:
+            type: string
+        "400":
+          description: 缺少任务 ID
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 任务不存在或已过期
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      summary: 订阅异步任务进度（SSE）
       tags:
       - common-公共
   /user/email/change:

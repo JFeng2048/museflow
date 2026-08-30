@@ -106,20 +106,23 @@ MuseFlow/
 │   └── logger/                  # 基于 slog + lumberjack 的日志器（含文件切割）
 ├── services/
 │   ├── user-service/            # 用户服务（Go，gRPC :5002）
-│   │   ├── cmd/server/main.go    # 服务入口：装配 config/repo/service/handler
+│   │   ├── cmd/server/main.go    # gRPC 服务入口：装配 config/repo/service/handler
+│   │   ├── cmd/worker/main.go    # 异步任务 Worker 入口：消费 asynq 队列（发信）
 │   │   ├── .env.example          # 服务配置模板（已提交；.env 已被 gitignore）
 │   │   └── internal/
 │   │       ├── config/           # 配置加载（USER_ / DB_ / REDIS_ / JWT_SECRET / LOG_）
 │   │       ├── handler/          # gRPC 处理器（proto ↔ 业务层转换）
+│   │       ├── pkg/              # 内部公共包（email 邮件 / queue 异步任务）
+│   │       ├── worker/handlers/  # asynq 任务处理器（发信 + 回写进度）
 │   │       ├── service/          # 业务逻辑层（按领域拆分子包）
 │   │       │   ├── auth/         #   认证（注册/登录/刷新/登出/校验/邮箱验证码/2FA）
 │   │       │   ├── token/        #   JWT 管理（manager / claims / fingerprint）
+│   │       │   ├── task/         #   异步任务进度查询与订阅
 │   │       │   ├── rbac/         #   角色与权限（Redis 缓存）
 │   │       │   ├── oauth/        #   第三方账号关联
 │   │       │   ├── audit/        #   操作审计落库
-│   │       │   ├── notify/       #   邮件发送（SMTP，未配置则日志降级）
 │   │       │   └── dto/          #   Service 内部数据对象（Device / TokenPair）
-│   │       ├── repository/       # 数据访问（GORM 模型读写 + Redis 令牌/验证码存储）
+│   │       ├── repository/       # 数据访问（GORM 模型读写 + Redis 令牌/验证码/任务状态）
 │   │       ├── model/            # GORM 实体（user_svc.users）
 │   │       └── database/         # 用户库 DDL（user_svc.sql + migrations/）
 │   ├── api-gateway/             # API 网关（Go，HTTP :5001）
@@ -144,6 +147,7 @@ MuseFlow/
 ├── .env                         # 全局配置文件（已 gitignore，含开发默认值）
 ├── .env.example                 # 全局配置模板（已提交，复制为 .env 后填写）
 ├── go.work                      # Go Workspace（本地多模块开发）
+├── dev.bat / dev.sh             # 一键热重载全部服务（Windows / Linux·macOS）
 ├── Makefile                     # 根目录构建脚本（含 Air 热重载、proto 生成等）
 ├── README.md / README.cn.md
 └── LICENSE
@@ -237,11 +241,12 @@ make run-gateway
 ### 5. 常用命令
 
 ```bash
-make build       # 编译全部服务到 bin/
+make build       # 编译全部服务到 bin/（含 user-service worker）
 make test        # 运行测试
 make vet         # 静态检查
 make proto       # 重新生成 gRPC 代码
 make swagger     # 重新生成 Swagger 文档
+make watch       # Air 热重载全部后端服务（等价于 ./dev.sh）
 make docker      # 构建 Docker 镜像（上下文为仓库根目录）
 ```
 
@@ -253,10 +258,20 @@ make docker      # 构建 Docker 镜像（上下文为仓库根目录）
 > | `scripts\run-gateway.bat` | `make run-gateway` | 普通启动 api-gateway |
 > | `scripts\watch-user.bat` | `make watch-user` | Air 热重载 user-service |
 > | `scripts\watch-gateway.bat` | `make watch-gateway` | Air 热重载 api-gateway |
-> | `scripts\watch.bat` | `make watch` | 同时热重载两个服务（各开一个窗口） |
+> | `dev.bat` | `make watch` | **推荐**：一键热重载全部后端（网关 + user-service + worker），双击即运行 |
+> | `dev.bat gateway` | `make watch-gateway` | 仅 api-gateway |
+> | `dev.bat user` | `make watch-user` | 仅 user-service（gRPC） |
+> | `dev.bat worker` | `make watch-user-worker` | 仅 user-service worker（asynq 消费端） |
+> | `dev.bat web` | — | 仅前端（`pnpm dev`） |
+> | `dev.bat full` | `make watch-full` | 后端全部 + 前端 |
+> | `dev.bat help` | — | 显示用法 |
+>
+> `dev.bat` 位于仓库根目录，每个服务开一个独立窗口，关闭窗口即停止该服务；
+> `scripts\*.bat` 为等价的细粒度入口，仍可继续使用。
 >
 > Air 需先安装：`go install github.com/air-verse/air@latest`（脚本会自动把 `%USERPROFILE%\go\bin` 加入 PATH）。
 > 批处理中的中文提示在部分老版 CMD 编码下可能显示乱码，不影响功能。
+> **注意**：仓库内 `*.bat` 必须保持 CRLF 换行，LF 会导致 cmd.exe 截断行并出现乱码。
 
 ---
 

@@ -117,20 +117,23 @@ MuseFlow/
 │   └── logger/                  # slog + lumberjack logger (with file rotation)
 ├── services/
 │   ├── user-service/            # User service (Go, gRPC :5002)
-│   │   ├── cmd/server/main.go    # Entrypoint: wire config/repo/service/handler
+│   │   ├── cmd/server/main.go    # gRPC entrypoint: wire config/repo/service/handler
+│   │   ├── cmd/worker/main.go    # Async worker entrypoint: consumes the asynq queue
 │   │   ├── .env.example          # Service config template (committed; .env gitignored)
 │   │   └── internal/
 │   │       ├── config/           # Config loading (USER_ / DB_ / REDIS_ / JWT_SECRET / LOG_)
 │   │       ├── handler/          # gRPC handlers (proto ↔ service layer)
+│   │       ├── pkg/              # Internal shared pkgs (email / queue)
+│   │       ├── worker/handlers/  # asynq task handlers (delivery + progress)
 │   │       ├── service/          # Business logic (split by domain into subpackages)
 │   │       │   ├── auth/         #   Auth (register/login/refresh/logout/verify/email-code/2FA)
 │   │       │   ├── token/        #   JWT management (manager / claims / fingerprint)
+│   │       │   ├── task/         #   Async task progress lookup & subscription
 │   │       │   ├── rbac/         #   Roles & permissions (Redis-cached)
 │   │       │   ├── oauth/        #   Third-party account linking
 │   │       │   ├── audit/        #   Operation audit persistence
-│   │       │   ├── notify/       #   Email sending (SMTP, log fallback)
 │   │       │   └── dto/          #   Service-internal DTOs (Device / TokenPair)
-│   │       ├── repository/       # Data access (GORM models + Redis token/code store)
+│   │       ├── repository/       # Data access (GORM models + Redis token/code/task store)
 │   │       ├── model/            # GORM entities (user_svc.users)
 │   │       └── database/         # User DB DDL (user_svc.sql + migrations/)
 │   ├── api-gateway/             # API Gateway (Go, HTTP :5001)
@@ -154,6 +157,7 @@ MuseFlow/
 ├── .env                         # Global config (gitignored, holds dev defaults)
 ├── .env.example                 # Global config template (committed; copy to .env)
 ├── go.work                      # Go Workspace (local multi-module dev)
+├── dev.bat / dev.sh             # One-shot hot-reload for all services (Windows / Linux·macOS)
 ├── Makefile                     # Root build script (Air hot-reload, proto gen, etc.)
 ├── README.md / README.cn.md
 └── LICENSE
@@ -246,11 +250,12 @@ After startup, the console prints the access and Swagger URLs:
 ### 5. Common commands
 
 ```bash
-make build       # build all services into bin/
+make build       # build all services into bin/ (incl. user-service worker)
 make test        # run tests
 make vet         # static analysis
 make proto       # regenerate gRPC code
 make swagger     # regenerate Swagger docs
+make watch       # Air hot-reload the whole backend (same as ./dev.sh)
 make docker      # build Docker images (context = repo root)
 ```
 
@@ -262,9 +267,19 @@ make docker      # build Docker images (context = repo root)
 > | `scripts\run-gateway.bat` | `make run-gateway` | start api-gateway |
 > | `scripts\watch-user.bat` | `make watch-user` | Air hot-reload user-service |
 > | `scripts\watch-gateway.bat` | `make watch-gateway` | Air hot-reload api-gateway |
-> | `scripts\watch.bat` | `make watch` | hot-reload both (one window each) |
+> | `dev.bat` | `make watch` | **recommended**: hot-reload the whole backend (gateway + user-service + worker); can be double-clicked |
+> | `dev.bat gateway` | `make watch-gateway` | api-gateway only |
+> | `dev.bat user` | `make watch-user` | user-service only (gRPC) |
+> | `dev.bat worker` | `make watch-user-worker` | user-service worker only (asynq consumer) |
+> | `dev.bat web` | — | frontend only (`pnpm dev`) |
+> | `dev.bat full` | `make watch-full` | whole backend + frontend |
+> | `dev.bat help` | — | show usage |
+>
+> `dev.bat` lives at the repo root; each service gets its own window, and closing a window stops that service.
+> The `scripts\*.bat` granular entry points remain available.
 >
 > Install Air first: `go install github.com/air-verse/air@latest` (scripts auto-add `%USERPROFILE%\go\bin` to PATH). Chinese console output in old CMD code pages may render garbled, but functionality is unaffected.
+> **Note**: `*.bat` files in this repo must keep CRLF line endings — LF makes cmd.exe truncate lines and garble output.
 
 ---
 

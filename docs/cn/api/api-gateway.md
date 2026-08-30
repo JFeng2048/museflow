@@ -19,7 +19,6 @@
 | POST | `/api/v1/auth/register` | No | 注册；请求体需带邮箱验证码 `code`（先调 `send-code` 取码），成功后账号标记已验证 |
 | POST | `/api/v1/auth/login` | No | 密码登录；成功签发 access（响应体）+ refresh（HttpOnly Cookie）。开启 2FA 时返回 `mfa_ticket` 而非令牌 |
 | POST | `/api/v1/auth/logout` | No (Cookie) | 登出；吊销当前设备的 refresh 并加入 access 黑名单 |
-| POST | `/api/v1/auth/email/send-code` | No | 发送邮箱验证码；`scene` 取 `register`/`login`/`reset_password`/`change_email`，带重发冷却，避免账号枚举 |
 | POST | `/api/v1/auth/login/code` | No | 邮箱验证码免密登录；复用双令牌签发，兼容 2FA 票据返回 |
 | POST | `/api/v1/auth/mfa/enable` | Yes | 开启两步验证；返回 TOTP 密钥与二维码 URI，需 `verify` 确认 |
 | POST | `/api/v1/auth/mfa/verify` | Yes | 校验 TOTP 或一次性恢复码；登录态下用于确认开启/关闭，或登录流程中换发令牌 |
@@ -28,7 +27,8 @@
 | POST | `/api/v1/auth/password/reset` | No | 用验证码重置密码；验证码一次性消费。验证码需先经 `send-code`（`scene=reset_password`）获取 |
 | GET  | `/api/v1/auth/sessions` | Yes | 当前用户的活跃会话（设备）列表 |
 | DELETE | `/api/v1/auth/sessions/:id` | Yes | 吊销指定会话（设备） |
-| POST | `/api/v1/common/email/send-code` | No | 公开发送邮箱验证码（与 `/auth/email/send-code` 同源，统一归入 `/common` 便于调用） |
+| POST | `/api/v1/common/email/send-code` | No | 发送邮箱验证码；`scene` 取 `register`/`login`/`reset_password`/`change_email`，带重发冷却，避免账号枚举。邮件异步发送，返回 `202` + `task_id`（`expires_in` 为验证码有效期秒数） |
+| GET | `/api/v1/common/tasks/{task_id}/stream` | No | SSE 订阅发送进度；事件名为 `pending`/`sending`/`retrying`/`success`/`failed`，收到终态后服务端关闭连接 |
 | POST | `/api/v1/common/refresh` | No (Cookie) | 用 refresh Cookie 换取新 access token；刷新后旧 refresh 轮转 |
 | GET  | `/api/v1/user/profile` | Yes | 获取当前用户资料 |
 | POST | `/api/v1/user/email/change` | Yes | 修改邮箱；先经 `send-code`（`scene=change_email`）向新邮箱取码，校验通过后更新邮箱并标记已验证；新邮箱不可被其他账号占用 |
@@ -36,3 +36,24 @@
 | GET  | `/swagger/index.html` | No | Swagger 文档 UI |
 
 > 网关本身不持有用户数据，所有业务校验与令牌签发均在 user-service 完成；`Auth` 列标注 `Yes` 的接口需在请求头携带 `Authorization: Bearer <access_token>`。
+
+## 邮件发送进度（SSE）
+
+发送验证码是异步的：接口投递 asynq 任务后立即返回 `202`，邮件由 user-service 的 Worker 并发发出。前端可凭返回的 `task_id` 订阅进度：
+
+```js
+const { task_id } = await sendCode({ email, scene })
+
+const es = new EventSource(`/api/v1/common/tasks/${task_id}/stream`)
+es.addEventListener('success', (e) => {
+  const data = JSON.parse(e.data) // { task_id, status, message, updated_at }
+  showTip(data.message)           // 验证码已发送，请查收邮件
+  es.close()
+})
+es.addEventListener('failed', (e) => {
+  showError(JSON.parse(e.data).message) // 邮件发送失败，请稍后重试
+  es.close()
+})
+```
+
+事件字段：`task_id`、`status`、`message`（可直接展示的中文提示）、`updated_at`。服务端每 15 秒发送一次注释行心跳保活，连接断开时浏览器会按 `retry` 字段（3 秒）自动重连。

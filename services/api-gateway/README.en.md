@@ -34,6 +34,7 @@ proto/user/                Contract shared with user-service
 - **Dual-token pass-through**: access token is returned in the body and sent as `Authorization: Bearer`; refresh token is written to an HttpOnly Cookie (controlled by `CookieSecure`/`SameSite`/`Domain`). Login/refresh/logout manage the Cookie at the gateway.
 - **Auth middleware**: verifies access-token signature locally (shares `JWT_SECRET` with user-service). Under `/auth/*` only login/register/reset/email-code are public; everything else requires a valid Bearer.
 - **2FA compatibility**: when login returns an `mfa_ticket`, the gateway issues no tokens and only echoes the ticket; the client exchanges it via `/auth/mfa/verify-login`.
+- **Async progress over SSE**: sending a code is handled asynchronously by user-service; the gateway converts the `WatchTask` server stream into SSE for the client. It closes the connection after a terminal event (`success`/`failed`) and emits periodic heartbeats so intermediaries don't drop it. SSE requires response buffering to be off (`X-Accel-Buffering: no`); Nginx must also disable `proxy_buffering` in deployment.
 - **Unified error mapping**: gRPC status is converted via `errcode` into HTTP status + bilingual message (`writeGRPCError`).
 - **Request tracing**: every request gets a request-id injected into the log context for cross-service tracing.
 
@@ -46,11 +47,11 @@ proto/user/                Contract shared with user-service
 | POST | `/auth/logout` | Logout and revoke tokens | No |
 | POST | `/auth/mfa/*` | 2FA enable/verify/recovery | Yes |
 | POST | `/auth/password/reset` | Reset password with code (code via `/common/email/send-code` scene=reset_password) | No |
-| POST | `/auth/email/send-code` | Send email code (register/login/reset_password/change_email) | No |
 | POST | `/auth/login/code` | Passwordless email-code login | No |
 | GET | `/auth/sessions` | List sessions | Yes |
 | DELETE | `/auth/sessions/:id` | Revoke a session | Yes |
-| POST | `/common/email/send-code` | Public email-code endpoint (same as `/auth/email/send-code`) | No |
+| POST | `/common/email/send-code` | Send email code (register/login/reset_password/change_email); async, returns `202` + `task_id` | No |
+| GET | `/common/tasks/{task_id}/stream` | SSE stream of email delivery progress (closed after terminal event) | No |
 | POST | `/common/refresh` | Refresh access via refresh Cookie | No |
 | POST | `/user/email/change` | Change email (login required, get change_email code first) | Yes |
 | GET | `/user/profile` | Current user profile | Yes |

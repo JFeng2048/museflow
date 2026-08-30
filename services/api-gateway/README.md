@@ -34,6 +34,7 @@ proto/user/                与 user-service 共享的契约
 - **双令牌透传**：access token 经响应体返回、放入 `Authorization: Bearer`；refresh token 写入 HttpOnly Cookie（受 `CookieSecure`/`SameSite`/`Domain` 控制）。登录/刷新/登出由网关管理 Cookie。
 - **认证中间件**：校验 access token 签名（与 user-service 共享 `JWT_SECRET`）；`/auth/*` 下仅登录、注册、重置、邮箱验证码等免认证，其余需携带有效 Bearer。
 - **2FA 兼容**：登录返回 `mfa_ticket` 时网关不下发令牌，仅回传票据，前端走 `/auth/mfa/verify-login` 换取。
+- **异步进度转 SSE**：发送验证码由 user-service 异步执行，网关把 `WatchTask` 服务端流转换为 SSE 推给前端；终态事件（`success`/`failed`）推送后关闭连接，并周期性发送心跳防止中间层断开。SSE 端点需关闭响应缓冲（`X-Accel-Buffering: no`），部署时 Nginx 侧同样要关掉 `proxy_buffering`。
 - **统一错误映射**：gRPC status 经 `errcode` 转换为 HTTP 状态码与双语消息（`writeGRPCError`）。
 - **请求链路**：每个请求生成 request-id 并注入日志上下文，便于跨服务追踪。
 
@@ -46,11 +47,11 @@ proto/user/                与 user-service 共享的契约
 | POST | `/auth/logout` | 登出并吊销令牌 | 否 |
 | POST | `/auth/mfa/*` | 2FA 启用/校验/恢复码 | 是 |
 | POST | `/auth/password/reset` | 验证码重置密码（码经 `/common/email/send-code` scene=reset_password 获取） | 否 |
-| POST | `/auth/email/send-code` | 发送邮箱验证码（register/login/reset_password/change_email） | 否 |
 | POST | `/auth/login/code` | 邮箱验证码免密登录 | 否 |
 | GET | `/auth/sessions` | 会话列表 | 是 |
 | DELETE | `/auth/sessions/:id` | 吊销会话 | 是 |
-| POST | `/common/email/send-code` | 公开发送邮箱验证码（同 `/auth/email/send-code`） | 否 |
+| POST | `/common/email/send-code` | 发送邮箱验证码（register/login/reset_password/change_email），异步投递，返回 `202` + `task_id` | 否 |
+| GET | `/common/tasks/{task_id}/stream` | SSE 订阅验证码邮件发送进度（终态后关闭连接） | 否 |
 | POST | `/common/refresh` | 用 refresh Cookie 换新 access | 否 |
 | POST | `/user/email/change` | 修改邮箱（需登录，先取 change_email 码） | 是 |
 | GET | `/user/profile` | 当前用户资料 | 是 |

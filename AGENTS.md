@@ -37,7 +37,9 @@ Go uses a workspace; there is no root `go.mod`. From the repo root (Windows; `ma
 - Swagger (gateway): `cd services/api-gateway && swag init -g cmd/server/main.go -o docs`.
 - Frontend (`web/`): `pnpm install`, `pnpm dev`, `pnpm build` (vue-tsc + vite), `pnpm preview`. Run `pnpm build` before commit.
 
-Hot reload: install `air` (`go install github.com/air-verse/air@latest`), then `cd services/user-service && air` (or gateway).
+Hot reload: install `air` (`go install github.com/air-verse/air@latest`). Root entry points start every service at once — `dev.bat` (Windows, one window per service) or `./dev.sh` (Linux/macOS, tmux when available): `dev.bat`, `dev.bat gateway|user|worker|web|full|help`. Granular usage: `cd services/user-service && air` (or gateway); the worker uses its own config, `cd services/user-service && air -c .air.worker.toml`.
+
+**Line endings**: `*.bat` files must stay CRLF — cmd.exe truncates lines and garbles output on LF. `*.sh` must stay LF. Check after generating scripts with editors/AI tools that default to LF.
 
 ## Coding Style & Naming Conventions
 

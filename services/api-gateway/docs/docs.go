@@ -1270,7 +1270,7 @@ const docTemplate = `{
         },
         "/common/email/send-code": {
             "post": {
-                "description": "按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功",
+                "description": "按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功\n邮件通过异步队列发送，接口只负责生成验证码并入队，立即返回 task_id（HTTP 202）；\n客户端可用 task_id 订阅 GET /common/tasks/{task_id}/stream 获取实时发送进度。",
                 "consumes": [
                     "application/json"
                 ],
@@ -1293,10 +1293,22 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "发送成功",
+                    "202": {
+                        "description": "已受理，异步发送中",
                         "schema": {
-                            "$ref": "#/definitions/errcode.Response"
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_common_dto.SendVerifyCodeData"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     },
                     "400": {
@@ -1351,6 +1363,47 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "设备校验失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/common/tasks/{task_id}/stream": {
+            "get": {
+                "description": "以 Server-Sent Events 持续推送任务状态，供前端展示「发送中 / 已发送 / 发送失败」。\n事件名即任务状态：pending（已入队）/ sending（发送中）/ retrying（重试中）/ success / failed；\n收到 success 或 failed 后服务端关闭连接。建议用 EventSource 接入。",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "common-公共"
+                ],
+                "summary": "订阅异步任务进度（SSE）",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "任务 ID，来自 /common/email/send-code 的返回",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "事件流：event: \u003cstatus\u003e / data: {\\\"task_id\\\":..,\\\"status\\\":..,\\\"message\\\":..}",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "缺少任务 ID",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "任务不存在或已过期",
                         "schema": {
                             "$ref": "#/definitions/errcode.Response"
                         }
@@ -2378,6 +2431,21 @@ const docTemplate = `{
                 "code": {
                     "type": "string",
                     "example": "824913"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_common_dto.SendVerifyCodeData": {
+            "type": "object",
+            "properties": {
+                "expires_in": {
+                    "description": "ExpiresIn 验证码有效期（秒）。",
+                    "type": "integer",
+                    "example": 600
+                },
+                "task_id": {
+                    "description": "TaskID 异步任务 ID，用于订阅发送进度（GET /common/tasks/{task_id}/stream）。",
+                    "type": "string",
+                    "example": "8f2c1e5a-3b7d-4a1e-9c0f-2d6b8a4e1f30"
                 }
             }
         },
