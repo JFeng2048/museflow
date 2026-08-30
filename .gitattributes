@@ -1,0 +1,24 @@
+# 换行符策略：仓库内统一按 LF 存储，检出时按平台/类型转换。
+#
+# 背景：团队在 Windows 开发，而 Git 全局普遍开启 core.autocrlf=true。
+# 这会让 .sh 在检出时被转成 CRLF，bash 执行时报 "\r: command not found"；
+# 反过来若 .bat 变成 LF，cmd.exe 会截断行并出现中文乱码。
+# 因此这里按文件类型显式锁定，不依赖贡献者的本地配置。
+
+* text=auto
+
+# Windows 批处理 / 命令脚本：必须 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Shell 脚本：必须 LF
+*.sh text eol=lf
+.bashrc text eol=lf
+
+# 生成物与二进制：不参与换行转换
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pb.go -text
