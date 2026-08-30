@@ -19,17 +19,18 @@ import (
 	"gorm.io/gorm"
 	gormlogger "gorm.io/gorm/logger"
 
-	userpb "github.com/museflow/proto/user"
 	"github.com/museflow/pkg/logger"
+	userpb "github.com/museflow/proto/user"
 	"github.com/museflow/user-service/internal/config"
 	"github.com/museflow/user-service/internal/handler"
+	"github.com/museflow/user-service/internal/pkg/queue"
 	"github.com/museflow/user-service/internal/repository"
 	"github.com/museflow/user-service/internal/service/admin"
 	"github.com/museflow/user-service/internal/service/audit"
 	"github.com/museflow/user-service/internal/service/auth"
-	"github.com/museflow/user-service/internal/service/notify"
 	"github.com/museflow/user-service/internal/service/oauth"
 	"github.com/museflow/user-service/internal/service/rbac"
+	"github.com/museflow/user-service/internal/service/task"
 	"github.com/museflow/user-service/internal/service/token"
 )
 
@@ -65,7 +66,11 @@ func main() {
 	oauthRepo := repository.NewOAuthRepository(db)
 	tokenStore := repository.NewTokenStore(rdb)
 	codeStore := repository.NewVerifyCodeStore(rdb)
-	mailer := notify.NewEmailSender(cfg.SMTP)
+	taskStore := repository.NewTaskStore(rdb)
+	// 邮件等慢速操作走 asynq 队列：这里的客户端只负责投递，消费在 cmd/worker
+	queueClient := queue.New(cfg.Queue, taskStore)
+	defer queueClient.Close()
+	taskService := task.NewService(taskStore)
 	tokenManager := token.NewTokenManager(cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL, cfg.MFATicketTTL)
 	// 权限缓存 TTL 与 Refresh Token 一致（7 天）
 	rbacService := rbac.NewService(rbacRepo, tokenStore, cfg.RefreshTTL)
@@ -74,7 +79,7 @@ func main() {
 	authService := auth.NewAuthService(
 		userRepo, tokenStore, tokenManager,
 		rbacService, auditService, oauthService,
-		codeStore, mailer,
+		codeStore, queueClient,
 		auth.ResetServiceConfig{
 			CodeTTL:      cfg.CodeTTL,
 			CodeLength:   cfg.CodeLength,
@@ -94,7 +99,7 @@ func main() {
 		cfg.BcryptCost,
 	)
 	adminService := admin.NewService(userRepo, rbacService, auditService)
-	userHandler := handler.NewUserHandler(authService, adminService)
+	userHandler := handler.NewUserHandler(authService, adminService, taskService)
 
 	// 角色与权限数据由数据库维护（database/user_svc.sql），代码不做种子写入
 	grpcServer := grpc.NewServer()

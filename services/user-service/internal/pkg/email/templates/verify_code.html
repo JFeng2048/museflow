@@ -1,0 +1,57 @@
+{{- /* 邮箱验证码 HTML 模板（注册 / 登录 / 修改邮箱） */ -}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MuseFlow 邮箱验证码</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f6f8;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(15,23,42,0.06);">
+          <tr>
+            <td style="padding:32px 40px 8px;">
+              <div style="font-size:20px;font-weight:600;color:#0f172a;letter-spacing:0.5px;">MuseFlow</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 40px 0;">
+              <h1 style="margin:0;font-size:18px;font-weight:600;color:#0f172a;">您好{{if .Nickname}}，{{.Nickname}}{{end}}</h1>
+              <p style="margin:16px 0 0;font-size:14px;line-height:24px;color:#475569;">
+                您正在进行<b>{{.Purpose}}</b>。请使用下面的验证码完成验证：
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:28px 40px;">
+              <div style="display:inline-block;padding:16px 32px;background:#f1f5f9;border-radius:10px;font-size:30px;font-weight:700;letter-spacing:8px;color:#0f172a;font-family:'SFMono-Regular',Consolas,monospace;">
+                {{.Code}}
+              </div>
+              <div style="margin-top:12px;font-size:13px;color:#94a3b8;">验证码 {{.Minutes}} 分钟内有效</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 40px 8px;">
+              <p style="margin:0;font-size:13px;line-height:22px;color:#64748b;">
+                为了保护您的账号安全，请勿将验证码透露给任何人。MuseFlow 工作人员不会向您索取验证码。
+              </p>
+              <p style="margin:12px 0 0;font-size:13px;line-height:22px;color:#64748b;">
+                如果您没有发起此操作，请忽略本邮件，您的账号不会受到影响。
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 40px 32px;border-top:1px solid #e2e8f0;margin-top:24px;">
+              <p style="margin:0;font-size:13px;color:#94a3b8;">祝您创作愉快，</p>
+              <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">MuseFlow 团队</p>
+              <p style="margin:16px 0 0;font-size:12px;color:#cbd5e1;">&copy; {{year}} MuseFlow</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

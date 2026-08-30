@@ -13,10 +13,10 @@ import (
 
 	"github.com/museflow/pkg/logger"
 	"github.com/museflow/user-service/internal/model"
+	"github.com/museflow/user-service/internal/pkg/queue"
 	"github.com/museflow/user-service/internal/repository"
 	"github.com/museflow/user-service/internal/service/audit"
 	"github.com/museflow/user-service/internal/service/dto"
-	"github.com/museflow/user-service/internal/service/notify"
 	"github.com/museflow/user-service/internal/service/oauth"
 	"github.com/museflow/user-service/internal/service/rbac"
 	"github.com/museflow/user-service/internal/service/token"
@@ -37,6 +37,17 @@ var (
 // bcrypt 最长只处理 72 字节，超长部分会被静默截断，这里显式拒绝以避免安全误解。
 const maxPasswordBytes = 72
 
+// TaskProducer 异步任务投递抽象（由 internal/pkg/queue.Client 实现）。
+//
+// 邮件属于慢速外部依赖，服务层只负责投递任务、不直接发信，
+// 依赖抽象便于单元测试注入内存替身。
+type TaskProducer interface {
+	// EnqueueEmailVerifyCode 投递邮箱验证码任务，返回任务 ID。
+	EnqueueEmailVerifyCode(ctx context.Context, p queue.EmailVerifyCodePayload) (string, error)
+	// EnqueueEmailWelcome 投递欢迎邮件任务，返回任务 ID。
+	EnqueueEmailWelcome(ctx context.Context, p queue.EmailWelcomePayload) (string, error)
+}
+
 // AuthService 认证业务逻辑。
 type AuthService struct {
 	users      repository.UserRepository
@@ -46,7 +57,7 @@ type AuthService struct {
 	audit      *audit.Service
 	oauth      *oauth.Service
 	codes      repository.VerifyCodeStore // 验证码存储（密码重置 / 注册校验 / 验证码登录）
-	mailer     notify.EmailSender         // 邮件发送器
+	producer   TaskProducer               // 异步任务投递（邮件等慢速操作）
 	reset      ResetServiceConfig         // 密码重置配置
 	emailCfg   EmailCodeConfig            // 邮箱验证码（注册校验 / 验证码登录）配置
 	mfaCfg     MFAConfig                  // 2FA 配置
@@ -62,7 +73,7 @@ func NewAuthService(
 	auditSvc *audit.Service,
 	oauthSvc *oauth.Service,
 	codes repository.VerifyCodeStore,
-	mailer notify.EmailSender,
+	producer TaskProducer,
 	reset ResetServiceConfig,
 	emailCfg EmailCodeConfig,
 	mfaCfg MFAConfig,
@@ -78,7 +89,7 @@ func NewAuthService(
 		audit:      auditSvc,
 		oauth:      oauthSvc,
 		codes:      codes,
-		mailer:     mailer,
+		producer:   producer,
 		reset:      reset,
 		emailCfg:   emailCfg,
 		mfaCfg:     mfaCfg,
@@ -134,11 +145,11 @@ func (s *AuthService) Register(ctx context.Context, email, password, nickname, c
 
 	hashStr := string(hash)
 	u := &model.User{
-		UUID:         uuid.New(),
-		Email:        email,
-		PasswordHash: &hashStr,
-		Nickname:     nickname,
-		Status:       model.StatusNormal,
+		UUID:          uuid.New(),
+		Email:         email,
+		PasswordHash:  &hashStr,
+		Nickname:      nickname,
+		Status:        model.StatusNormal,
 		EmailVerified: true,
 	}
 
@@ -150,6 +161,16 @@ func (s *AuthService) Register(ctx context.Context, email, password, nickname, c
 	if s.rbac != nil {
 		if err := s.rbac.AssignRole(ctx, u.UUID, rbac.RoleUser, u.UUID); err != nil {
 			logger.WarnContext(ctx, "注册授予默认角色失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
+		}
+	}
+
+	// 注册成功后投递欢迎邮件：属于通知类任务，失败只记日志不影响注册结果
+	if s.producer != nil {
+		if _, err := s.producer.EnqueueEmailWelcome(ctx, queue.EmailWelcomePayload{
+			To:       u.Email,
+			Nickname: u.Nickname,
+		}); err != nil {
+			logger.WarnContext(ctx, "投递欢迎邮件任务失败", logger.UserUUID(u.UUID.String()), logger.Err(err))
 		}
 	}
 
@@ -455,8 +476,8 @@ func (s *AuthService) GetProfile(ctx context.Context, userUUID string) (*model.U
 
 // EmailCodeConfig 邮箱验证码（注册校验 / 验证码登录）配置。
 type EmailCodeConfig struct {
-	CodeLength  int           // 验证码长度
-	CodeTTL     time.Duration // 验证码有效期
+	CodeLength   int           // 验证码长度
+	CodeTTL      time.Duration // 验证码有效期
 	CodeResendCD time.Duration // 重发冷却
 }
 
@@ -473,55 +494,56 @@ func (c *EmailCodeConfig) applyDefaults() {
 	}
 }
 
-// emailPurpose 根据场景返回邮件正文用途描述。
-func emailPurpose(scene string) string {
-	switch scene {
-	case "register":
-		return "注册 MuseFlow 账号"
-	case "login":
-		return "登录 MuseFlow 账号"
-	case "reset_password":
-		return "重置 MuseFlow 账号密码"
-	case "change_email":
-		return "修改 MuseFlow 账号邮箱"
-	default:
-		return "验证 MuseFlow 邮箱"
-	}
-}
-
-// SendVerifyCode 发送邮箱验证码。
+// SendVerifyCode 生成邮箱验证码并投递异步发送任务。
 //
 // scene 取值：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）。
-// 重发冷却内返回 ErrResendTooSoon；邮件发送失败时降级为日志模式（便于联调）。
-func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) error {
+// 重发冷却内返回 ErrResendTooSoon。
+//
+// 返回值：task_id 用于订阅发送进度（见 gateway 的 SSE 端点），expires_in 为验证码有效期（秒）。
+//
+// 这里不直接调用 SMTP：邮件发送被下沉到 asynq 队列由独立 Worker 并发消费，
+// 请求链路只保留 Redis 读写与一次入队，耗时从「数百毫秒到数秒」降到毫秒级。
+func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) (string, int64, error) {
 	email = normalizeEmail(email)
 	if email == "" {
-		return fmt.Errorf("邮箱不能为空")
+		return "", 0, fmt.Errorf("邮箱不能为空")
 	}
-	if scene != "register" && scene != "login" && scene != "reset_password" && scene != "change_email" {
-		return fmt.Errorf("不支持的验证码场景: %s", scene)
+	if !supportedScene(scene) {
+		return "", 0, fmt.Errorf("不支持的验证码场景: %s", scene)
+	}
+	if s.producer == nil {
+		return "", 0, fmt.Errorf("异步任务队列未初始化")
 	}
 
 	ok, err := s.codes.TryLockResend(ctx, scene, email, s.emailCfg.CodeResendCD)
 	if err != nil {
-		return fmt.Errorf("检查验证码重发频率失败: %w", err)
+		return "", 0, fmt.Errorf("检查验证码重发频率失败: %w", err)
 	}
 	if !ok {
-		return ErrResendTooSoon
+		return "", 0, ErrResendTooSoon
 	}
 
-	code, err := notify.GenerateNumericCode(s.emailCfg.CodeLength)
+	code, err := generateNumericCode(s.emailCfg.CodeLength)
 	if err != nil {
-		return fmt.Errorf("生成邮箱验证码失败: %w", err)
+		return "", 0, fmt.Errorf("生成邮箱验证码失败: %w", err)
 	}
 	if err := s.codes.SaveCode(ctx, scene, email, code, s.emailCfg.CodeTTL); err != nil {
-		return fmt.Errorf("保存邮箱验证码失败: %w", err)
+		return "", 0, fmt.Errorf("保存邮箱验证码失败: %w", err)
 	}
 
-	body := notify.VerifyCodeBody(emailPurpose(scene), code, s.emailCfg.CodeTTL)
-	if err := s.mailer.Send(email, "MuseFlow 邮箱验证码", body); err != nil {
-		// 降级：记录日志但不阻断流程，便于本地无 SMTP 联调
-		logger.WarnContext(ctx, "邮箱验证码发送失败，已降级为日志模式（验证码已打印至下方日志，生产环境请配置 SMTP）", "email", email, logger.Err(err))
+	taskID, err := s.producer.EnqueueEmailVerifyCode(ctx, queue.EmailVerifyCodePayload{
+		To:      email,
+		Code:    code,
+		Scene:   scene,
+		Purpose: emailPurpose(scene),
+		TTL:     int64(s.emailCfg.CodeTTL.Seconds()),
+	})
+	if err != nil {
+		// 入队失败意味着验证码永远送不出去，回滚验证码与冷却锁，
+		// 避免用户白等一个冷却周期；对外只回通用提示，细节留在日志
+		logger.ErrorContext(ctx, "投递邮箱验证码任务失败", "email", email, "scene", scene, logger.Err(err))
+		s.rollbackSendCode(ctx, scene, email)
+		return "", 0, fmt.Errorf("邮件发送服务暂时不可用，请稍后再试")
 	}
 
 	if s.audit != nil {
@@ -531,7 +553,17 @@ func (s *AuthService) SendVerifyCode(ctx context.Context, email, scene string) e
 			Detail:   "scene=" + scene,
 		})
 	}
-	return nil
+	return taskID, int64(s.emailCfg.CodeTTL.Seconds()), nil
+}
+
+// rollbackSendCode 入队失败后的补偿：删除已写入的验证码并释放冷却锁。
+func (s *AuthService) rollbackSendCode(ctx context.Context, scene, email string) {
+	if err := s.codes.DeleteCode(ctx, scene, email); err != nil {
+		logger.WarnContext(ctx, "回滚邮箱验证码失败", "email", email, logger.Err(err))
+	}
+	if err := s.codes.UnlockResend(ctx, scene, email); err != nil {
+		logger.WarnContext(ctx, "释放验证码重发冷却失败", "email", email, logger.Err(err))
+	}
 }
 
 // ChangeEmail 校验新邮箱验证码并将账号邮箱改为新邮箱。

@@ -1,0 +1,46 @@
+{{- /* 注册欢迎邮件 HTML 模板 */ -}}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>欢迎加入 MuseFlow</title>
+</head>
+<body style="margin:0;padding:0;background:#f5f6f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f6f8;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 2px 12px rgba(15,23,42,0.06);">
+          <tr>
+            <td style="padding:32px 40px 8px;">
+              <div style="font-size:20px;font-weight:600;color:#0f172a;letter-spacing:0.5px;">MuseFlow</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 40px 0;">
+              <h1 style="margin:0;font-size:18px;font-weight:600;color:#0f172a;">欢迎加入 MuseFlow{{if .Nickname}}，{{.Nickname}}{{end}}</h1>
+              <p style="margin:16px 0 0;font-size:14px;line-height:24px;color:#475569;">
+                您的账号已创建成功（{{.Email}}）。现在就可以开始用 AI 辅助创作属于您的小说了。
+              </p>
+              <p style="margin:12px 0 0;font-size:14px;line-height:24px;color:#475569;">
+                建议先完成这两件事，让账号更安全、创作更顺手：
+              </p>
+              <ul style="margin:12px 0 0;padding-left:20px;font-size:14px;line-height:24px;color:#475569;">
+                <li>开启双因素认证，为账号再加一把锁</li>
+                <li>完善个人资料与写作偏好，让 AI 更懂你的风格</li>
+              </ul>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:24px 40px 32px;border-top:1px solid #e2e8f0;margin-top:24px;">
+              <p style="margin:0;font-size:13px;color:#94a3b8;">祝您创作愉快，</p>
+              <p style="margin:4px 0 0;font-size:13px;color:#94a3b8;">MuseFlow 团队</p>
+              <p style="margin:16px 0 0;font-size:12px;color:#cbd5e1;">&copy; {{year}} MuseFlow</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

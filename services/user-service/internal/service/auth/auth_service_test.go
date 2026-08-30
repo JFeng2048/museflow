@@ -270,7 +270,7 @@ func newTestService() (*AuthService, *fakeTokenStore, *fakeCodeStore) {
 	tm := token.NewTokenManager("test-secret", time.Hour, 30*24*time.Hour, 5*time.Minute)
 	codes := newFakeCodeStore()
 	// bcrypt 使用最小成本加速测试（rbac / audit / oauth 传 nil：测试聚焦认证主流程）
-	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, codes, &stubMailer{}, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, codes, newFakeQueue(), testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
 	return svc, store, codes
 }
 
@@ -464,7 +464,7 @@ func TestExpiredAccessTokenIsRejected(t *testing.T) {
 	store := newFakeTokenStore()
 	// 负有效期立即过期
 	tm := token.NewTokenManager("test-secret", -time.Minute, time.Hour, 5*time.Minute)
-	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), &stubMailer{}, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
+	svc := NewAuthService(newFakeUserRepo(), store, tm, nil, nil, nil, newFakeCodeStore(), newFakeQueue(), testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
 
 	tokenStr, err := tm.GenerateAccess(uuid.NewString(), uuid.NewString())
 	if err != nil {
@@ -524,7 +524,7 @@ func TestLoginLocksAccountAfterMaxFailures(t *testing.T) {
 	store := newFakeTokenStore()
 	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute)
 	codes := newFakeCodeStore()
-	svc := NewAuthService(repo, store, tm, nil, nil, nil, codes, &stubMailer{}, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
+	svc := NewAuthService(repo, store, tm, nil, nil, nil, codes, newFakeQueue(), testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost)
 	ctx := context.Background()
 
 	codes.codes["register:lock@museflow.ai"] = testRegisterCode
@@ -577,31 +577,66 @@ func TestListSessionsReturnsActiveDevices(t *testing.T) {
 
 // ---- 邮箱验证码（注册校验 / 补验证 / 免密登录） ----
 
-func TestSendVerifyCodeStoresCodeAndSendsMail(t *testing.T) {
-	svc, codes, mailer := newResetTestService()
+func TestSendVerifyCodeStoresCodeAndEnqueuesTask(t *testing.T) {
+	svc, codes, producer := newResetTestService()
 	ctx := context.Background()
 
-	if err := svc.SendVerifyCode(ctx, "Code@MuseFlow.ai", "register"); err != nil {
+	taskID, expiresIn, err := svc.SendVerifyCode(ctx, "Code@MuseFlow.ai", "register")
+	if err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
+	if taskID == "" {
+		t.Fatal("应返回用于订阅进度的 task_id")
+	}
+	if expiresIn != int64(svc.emailCfg.CodeTTL.Seconds()) {
+		t.Errorf("有效期秒数不符: %d != %d", expiresIn, int64(svc.emailCfg.CodeTTL.Seconds()))
+	}
 
-	// 邮箱在存储与邮件中均被规范化为小写
+	// 邮箱在存储与任务载荷中均被规范化为小写
 	code, _ := codes.GetCode(ctx, "register", "code@museflow.ai")
 	if len(code) != svc.emailCfg.CodeLength {
 		t.Errorf("应生成 %d 位验证码，实际 %q", svc.emailCfg.CodeLength, code)
 	}
-	if mailer.sentTo != "code@museflow.ai" {
-		t.Errorf("收件人未规范化: %s", mailer.sentTo)
+	payload := producer.lastVerifyCode()
+	if payload == nil {
+		t.Fatal("未投递邮箱验证码任务")
 	}
-	if !strings.Contains(mailer.sentBody, code) {
-		t.Errorf("邮件正文应包含验证码 %s，实际: %s", code, mailer.sentBody)
+	if payload.To != "code@museflow.ai" {
+		t.Errorf("收件人未规范化: %s", payload.To)
+	}
+	if payload.Code != code {
+		t.Errorf("任务载荷应携带验证码 %s，实际: %s", code, payload.Code)
+	}
+	if payload.Scene != "register" {
+		t.Errorf("场景不符，实际: %s", payload.Scene)
+	}
+	if !strings.Contains(payload.Purpose, "注册") {
+		t.Errorf("用途描述不含场景信息: %s", payload.Purpose)
+	}
+}
+
+func TestSendVerifyCodeRollsBackWhenQueueUnavailable(t *testing.T) {
+	svc, codes, producer := newResetTestService()
+	ctx := context.Background()
+
+	producer.failNext = true
+	if _, _, err := svc.SendVerifyCode(ctx, "rollback@museflow.ai", "register"); err == nil {
+		t.Fatal("队列不可用时应当失败")
+	}
+
+	// 验证码与冷却锁都应回滚，用户无需等待一个无效的冷却周期
+	if code, _ := codes.GetCode(ctx, "register", "rollback@museflow.ai"); code != "" {
+		t.Errorf("入队失败后应删除验证码，实际仍存在: %s", code)
+	}
+	if codes.locks["register:rollback@museflow.ai"] {
+		t.Error("入队失败后应释放重发冷却锁")
 	}
 }
 
 func TestSendVerifyCodeRejectsUnsupportedScene(t *testing.T) {
 	svc, _, _ := newResetTestService()
 	// 非法场景应被拒绝（不应静默成功）
-	if err := svc.SendVerifyCode(context.Background(), "x@y.com", "hack"); err == nil {
+	if _, _, err := svc.SendVerifyCode(context.Background(), "x@y.com", "hack"); err == nil {
 		t.Fatal("非法场景应被拒绝")
 	}
 }
@@ -614,7 +649,7 @@ func TestChangeEmailUpdatesEmailAndVerifies(t *testing.T) {
 	u := registerOK(t, svc, codes, "old@museflow.ai", "oldpass1234", "n")
 
 	// 向新邮箱发送 change_email 场景验证码
-	if err := svc.SendVerifyCode(ctx, "new@museflow.ai", "change_email"); err != nil {
+	if _, _, err := svc.SendVerifyCode(ctx, "new@museflow.ai", "change_email"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
 	code, _ := codes.GetCode(ctx, "change_email", "new@museflow.ai")
@@ -644,7 +679,7 @@ func TestChangeEmailRejectsAlreadyUsedEmail(t *testing.T) {
 	registerOK(t, svc, codes, "owner@museflow.ai", "oldpass1234", "n")
 	u := registerOK(t, svc, codes, "other@museflow.ai", "oldpass1234", "n")
 
-	if err := svc.SendVerifyCode(ctx, "owner@museflow.ai", "change_email"); err != nil {
+	if _, _, err := svc.SendVerifyCode(ctx, "owner@museflow.ai", "change_email"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
 	code, _ := codes.GetCode(ctx, "change_email", "owner@museflow.ai")
@@ -660,7 +695,7 @@ func TestLoginWithCodeIssuesUsableTokens(t *testing.T) {
 	ctx := context.Background()
 
 	registerOK(t, svc, codes, "codeuser@museflow.ai", "pw12345678", "n")
-	if err := svc.SendVerifyCode(ctx, "codeuser@museflow.ai", "login"); err != nil {
+	if _, _, err := svc.SendVerifyCode(ctx, "codeuser@museflow.ai", "login"); err != nil {
 		t.Fatalf("发送登录验证码失败: %v", err)
 	}
 	code, _ := codes.GetCode(ctx, "login", "codeuser@museflow.ai")
@@ -682,7 +717,7 @@ func TestLoginWithCodeRejectsWrongCodeAndUnknownEmail(t *testing.T) {
 	ctx := context.Background()
 
 	registerOK(t, svc, codes, "codeuser2@museflow.ai", "pw12345678", "n")
-	if err := svc.SendVerifyCode(ctx, "codeuser2@museflow.ai", "login"); err != nil {
+	if _, _, err := svc.SendVerifyCode(ctx, "codeuser2@museflow.ai", "login"); err != nil {
 		t.Fatalf("发送登录验证码失败: %v", err)
 	}
 

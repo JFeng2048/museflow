@@ -1,0 +1,38 @@
+# ---- 构建阶段 ----
+# user-service 的异步任务 Worker（asynq 消费端）镜像。
+# 与服务主进程共用同一份代码，入口为 cmd/worker。
+#
+# 构建上下文需为仓库根目录：
+#   docker build -f services/user-service/Dockerfile.worker -t museflow/user-service-worker .
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /src
+
+# 先复制模块定义并下载依赖，利用 Docker 层缓存
+COPY proto/go.mod proto/go.sum ./proto/
+COPY services/user-service/go.mod services/user-service/go.sum ./services/user-service/
+RUN cd services/user-service && go mod download
+
+# 复制源码
+COPY proto/ ./proto/
+COPY services/user-service/ ./services/user-service/
+
+# 静态编译，去除调试信息减小体积
+RUN cd services/user-service && \
+    CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/user-service-worker ./cmd/worker
+
+# ---- 运行阶段 ----
+FROM alpine:3.20
+
+# ca-certificates 用于 SMTP over TLS，tzdata 保证时间正确
+RUN apk add --no-cache ca-certificates tzdata && \
+    adduser -D -u 10001 appuser
+
+WORKDIR /app
+COPY --from=builder /out/user-service-worker /app/user-service-worker
+
+# 以非 root 用户运行
+USER appuser
+
+# Worker 不对外提供端口，仅连接 Redis 与 SMTP
+ENTRYPOINT ["/app/user-service-worker"]

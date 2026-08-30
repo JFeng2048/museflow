@@ -69,6 +69,9 @@ type VerifyCodeStore interface {
 	DeleteCode(ctx context.Context, scene, target string) error
 	// TryLockResend 防重发：在 cooldown 内重复请求返回 false
 	TryLockResend(ctx context.Context, scene, target string, cooldown time.Duration) (bool, error)
+	// UnlockResend 释放防重发锁：入队等下游步骤失败时调用，
+	// 避免用户被无谓的冷却期挡住而无法重试。
+	UnlockResend(ctx context.Context, scene, target string) error
 }
 
 type redisVerifyCodeStore struct {
@@ -106,4 +109,9 @@ func (s *redisVerifyCodeStore) DeleteCode(ctx context.Context, scene, target str
 // TryLockResend 通过 SetNX 实现冷却期内的防重发。
 func (s *redisVerifyCodeStore) TryLockResend(ctx context.Context, scene, target string, cooldown time.Duration) (bool, error) {
 	return s.rdb.SetNX(ctx, keyFor(limitPrefixForScene(scene), scene, target), 1, cooldown).Result()
+}
+
+// UnlockResend 删除防重发锁键。
+func (s *redisVerifyCodeStore) UnlockResend(ctx context.Context, scene, target string) error {
+	return s.rdb.Del(ctx, keyFor(limitPrefixForScene(scene), scene, target)).Err()
 }

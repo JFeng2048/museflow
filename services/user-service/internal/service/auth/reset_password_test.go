@@ -3,11 +3,13 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/museflow/user-service/internal/pkg/queue"
 	"github.com/museflow/user-service/internal/service/token"
 )
 
@@ -45,16 +47,49 @@ func (s *fakeCodeStore) TryLockResend(_ context.Context, scene, target string, _
 	return true, nil
 }
 
-// stubMailer 记录邮件内容，不真实发送。
-type stubMailer struct {
-	sentTo   string
-	sentBody string
+func (s *fakeCodeStore) UnlockResend(_ context.Context, scene, target string) error {
+	delete(s.locks, scene+":"+target)
+	return nil
 }
 
-func (m *stubMailer) Send(to, subject, body string) error {
-	m.sentTo = to
-	m.sentBody = body
-	return nil
+// fakeQueue 记录投递的异步任务，不真实写入 Redis。
+//
+// 邮件已下沉到 asynq 队列，服务层不再持有邮件发送器，
+// 因此这里用队列替身来断言「任务是否被正确投递」。
+type fakeQueue struct {
+	verifyCodes []queue.EmailVerifyCodePayload
+	welcome     []queue.EmailWelcomePayload
+	// failNext 置 true 时模拟队列不可用，用于验证失败回滚
+	failNext bool
+	seq      int
+}
+
+func newFakeQueue() *fakeQueue { return &fakeQueue{} }
+
+func (q *fakeQueue) EnqueueEmailVerifyCode(_ context.Context, p queue.EmailVerifyCodePayload) (string, error) {
+	if q.failNext {
+		return "", errors.New("队列不可用")
+	}
+	q.seq++
+	q.verifyCodes = append(q.verifyCodes, p)
+	return fmt.Sprintf("task-%d", q.seq), nil
+}
+
+func (q *fakeQueue) EnqueueEmailWelcome(_ context.Context, p queue.EmailWelcomePayload) (string, error) {
+	if q.failNext {
+		return "", errors.New("队列不可用")
+	}
+	q.seq++
+	q.welcome = append(q.welcome, p)
+	return fmt.Sprintf("task-%d", q.seq), nil
+}
+
+// lastVerifyCode 返回最近一次投递的验证码任务，未投递时返回 nil。
+func (q *fakeQueue) lastVerifyCode() *queue.EmailVerifyCodePayload {
+	if len(q.verifyCodes) == 0 {
+		return nil
+	}
+	return &q.verifyCodes[len(q.verifyCodes)-1]
 }
 
 // testMFAConfig 返回测试用 2FA 配置（使用默认值）。
@@ -71,17 +106,17 @@ func testResetConfig() ResetServiceConfig {
 	}
 }
 
-// newResetTestService 构造带验证码与邮件桩的测试服务。
-func newResetTestService() (*AuthService, *fakeCodeStore, *stubMailer) {
+// newResetTestService 构造带验证码存储与队列替身的测试服务。
+func newResetTestService() (*AuthService, *fakeCodeStore, *fakeQueue) {
 	store := newFakeCodeStore()
-	mailer := &stubMailer{}
+	producer := newFakeQueue()
 	tm := token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute)
 	svc := NewAuthService(
 		newFakeUserRepo(), newFakeTokenStore(), tm,
 		nil, nil, nil, // rbac / audit / oauth 传 nil
-		store, mailer, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
+		store, producer, testResetConfig(), testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
 	)
-	return svc, store, mailer
+	return svc, store, producer
 }
 
 // ---- 用例 ----
@@ -91,7 +126,7 @@ func TestResetPasswordRejectsWrongCode(t *testing.T) {
 	ctx := context.Background()
 
 	registerOK(t, svc, store, "reset2@museflow.ai", "oldpass1234", "n")
-	if err := svc.SendVerifyCode(ctx, "reset2@museflow.ai", "reset_password"); err != nil {
+	if _, _, err := svc.SendVerifyCode(ctx, "reset2@museflow.ai", "reset_password"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
 	// 取出正确验证码后改写为错误值
@@ -121,7 +156,7 @@ func TestResetPasswordConsumesCodeAndAllowsNewLogin(t *testing.T) {
 	ctx := context.Background()
 
 	registerOK(t, svc, store, "reset4@museflow.ai", "oldpass1234", "n")
-	if err := svc.SendVerifyCode(ctx, "reset4@museflow.ai", "reset_password"); err != nil {
+	if _, _, err := svc.SendVerifyCode(ctx, "reset4@museflow.ai", "reset_password"); err != nil {
 		t.Fatalf("发送验证码失败: %v", err)
 	}
 	code, _ := store.GetCode(ctx, "reset_password", "reset4@museflow.ai")
@@ -152,15 +187,15 @@ func TestSendVerifyCodeEnforcesResendCooldown(t *testing.T) {
 	withCD := NewAuthService(
 		newFakeUserRepo(), newFakeTokenStore(),
 		token.NewTokenManager("test-secret", time.Hour, time.Hour, 5*time.Minute),
-		nil, nil, nil, codes, &stubMailer{},
+		nil, nil, nil, codes, newFakeQueue(),
 		ResetServiceConfig{CodeTTL: 10 * time.Minute, CodeLength: 6, CodeResendCD: time.Minute},
 		testEmailCodeConfig(), testMFAConfig(), bcrypt.MinCost,
 	)
 
-	if err := withCD.SendVerifyCode(ctx, "cooldown@museflow.ai", "reset_password"); err != nil {
+	if _, _, err := withCD.SendVerifyCode(ctx, "cooldown@museflow.ai", "reset_password"); err != nil {
 		t.Fatalf("首次发送失败: %v", err)
 	}
-	if err := withCD.SendVerifyCode(ctx, "cooldown@museflow.ai", "reset_password"); !errors.Is(err, ErrResendTooSoon) {
+	if _, _, err := withCD.SendVerifyCode(ctx, "cooldown@museflow.ai", "reset_password"); !errors.Is(err, ErrResendTooSoon) {
 		t.Errorf("冷却期内重复发送应被拒绝，实际: %v", err)
 	}
 }

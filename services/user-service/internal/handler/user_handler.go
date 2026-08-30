@@ -6,16 +6,19 @@ package handler
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	userpb "github.com/museflow/proto/user"
 	"github.com/museflow/pkg/logger"
+	userpb "github.com/museflow/proto/user"
 	"github.com/museflow/user-service/internal/model"
+	"github.com/museflow/user-service/internal/pkg/queue"
 	"github.com/museflow/user-service/internal/service/admin"
 	"github.com/museflow/user-service/internal/service/auth"
 	"github.com/museflow/user-service/internal/service/dto"
+	"github.com/museflow/user-service/internal/service/task"
 )
 
 // UserHandler gRPC 处理器。
@@ -23,11 +26,14 @@ type UserHandler struct {
 	userpb.UnimplementedUserServiceServer
 	auth  *auth.AuthService
 	admin *admin.Service
+	tasks *task.Service
 }
 
 // NewUserHandler 构造 gRPC 处理器。
-func NewUserHandler(a *auth.AuthService, adm *admin.Service) *UserHandler {
-	return &UserHandler{auth: a, admin: adm}
+//
+// taskSvc 为异步任务进度服务，可传 nil（此时 WatchTask 返回 Unimplemented）。
+func NewUserHandler(a *auth.AuthService, adm *admin.Service, taskSvc *task.Service) *UserHandler {
+	return &UserHandler{auth: a, admin: adm, tasks: taskSvc}
 }
 
 // Register 用户注册。
@@ -98,12 +104,49 @@ func (h *UserHandler) VerifyMFALogin(ctx context.Context, req *userpb.VerifyMFAL
 	return resp, nil
 }
 
-// SendVerifyCode 发送邮箱验证码（注册校验 / 验证码登录 / 补验证邮箱）。
+// SendVerifyCode 生成邮箱验证码并投递异步发送任务。
+//
+// 只做入队，不阻塞等待 SMTP；返回 task_id 供客户端订阅发送进度。
 func (h *UserHandler) SendVerifyCode(ctx context.Context, req *userpb.SendVerifyCodeRequest) (*userpb.SendVerifyCodeResponse, error) {
-	if err := h.auth.SendVerifyCode(ctx, req.GetEmail(), req.GetScene()); err != nil {
+	taskID, expiresIn, err := h.auth.SendVerifyCode(ctx, req.GetEmail(), req.GetScene())
+	if err != nil {
 		return nil, mapError(err)
 	}
-	return &userpb.SendVerifyCodeResponse{}, nil
+	logger.InfoContext(ctx, "邮箱验证码已入队", "task_id", taskID, "scene", req.GetScene())
+	return &userpb.SendVerifyCodeResponse{TaskId: taskID, ExpiresIn: expiresIn}, nil
+}
+
+// WatchTask 订阅异步任务进度（服务端流）。
+//
+// 任务进入终态（success / failed）后主动关闭流；客户端断开时 ctx 会被取消，
+// 订阅协程随之退出，不会泄漏。
+func (h *UserHandler) WatchTask(req *userpb.WatchTaskRequest, stream userpb.UserService_WatchTaskServer) error {
+	if h.tasks == nil {
+		return status.Error(codes.Unimplemented, "任务进度服务未启用")
+	}
+
+	taskID := strings.TrimSpace(req.GetTaskId())
+	if taskID == "" {
+		return status.Error(codes.InvalidArgument, "任务 ID 不能为空")
+	}
+
+	ctx := stream.Context()
+	err := h.tasks.Stream(ctx, taskID, task.DefaultWatchTimeout, func(st queue.TaskStatus) error {
+		return stream.Send(&userpb.TaskEvent{
+			TaskId:    st.TaskID,
+			Status:    st.Status,
+			Message:   st.Message,
+			UpdatedAt: st.UpdatedAt,
+		})
+	})
+	if err != nil {
+		if errors.Is(err, task.ErrTaskNotFound) {
+			return status.Error(codes.NotFound, err.Error())
+		}
+		logger.WarnContext(ctx, "推送任务进度失败", "task_id", taskID, logger.Err(err))
+		return status.Error(codes.Internal, "推送任务进度失败")
+	}
+	return nil
 }
 
 // LoginWithCode 邮箱验证码登录（免密）。

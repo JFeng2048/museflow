@@ -1,0 +1,23 @@
+# Air 热重载配置 —— user-service worker（asynq 消费端）
+# 用法：在 services/user-service 目录执行 `air -c .air.worker.toml`
+root = "."
+tmp_dir = "tmp-worker"
+
+[build]
+  # 构建并运行入口：异步任务消费端，与服务主进程分开进程热重载
+  cmd = "go run ./cmd/worker"
+  # 仅构建（air 用此命令做增量编译校验）
+  bin = "./tmp-worker/user-service-worker"
+  include_ext = ["go", "mod", "sum"]
+  exclude_dir = ["tmp", "tmp-worker", "docs", "bin", "test"]
+  exclude_file = []
+  exclude_regex = ["_test\\.go"]
+  include_dir = ["internal", "cmd", "../../proto"]
+  delay = 1000
+  stop_on_error = false
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true

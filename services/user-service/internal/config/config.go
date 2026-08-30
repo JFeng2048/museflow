@@ -11,7 +11,8 @@ import (
 
 	"github.com/museflow/pkg/envloader"
 	"github.com/museflow/pkg/logger"
-	"github.com/museflow/user-service/internal/service/notify"
+	"github.com/museflow/user-service/internal/pkg/email"
+	"github.com/museflow/user-service/internal/pkg/queue"
 )
 
 // Config user-service 运行配置。
@@ -35,11 +36,14 @@ type Config struct {
 	MFARecoveryCodes     int    // 恢复码数量
 	MFARecoveryCodeLen   int    // 单个恢复码长度
 
-	// 验证码与邮件（密码重置）
-	CodeTTL       time.Duration // 验证码有效期
-	CodeLength    int           // 验证码位数
-	CodeResendCD  time.Duration // 重发冷却时间，防止短时间重复发送
-	SMTP          notify.SMTPConfig // 邮件发送配置，未配置主机时降级为日志模式
+	// 验证码与邮件
+	CodeTTL      time.Duration // 验证码有效期
+	CodeLength   int           // 验证码位数
+	CodeResendCD time.Duration // 重发冷却时间，防止短时间重复发送
+	SMTP         email.SMTPConfig // 邮件发送配置，未配置主机时降级为日志模式
+
+	// 异步任务队列（asynq，基于 Redis）
+	Queue queue.Config
 
 	Log *logger.Config // 日志配置（由 LOG_ 前缀读取）
 }
@@ -82,12 +86,24 @@ func Load() (*Config, error) {
 		CodeTTL:      env.GetDuration("CODE_TTL_SECONDS", 600*time.Second),
 		CodeLength:   env.GetInt("CODE_LENGTH", 6),
 		CodeResendCD: env.GetDuration("CODE_RESEND_COOLDOWN_SECONDS", 60*time.Second),
-		SMTP: notify.SMTPConfig{
+		SMTP: email.SMTPConfig{
 			Host:     env.Get("SMTP_HOST", ""),
 			Port:     env.GetInt("SMTP_PORT", 587),
 			Username: env.Get("SMTP_USERNAME", ""),
 			Password: env.Get("SMTP_PASSWORD", ""),
 			From:     env.Get("SMTP_FROM", ""),
+		},
+		Queue: queue.Config{
+			// 队列与验证码一样复用公共 REDIS_* 配置，避免再维护一套连接参数
+			RedisAddr:   redis.GetCommon("REDIS_ADDR", "localhost:6379"),
+			RedisPass:   redis.GetCommon("REDIS_PASSWORD", ""),
+			RedisDB:     redis.GetCommonInt("REDIS_DB", 0),
+			QueueName:   env.Get("QUEUE_NAME", "email"),
+			MaxRetry:    env.GetInt("QUEUE_MAX_RETRY", 3),
+			Timeout:     env.GetDuration("QUEUE_TIMEOUT_SECONDS", 30*time.Second),
+			Concurrency: env.GetInt("WORKER_CONCURRENCY", 20),
+			Retention:   env.GetDuration("QUEUE_RETENTION_SECONDS", time.Hour),
+			StatusTTL:   env.GetDuration("QUEUE_STATUS_TTL_SECONDS", 10*time.Minute),
 		},
 		Log: loadLogConfig(env),
 	}
