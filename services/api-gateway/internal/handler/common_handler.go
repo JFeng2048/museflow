@@ -54,13 +54,16 @@ func NewCommonHandler(users *client.UserClient, cfg *config.Config) *CommonHandl
 //	@Description	按场景发送邮箱验证码：register（注册校验）/ login（验证码登录）/ reset_password（密码重置）/ change_email（修改邮箱）；避免账号枚举，邮箱不存在时也返回成功
 //	@Description	邮件通过异步队列发送，接口只负责生成验证码并入队，立即返回 task_id（HTTP 202）；
 //	@Description	客户端可用 task_id 订阅 GET /common/tasks/{task_id}/stream 获取实时发送进度。
+//	@Description	请求需携带 Cloudflare Turnstile 令牌（captcha_token）；令牌一次性，每次发送都要重新获取。
 //	@Tags			common-公共
 //	@Accept			json
 //	@Produce		json
-//	@Param			body	body		authdto.SendVerifyCodeRequest	true	"邮箱与场景"
+//	@Param			body	body		authdto.SendVerifyCodeRequest	true	"邮箱、场景与人机验证令牌"
 //	@Success		202		{object}	errcode.Response{data=commondto.SendVerifyCodeData}	"已受理，异步发送中"
 //	@Failure		400		{object}	errcode.Response	"参数校验失败"
+//	@Failure		403		{object}	errcode.Response	"人机验证未通过，请重新完成验证"
 //	@Failure		429		{object}	errcode.Response	"发送过于频繁"
+//	@Failure		503		{object}	errcode.Response	"人机验证服务暂时不可用"
 //	@Router			/common/email/send-code [post]
 func (h *CommonHandler) SendVerifyCode(c *gin.Context) {
 	var req authdto.SendVerifyCodeRequest
@@ -72,6 +75,9 @@ func (h *CommonHandler) SendVerifyCode(c *gin.Context) {
 	resp, err := h.users.Service().SendVerifyCode(c.Request.Context(), &userpb.SendVerifyCodeRequest{
 		Email: req.Email,
 		Scene: req.Scene,
+		// 令牌由前端 widget 生成，一次性；IP 交给校验服务做辅助判断
+		CaptchaToken: req.CaptchaToken,
+		ClientIp:     c.ClientIP(),
 	})
 	if err != nil {
 		writeGRPCError(c, err)

@@ -56,6 +56,10 @@ type RegenerateRecoveryCodesRequest struct {
 type SendVerifyCodeRequest struct {
 	Email string `json:"email" binding:"required,email" example:"author@museflow.ai"`
 	Scene string `json:"scene" binding:"required,oneof=register login reset_password change_email" example:"register"`
+	// CaptchaToken Cloudflare Turnstile 人机验证令牌，一次性。
+	// 服务端启用人机验证后必填；未启用时可省略。
+	// 注意：令牌使用一次即失效，前端每次发送都必须重新获取。
+	CaptchaToken string `json:"captcha_token" binding:"omitempty,max=2048" example:"0.XXXXXXXXXXXXXXXXXXXXXX...."`
 }
 
 // ChangeEmailRequest 修改邮箱请求（需登录）。
