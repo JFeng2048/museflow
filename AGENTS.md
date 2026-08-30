@@ -39,6 +39,13 @@ Go uses a workspace; there is no root `go.mod`. From the repo root (Windows; `ma
 
 Hot reload: install `air` (`go install github.com/air-verse/air@latest`). Root entry points start every service at once — `dev.bat` (Windows, one window per service) or `./dev.sh` (Linux/macOS, tmux when available): `dev.bat`, `dev.bat gateway|user|worker|web|full|help`. Granular usage: `cd services/user-service && air` (or gateway); the worker uses its own config, `cd services/user-service && air -c .air.worker.toml`.
 
+Air config rules (v1.67+), all three `.air.toml` already follow them — violating any one produces misleading failures:
+- `build.cmd` must **build only** (`go build -o ./tmp/x ./cmd/...`), never `go run`. `go run` compiles *and* runs, so a service exiting non-zero (DB/Redis not up) is misreported as `failed to build`, and air then tries to run a binary that was never produced.
+- Use `build.entrypoint` (`["./tmp/x"]`); `build.bin` is deprecated and warns.
+- Set `stop_on_error = true`, otherwise a failed build silently runs a stale binary.
+- On Windows the binary must end in `.exe`; declare it via the `[build.windows]` platform override so Linux/macOS keep extensionless binaries.
+- `rerun = true` + `rerun_delay = 3000` so a service that fails fast on a not-yet-ready DB/Redis recovers on its own after `dev.bat` starts everything at once.
+
 **Line endings**: `*.bat` files must stay CRLF — cmd.exe truncates lines and garbles output on LF. `*.sh` must stay LF. Check after generating scripts with editors/AI tools that default to LF.
 
 ## Coding Style & Naming Conventions

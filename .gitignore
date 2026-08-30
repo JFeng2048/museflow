@@ -28,8 +28,14 @@ go.work.sum
 # 构建产物
 bin/
 
-# Air 热重载临时目录
+# `go build ./...` 会把各 main 包的可执行文件写到当前目录（根目录），一并忽略
+/api-gateway
+/user-service
+/user-service-worker
+
+# Air 热重载临时目录（worker 实例用 tmp-worker，避免与 gRPC 服务互相干扰）
 tmp/
+tmp-worker/
 
 # env 文件：.env 含本地密钥，忽略不提交；.env.example 作为模板提交
 .env
