@@ -8,6 +8,8 @@ import {
   IdCardOutline,
   MailOutline,
   LockClosedOutline,
+  EyeOutline,
+  EyeOffOutline,
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/system/user'
 import { useUiStore } from '@/stores/ui'
@@ -36,15 +38,30 @@ const valid = computed(
   () => !!email.value && password.value.length >= 6 && password.value === confirm.value,
 )
 
+// 按住小眼睛时显示密码明文，松开/移出即隐藏（不切换持久状态）
+const revealPassword = ref(false)
+function onRevealDown() {
+  revealPassword.value = true
+}
+function onRevealUp() {
+  revealPassword.value = false
+}
+
+// 密码与确认密码是否都已填写且不一致：用于实时提示，避免用户填完才发现发不了验证码
+const passwordsFilled = computed(() => !!password.value && !!confirm.value)
+const passwordMismatch = computed(() => passwordsFilled.value && password.value !== confirm.value)
+// 密码不足 6 位：实时提示（不阻塞按钮，方便用户点击时获得具体反馈）
+const passwordTooShort = computed(() => !!password.value && password.value.length < 6)
+
 const countDown = ref(0)
 const showMockCode = ref(false)
 const tsRef = ref<TurnstileWidgetExposed | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
-async function onSendCode() {
-  if (loading.value) return
+async function onSendCode(): Promise<boolean> {
+  if (loading.value) return false
   if (!email.value) {
     message.warning(t('auth.fillBoth'))
-    return
+    return false
   }
   loading.value = true
   // 发送验证码前完成人机验证（mock 环境降级跳过）
@@ -54,13 +71,17 @@ async function onSendCode() {
   } catch {
     message.warning(t('auth.turnstileRequired'))
     loading.value = false
-    return
+    return false
   }
   try {
     await sendCode({ email: email.value, scene: 'register', turnstileToken: tsToken ?? undefined })
-  } finally {
+  } catch {
+    tsRef.value?.reset()
     loading.value = false
+    return false
   }
+  tsRef.value?.reset() // Turnstile 令牌一次性，成功也要重置
+  loading.value = false
   code.value = MOCK_CODE
   if (ui.mockMode) {
     showMockCode.value = true
@@ -73,16 +94,22 @@ async function onSendCode() {
     countDown.value--
     if (countDown.value <= 0 && timer) clearInterval(timer)
   }, 1000)
+  return true
 }
 
 async function onSubmit() {
   if (step.value === 'form') {
-    if (!valid.value) {
-      message.warning(password.value !== confirm.value ? t('auth.pwMismatch') : t('auth.pwTooShort'))
+    // 两次密码不一致时优先提示，避免用户填完信息却发不出验证码
+    if (passwordMismatch.value) {
+      message.warning(t('auth.pwMismatch'))
       return
     }
-    await onSendCode()
-    step.value = 'code'
+    if (!valid.value) {
+      message.warning(t('auth.pwTooShort'))
+      return
+    }
+    const ok = await onSendCode()
+    if (ok) step.value = 'code'
     return
   }
   if (!code.value) {
@@ -127,11 +154,51 @@ async function onSubmit() {
       <div v-if="step === 'form'" class="auth-row">
         <label class="auth-field">
           <span class="auth-lbl"><n-icon :component="LockClosedOutline" class="text-[14px]" /> {{ t('auth.password') }}</span>
-          <input v-model="password" type="password" :placeholder="t('auth.passwordPlaceholder')" autocomplete="new-password" />
+          <div class="auth-input-wrap">
+            <input
+              v-model="password"
+              :type="revealPassword ? 'text' : 'password'"
+              :placeholder="t('auth.passwordPlaceholder')"
+              autocomplete="new-password"
+            />
+            <button
+              class="auth-reveal"
+              type="button"
+              :title="t('auth.showPassword')"
+              @mousedown.prevent="onRevealDown"
+              @mouseup.prevent="onRevealUp"
+              @mouseleave="onRevealUp"
+              @touchstart.prevent="onRevealDown"
+              @touchend.prevent="onRevealUp"
+            >
+              <n-icon :component="revealPassword ? EyeOffOutline : EyeOutline" class="text-[16px]" />
+            </button>
+          </div>
+          <p v-if="passwordTooShort" class="auth-field-err">{{ t('auth.pwTooShort') }}</p>
         </label>
         <label class="auth-field">
           <span class="auth-lbl"><n-icon :component="LockClosedOutline" class="text-[14px]" /> {{ t('auth.confirmPassword') }}</span>
-          <input v-model="confirm" type="password" :placeholder="t('auth.confirmPlaceholder')" autocomplete="new-password" />
+          <div class="auth-input-wrap">
+            <input
+              v-model="confirm"
+              :type="revealPassword ? 'text' : 'password'"
+              :placeholder="t('auth.confirmPlaceholder')"
+              autocomplete="new-password"
+            />
+            <button
+              class="auth-reveal"
+              type="button"
+              :title="t('auth.showPassword')"
+              @mousedown.prevent="onRevealDown"
+              @mouseup.prevent="onRevealUp"
+              @mouseleave="onRevealUp"
+              @touchstart.prevent="onRevealDown"
+              @touchend.prevent="onRevealUp"
+            >
+              <n-icon :component="revealPassword ? EyeOffOutline : EyeOutline" class="text-[16px]" />
+            </button>
+          </div>
+          <p v-if="passwordMismatch" class="auth-field-err">{{ t('auth.pwMismatch') }}</p>
         </label>
       </div>
 
@@ -152,7 +219,7 @@ async function onSubmit() {
       <!-- 人机验证：平时隐藏，点击「发送验证码」时才弹出校验（组件内部 visible 控制） -->
       <TurnstileWidget ref="tsRef" action="register" :allow-fallback="ui.mockMode" />
 
-      <button class="auth-primary" :disabled="loading || (step === 'form' && !valid)" type="submit">
+      <button class="auth-primary" :disabled="loading" type="submit">
         {{ loading ? t('auth.registering') : step === 'form' ? t('auth.sendCode') : t('auth.registerBtn') }}
       </button>
       <button v-if="step === 'code'" class="auth-back" type="button" @click="step = 'form'">

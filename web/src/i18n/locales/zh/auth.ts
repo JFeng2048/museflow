@@ -26,6 +26,7 @@ export default {
   registerFailed: '注册小插曲，再试一次？',
   pwMismatch: '两次密码不太一样，再确认一下～',
   pwTooShort: '密码至少 6 位哦。',
+  showPassword: '按住显示密码',
   agree: '登录即代表你愿意和 MuseFlow 一起，温柔地对待每一个故事。',
   fillBoth: '先填好邮箱和密码，我们才好为你开门～',
   emailPlaceholder: 'name\\@museflow.app',

@@ -912,6 +912,45 @@
   border-color: var(--c-amber);
   box-shadow: 0 0 0 3px var(--c-amber-soft);
 }
+/* 带右侧「按住显示密码」按钮的输入框 */
+.auth-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.auth-input-wrap input {
+  padding-right: 42px;
+}
+.auth-reveal {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-ink-muted);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+}
+.auth-reveal:hover {
+  color: var(--c-amber);
+  background: var(--c-amber-soft);
+}
+.auth-reveal:active {
+  color: var(--c-amber);
+}
+.auth-field-err {
+  margin: 6px 2px 0;
+  font-size: 12px;
+  color: var(--c-danger, #c0392b);
+}
 .auth-primary {
   width: 100%;
   margin-top: 6px;

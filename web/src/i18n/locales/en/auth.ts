@@ -26,6 +26,7 @@ export default {
   registerFailed: 'Sign-up hiccup, please try again.',
   pwMismatch: 'The two passwords do not match, check again.',
   pwTooShort: 'Password needs at least 6 characters.',
+  showPassword: 'Hold to reveal password',
   agree: 'By signing in you agree to treat every story gently with MuseFlow.',
   fillBoth: 'Please fill in both email and password so we can open the door.',
   emailPlaceholder: 'name\\@museflow.app',
