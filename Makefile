@@ -40,15 +40,19 @@ tidy: ## 整理各模块依赖
 	cd $(GATEWAY_DIR) && go mod tidy
 
 .PHONY: build
-build: build-gateway build-user ## 编译全部服务
+build: build-gateway build-user build-user-worker ## 编译全部服务（含 Worker）
 
 .PHONY: build-gateway
 build-gateway: ## 编译 api-gateway
 	cd $(GATEWAY_DIR) && go build -o ../../$(BIN_DIR)/api-gateway ./cmd/server
 
 .PHONY: build-user
-build-user: ## 编译 user-service
+build-user: ## 编译 user-service（gRPC 服务）
 	cd $(USER_DIR) && go build -o ../../$(BIN_DIR)/user-service ./cmd/server
+
+.PHONY: build-user-worker
+build-user-worker: ## 编译 user-service 的异步任务 Worker
+	cd $(USER_DIR) && go build -o ../../$(BIN_DIR)/user-service-worker ./cmd/worker
 
 .PHONY: run-gateway
 run-gateway: ## 本地启动 api-gateway
@@ -58,10 +62,17 @@ run-gateway: ## 本地启动 api-gateway
 run-user: ## 本地启动 user-service
 	cd $(USER_DIR) && go run ./cmd/server
 
+.PHONY: run-user-worker
+run-user-worker: ## 本地启动 user-service 的异步任务 Worker
+	cd $(USER_DIR) && go run ./cmd/worker
+
 .PHONY: watch
-watch: ## 同时热重载两个服务（需先 make init 安装 air）
-	@echo "启动 user-service(5002) 与 api-gateway(5001) 热重载..."
-	@(cd $(USER_DIR) && air) & (cd $(GATEWAY_DIR) && air)
+watch: ## 热重载全部服务（等价于 bash dev.sh；Windows 用 dev.bat）
+	@bash ./dev.sh
+
+.PHONY: watch-full
+watch-full: ## 热重载全部服务 + 前端
+	@bash ./dev.sh full
 
 .PHONY: watch-gateway
 watch-gateway: ## 仅热重载 api-gateway
@@ -70,6 +81,10 @@ watch-gateway: ## 仅热重载 api-gateway
 .PHONY: watch-user
 watch-user: ## 仅热重载 user-service
 	cd $(USER_DIR) && air
+
+.PHONY: watch-user-worker
+watch-user-worker: ## 仅热重载 user-service 的异步任务 Worker
+	cd $(USER_DIR) && air -c .air.worker.toml
 
 .PHONY: test
 test: ## 运行全部测试
@@ -84,9 +99,10 @@ fmt: ## 格式化代码
 	gofmt -w $(PROTO_DIR) $(USER_DIR) $(GATEWAY_DIR)
 
 .PHONY: docker
-docker: ## 构建两个服务的镜像（上下文为仓库根目录）
+docker: ## 构建全部镜像（上下文为仓库根目录）
 	docker build -f $(GATEWAY_DIR)/Dockerfile -t museflow/api-gateway:latest .
 	docker build -f $(USER_DIR)/Dockerfile -t museflow/user-service:latest .
+	docker build -f $(USER_DIR)/Dockerfile.worker -t museflow/user-service-worker:latest .
 
 .PHONY: clean
 clean: ## 清理构建产物
