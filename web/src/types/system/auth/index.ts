@@ -113,3 +113,101 @@ export interface ResetPasswordPayload {
   code: string
   newPassword: string
 }
+
+export interface UpdateProfilePayload {
+  /** 昵称，留空表示不修改。 */
+  name?: string
+  bio?: string
+  avatar?: string
+}
+
+export interface ChangeEmailPayload {
+  newEmail: string
+  code: string
+}
+
+/* ---------------- 后端线格式（snake_case） ----------------
+ * 对应 api-gateway 的 internal/dto，仅 api 层内部用于转换，
+ * 视图与 store 仍使用上面的 camelCase 领域类型。
+ */
+
+/** userdto.UserInfo */
+export interface UserInfoDto {
+  uuid: string
+  email: string
+  phone?: string
+  nickname: string
+  avatar_url?: string
+  bio?: string
+  status: number
+  email_verified: boolean
+  phone_verified: boolean
+  mfa_enabled: boolean
+  last_login_at?: number
+  created_at: number
+}
+
+/** authdto.LoginResponseData：登录 / 验证码登录 / 2FA 二次验证共用。 */
+export interface LoginDataDto {
+  access_token?: string
+  token_type?: string
+  expires_in?: number
+  user: UserInfoDto
+  requires_mfa: boolean
+  mfa_ticket?: string
+  recovery_codes?: string[]
+  remaining_recovery_codes?: number
+}
+
+/** userdto.SessionInfo */
+export interface SessionInfoDto {
+  token_id: string
+  device_id: string
+  device_name: string
+  login_time: number
+  last_refresh_time: number
+}
+
+/** userdto.SessionList：会话列表被包在 sessions 字段里。 */
+export interface SessionListDto {
+  sessions: SessionInfoDto[]
+}
+
+/** authdto.MFASetupData */
+export interface MFASetupDto {
+  secret: string
+  otpauth_url: string
+}
+
+/** authdto.MFAStatusData */
+export interface MFAStatusDto {
+  enabled: boolean
+  remaining_recovery_codes: number
+}
+
+/** commondto.SendVerifyCodeData：HTTP 202，异步发送。 */
+export interface SendCodeDataDto {
+  task_id: string
+  expires_in: number
+}
+
+/** userdto.OAuthBinding */
+export interface OAuthBindingDto {
+  provider: string
+  provider_user_id: string
+  provider_email?: string
+  provider_nickname?: string
+  provider_avatar?: string
+  last_login_at?: number
+  created_at: number
+}
+
+/** userdto.OAuthBindingList */
+export interface OAuthBindingListDto {
+  bindings: OAuthBindingDto[]
+}
+
+/** userdto.PermissionListData */
+export interface PermissionListDto {
+  permissions: string[]
+}

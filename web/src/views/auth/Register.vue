@@ -125,6 +125,12 @@ async function onSubmit() {
       confirmPassword: confirm.value,
       code: code.value,
     })
+    if (!result.token) {
+      // 注册成功但未拿到令牌（账号需先完成邮箱验证），引导用户去登录
+      message.success(t('auth.registerSuccess'))
+      setAuthMode?.('login')
+      return
+    }
     userStore.setAuth(result.token, result.user)
     message.success(t('auth.registerSuccess'))
     router.replace('/novels')

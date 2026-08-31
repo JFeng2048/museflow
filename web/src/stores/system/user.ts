@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchProfile } from '@/api/system/auth'
+import { fetchProfile, logout as logoutApi } from '@/api/system/auth'
+import { TOKEN_KEY } from '@/constants/auth'
 import type { User, UserBindings, BindingProvider, ViewMode } from '@/types/system/auth'
 
-const TOKEN_KEY = 'mf.token'
 const USER_KEY = 'mf.user'
 const VIEW_KEY = 'mf.view'
 
@@ -91,7 +91,8 @@ export const useUserStore = defineStore('user', () => {
     persist()
   }
 
-  function logout() {
+  /** 清理本地登录态。 */
+  function clearLocal() {
     token.value = ''
     user.value = { ...DEFAULT_USER }
     profileLoaded.value = false
@@ -99,6 +100,17 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
     localStorage.removeItem(VIEW_KEY)
+  }
+
+  /**
+   * 登出：先通知服务端失效令牌（含 refresh token 与其绑定的会话），
+   * 再清理本地状态。网络或令牌已失效时不阻塞登出，保证用户一定能退出。
+   */
+  async function logout() {
+    if (token.value) {
+      await logoutApi().catch(() => undefined)
+    }
+    clearLocal()
   }
 
   function persist() {

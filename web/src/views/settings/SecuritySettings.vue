@@ -15,7 +15,7 @@ import {
   verifyMfa,
   disableMfa,
   getMfaStatus,
-  getRecoveryCodes,
+  regenerateRecoveryCodes,
   listSessions,
   revokeSession,
 } from '@/api/system/auth'
@@ -79,6 +79,34 @@ async function onDisable(code: string) {
   }
 }
 
+// 重新生成恢复码需要先用当前 TOTP 验证码确认身份（后端要求 body 带 code）
+const showRegen = ref(false)
+const regenCode = ref('')
+const regenLoading = ref(false)
+
+function openRegen() {
+  regenCode.value = ''
+  showRegen.value = true
+}
+
+async function confirmRegen() {
+  if (!regenCode.value) {
+    message.warning(t('auth.fillBoth'))
+    return
+  }
+  regenLoading.value = true
+  try {
+    const codes = await regenerateRecoveryCodes(regenCode.value)
+    recoveryCodes.value = codes
+    status.value = { ...status.value, remainingRecoveryCodes: codes.length }
+    showRegen.value = false
+  } catch {
+    message.error(t('auth.mfaInvalid'))
+  } finally {
+    regenLoading.value = false
+  }
+}
+
 async function refreshSessions() {
   sessions.value = await listSessions()
   message.success(t('security.sessionsRefreshed'))
@@ -113,7 +141,7 @@ async function onRevoke(tokenId: string) {
       </div>
 
       <div v-if="status.enabled" class="security-actions">
-        <n-button size="small" tertiary @click="recoveryCodes = []; getRecoveryCodes().then(r => recoveryCodes = r)">
+        <n-button size="small" tertiary @click="openRegen">
           {{ t('security.viewRecovery') }}
         </n-button>
         <n-popconfirm @positive-click="onDisable('')">
@@ -176,6 +204,20 @@ async function onRevoke(tokenId: string) {
         <div class="modal-foot">
           <n-button @click="showSetup = false">{{ t('auth.backToLogin') }}</n-button>
           <n-button type="primary" :loading="setupLoading" @click="confirmSetup">{{ t('security.confirmEnable') }}</n-button>
+        </div>
+      </template>
+    </n-modal>
+
+    <!-- 重新生成恢复码：先用当前 TOTP 验证码确认身份 -->
+    <n-modal v-model:show="showRegen" :title="t('security.viewRecovery')" preset="card" style="width: 420px; max-width: 92vw">
+      <div class="mfa-setup">
+        <p>{{ t('security.mfaSetupDesc') }}</p>
+        <n-input v-model:value="regenCode" :placeholder="t('auth.codePlaceholder')" />
+      </div>
+      <template #footer>
+        <div class="modal-foot">
+          <n-button @click="showRegen = false">{{ t('auth.backToLogin') }}</n-button>
+          <n-button type="primary" :loading="regenLoading" @click="confirmRegen">{{ t('security.viewRecovery') }}</n-button>
         </div>
       </template>
     </n-modal>
