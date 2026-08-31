@@ -25,7 +25,7 @@ export default {
   showPassword: 'Hold to reveal password',
   agree: 'By signing in you agree to treat every story gently with MuseFlow.',
   fillBoth: 'Please fill in both email and password so we can open the door.',
-  emailPlaceholder: 'name\\@museflow.app',
+  emailPlaceholder: 'Your email',
   passwordPlaceholder: 'Your login password',
   confirmPlaceholder: 'Enter again',
   nicknamePlaceholder: 'What should we call you?',
