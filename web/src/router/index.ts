@@ -36,6 +36,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue') },
       { path: 'users', name: 'admin-users', component: () => import('@/views/admin/Users.vue') },
+      { path: 'roles', name: 'admin-roles', component: () => import('@/views/admin/Roles.vue') },
       { path: 'models', name: 'admin-models', component: () => import('@/views/admin/Models.vue') },
       { path: 'announcements', name: 'admin-announcements', component: () => import('@/views/admin/Announcements.vue') },
       { path: 'logs', name: 'admin-logs', component: () => import('@/views/admin/Logs.vue') },

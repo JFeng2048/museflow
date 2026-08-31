@@ -1,37 +1,77 @@
 /** 管理后台（控制台）领域类型。仅管理员侧使用，普通用户不感知。 */
 
-import type { UserRole } from '@/types/system/auth'
+import type { UserInfoDto } from '@/types/system/auth'
 
-/** 用户管理列表里展示的用户（比前台 User 多运营维度字段）。 */
+/**
+ * 后端用户状态（admindto.UpdateUserStatusRequest）。
+ * 1=正常 2=冻结 3=已注销 4=待审核
+ */
+export type AdminUserStatusValue = 1 | 2 | 3 | 4
+
+/** 用户管理列表项：由 GET /admin/users 返回，字段与后端一致。 */
 export interface AdminUser {
+  /** 用户 UUID。 */
   id: string
   name: string
   email: string
-  role: UserRole
-  /** 头像 emoji 或 dataURL，缺省按名字首字渲染。 */
   avatar?: string
-  avatarColor?: string
-  /** 账号状态：正常 / 停用。停用后该用户无法登录。 */
-  status: 'active' | 'disabled'
-  /** 是否今日活跃（近 24 小时有登录或写作）。 */
-  activeToday: boolean
-  /** 累计作品数。 */
-  novelCount: number
-  /** 累计字数。 */
-  totalWords: number
-  /** 剩余积分。 */
-  credits: number
+  /** 角色编码列表，如 ['admin'] / ['user']。 */
+  roles: string[]
+  status: AdminUserStatusValue
+  emailVerified: boolean
+  mfaEnabled: boolean
   createdAt: string
-  /** 最近活跃时间 ISO 字符串。 */
-  lastActiveAt: string
+  updatedAt: string
+  /** 最终权限列表，仅 GET /admin/users/{uuid} 详情接口返回。 */
+  permissions?: string[]
 }
 
-/** 创建用户表单。 */
-export interface AdminUserCreate {
+/** 角色信息。 */
+export interface AdminRole {
+  id: number
+  /** 角色编码，如 admin / user / auditor。 */
+  code: string
   name: string
-  email: string
-  password: string
-  role: UserRole
+  description: string
+  /** 系统内置角色不可修改 / 删除。 */
+  isSystem: boolean
+  createdAt: string
+}
+
+/** 权限信息。 */
+export interface AdminPermission {
+  id: number
+  /** 权限编码，如 user:read。 */
+  code: string
+  name: string
+  resource: string
+  action: string
+  description: string
+}
+
+/** 审计日志条目。 */
+export interface AdminAuditLog {
+  id: string
+  /** 发生时间 ISO 字符串。 */
+  time: string
+  /** 操作类型，如 login / change_password。 */
+  action: string
+  /** 资源类型，如 auth / user / role。 */
+  resource: string
+  resourceId: string
+  /** 操作人 UUID，空表示系统操作。 */
+  actor: string
+  ip: string
+  /** 详情（后端为 JSON 字符串）。 */
+  detail?: string
+}
+
+/** 分页查询结果。 */
+export interface PageResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
 }
 
 /** 管理台首页核心指标。 */
@@ -89,21 +129,6 @@ export interface AdminAnnouncement {
   status: 'draft' | 'published'
 }
 
-/** 系统日志条目。 */
-export interface AdminLog {
-  id: string
-  /** 发生时间 ISO 字符串。 */
-  time: string
-  /** 日志级别。 */
-  level: 'info' | 'warn' | 'error'
-  /** 关联服务 / 模块。 */
-  service: string
-  /** 操作用户（可为系统）。 */
-  actor: string
-  /** 日志内容。 */
-  message: string
-}
-
 /** 服务监控条目。 */
 export interface AdminService {
   id: string
@@ -125,4 +150,80 @@ export interface AdminService {
   checkedAt: string
   /** 访问地址（可选）。 */
   endpoint?: string
+}
+
+/* ---------------- 后端线格式（snake_case） ----------------
+ * 对应 api-gateway 的 internal/dto/admin_dto，仅 api 层内部使用。
+ */
+
+/** admindto.AdminUserItem */
+export interface AdminUserItemDto {
+  user: UserInfoDto
+  roles: string[]
+  updated_at: number
+}
+
+/** admindto.UserList */
+export interface UserListDto {
+  users: AdminUserItemDto[]
+  total: number
+  page: number
+  page_size: number
+}
+
+/** admindto.UserDetail */
+export interface UserDetailDto {
+  user: AdminUserItemDto
+  permissions: string[]
+}
+
+/** admindto.RoleInfo */
+export interface RoleInfoDto {
+  id: number
+  code: string
+  name: string
+  description: string
+  is_system: boolean
+  created_at: number
+}
+
+/** admindto.RoleList */
+export interface RoleListDto {
+  roles: RoleInfoDto[]
+}
+
+/** admindto.PermissionInfo（加 Admin 前缀以区别于 system/auth 的同名权限列表）。 */
+export interface AdminPermissionInfoDto {
+  id: number
+  code: string
+  name: string
+  resource: string
+  action: string
+  description: string
+}
+
+/** admindto.PermissionList */
+export interface AdminPermissionListDto {
+  permissions: AdminPermissionInfoDto[]
+}
+
+/** admindto.AuditLogItem */
+export interface AuditLogItemDto {
+  id: number
+  user_uuid: string
+  action: string
+  resource: string
+  resource_id: string
+  ip?: string
+  user_agent?: string
+  detail?: string
+  created_at: number
+}
+
+/** admindto.AuditLogList */
+export interface AuditLogListDto {
+  logs: AuditLogItemDto[]
+  total: number
+  page: number
+  page_size: number
 }

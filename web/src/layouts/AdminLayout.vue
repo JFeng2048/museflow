@@ -7,6 +7,7 @@ import { useUserStore } from '@/stores/system/user'
 import {
   GridOutline,
   PeopleOutline,
+  ShieldOutline,
   ConstructOutline,
   MegaphoneOutline,
   ListOutline,
@@ -32,6 +33,7 @@ const mockLabel = computed(() => (ui.currentLang === 'zh' ? '演示数据' : 'De
 const nav = computed(() => [
   { label: t('admin.nav.dashboard'), name: 'admin-dashboard', icon: GridOutline },
   { label: t('admin.nav.users'), name: 'admin-users', icon: PeopleOutline },
+  { label: t('admin.nav.roles'), name: 'admin-roles', icon: ShieldOutline },
   { label: t('admin.nav.models'), name: 'admin-models', icon: ConstructOutline },
   { label: t('admin.nav.announcements'), name: 'admin-announcements', icon: MegaphoneOutline },
   { label: t('admin.nav.logs'), name: 'admin-logs', icon: ListOutline },

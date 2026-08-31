@@ -1,10 +1,7 @@
 import type {
-  AdminUser,
-  AdminUserCreate,
   AdminMetrics,
   AdminModel,
   AdminAnnouncement,
-  AdminLog,
   AdminService,
 } from '@/types/admin'
 
@@ -18,57 +15,11 @@ function minsAgo(n: number): string {
   return new Date(Date.now() - n * 60000).toISOString()
 }
 
-export const adminUsers: AdminUser[] = [
-  {
-    id: 'u-1', name: '林知秋', email: 'demo@museflow.com', role: 'writer',
-    status: 'active', activeToday: true, novelCount: 7, totalWords: 165000, credits: 1280,
-    createdAt: daysAgo(90), lastActiveAt: hoursAgo(2),
-  },
-  {
-    id: 'u-2', name: '沈砚', email: 'shen@museflow.com', role: 'writer',
-    status: 'active', activeToday: false, novelCount: 3, totalWords: 42000, credits: 320,
-    createdAt: daysAgo(45), lastActiveAt: daysAgo(2),
-  },
-  {
-    id: 'u-3', name: 'Aki', email: 'aki@museflow.com', role: 'writer',
-    status: 'disabled', activeToday: false, novelCount: 1, totalWords: 8000, credits: 0,
-    createdAt: daysAgo(20), lastActiveAt: daysAgo(8),
-  },
-  {
-    id: 'u-admin', name: '管理员', email: 'admin@museflow.com', role: 'admin',
-    status: 'active', activeToday: true, novelCount: 0, totalWords: 0, credits: 99999,
-    createdAt: daysAgo(365), lastActiveAt: hoursAgo(1),
-  },
-  {
-    id: 'u-4', name: '墨小白', email: 'mobai@museflow.com', role: 'writer',
-    status: 'active', activeToday: true, novelCount: 12, totalWords: 298000, credits: 540,
-    createdAt: daysAgo(150), lastActiveAt: hoursAgo(5),
-  },
-  {
-    id: 'u-5', name: '清风', email: 'qingfeng@museflow.com', role: 'writer',
-    status: 'active', activeToday: false, novelCount: 5, totalWords: 88000, credits: 210,
-    createdAt: daysAgo(60), lastActiveAt: daysAgo(1),
-  },
-]
-
-/** 创建用户（mock：返回新用户对象）。 */
-export function createAdminUser(input: AdminUserCreate): AdminUser {
-  const user: AdminUser = {
-    id: 'u-' + Math.random().toString(36).slice(2, 8),
-    name: input.name,
-    email: input.email,
-    role: input.role,
-    status: 'active',
-    activeToday: false,
-    novelCount: 0,
-    totalWords: 0,
-    credits: 200,
-    createdAt: new Date().toISOString(),
-    lastActiveAt: daysAgo(999),
-  }
-  adminUsers.unshift(user)
-  return user
-}
+/**
+ * 注意：用户管理（/admin/users）与审计日志（/admin/audit-logs）已对接真实接口，
+ * 这里不再提供 adminUsers / adminLogs mock 数据。
+ * 以下 mock 仅服务于后端尚未实现的页面（概览指标 / 模型 / 公告 / 服务监控）。
+ */
 
 export const adminModels: AdminModel[] = [
   { id: 'm-chat', name: 'GPT-4o', provider: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-****3a9f', category: '对话', contextWindow: 128000, enabled: true },
@@ -95,16 +46,6 @@ export const adminAnnouncements: AdminAnnouncement[] = [
     content: '新注册用户赠送积分已从 100 调整为 200，详见系统设置。',
     level: 'normal', pinned: false, publishedAt: daysAgo(3), status: 'draft',
   },
-]
-
-export const adminLogs: AdminLog[] = [
-  { id: 'l-1', time: minsAgo(2), level: 'error', service: 'user-service', actor: 'system', message: '数据库连接池耗尽，已触发自动扩容' },
-  { id: 'l-2', time: minsAgo(9), level: 'warn', service: 'api-gateway', actor: 'system', message: '上游 user-service P99 延迟超过 800ms' },
-  { id: 'l-3', time: minsAgo(15), level: 'info', service: 'api-gateway', actor: 'admin@museflow.com', message: '管理员登录成功' },
-  { id: 'l-4', time: minsAgo(28), level: 'info', service: 'generation-svc', actor: 'demo@museflow.com', message: '发起续写任务 task-9921，耗时 4.2s' },
-  { id: 'l-5', time: minsAgo(41), level: 'warn', service: 'generation-svc', actor: 'system', message: '模型 GLM-4-Plus 触发限流（每分钟 60 次）' },
-  { id: 'l-6', time: hoursAgo(1), level: 'info', service: 'crawl4ai-svc', actor: 'mobai@museflow.com', message: '素材采集完成，入库 12 条' },
-  { id: 'l-7', time: hoursAgo(2), level: 'error', service: 'generation-svc', actor: 'aki@museflow.com', message: '生成任务失败：上下文超出窗口上限' },
 ]
 
 export const adminServices: AdminService[] = [
