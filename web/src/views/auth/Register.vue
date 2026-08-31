@@ -13,7 +13,7 @@ import {
 } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/system/user'
 import { useUiStore } from '@/stores/ui'
-import { register as registerApi, sendCode, MOCK_CODE } from '@/api/system/auth'
+import { register as registerApi, sendCode } from '@/api/system/auth'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
 import type { TurnstileWidgetExposed } from '@/components/auth/TurnstileWidget.vue'
 
@@ -54,7 +54,6 @@ const passwordMismatch = computed(() => passwordsFilled.value && password.value 
 const passwordTooShort = computed(() => !!password.value && password.value.length < 6)
 
 const countDown = ref(0)
-const showMockCode = ref(false)
 const tsRef = ref<TurnstileWidgetExposed | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
 async function onSendCode(): Promise<boolean> {
@@ -64,7 +63,7 @@ async function onSendCode(): Promise<boolean> {
     return false
   }
   loading.value = true
-  // 发送验证码前完成人机验证（mock 环境降级跳过）
+  // 发送验证码前完成人机验证
   let tsToken: string | null = null
   try {
     tsToken = await tsRef.value?.ensureToken() ?? null
@@ -82,13 +81,8 @@ async function onSendCode(): Promise<boolean> {
   }
   tsRef.value?.reset() // Turnstile 令牌一次性，成功也要重置
   loading.value = false
-  code.value = MOCK_CODE
-  if (ui.mockMode) {
-    showMockCode.value = true
-    message.info(t('auth.mockCodeTip'), { duration: 6000 })
-  } else {
-    message.success(t('auth.codeSent'))
-  }
+  // 验证码由服务端下发到邮箱，前端不再预填
+  message.success(t('auth.codeSent'))
   countDown.value = 60
   timer = setInterval(() => {
     countDown.value--
@@ -211,9 +205,6 @@ async function onSubmit() {
       <!-- 邮箱验证码：第二步输入并校验 -->
       <label v-if="step === 'code'" class="auth-field">
         <span class="auth-lbl"><n-icon :component="LockClosedOutline" class="text-[14px]" /> {{ t('auth.emailCode') }}</span>
-        <div v-if="ui.mockMode && showMockCode" class="auth-mock-code">
-          {{ t('auth.mockCodeEnv') }} <b>{{ MOCK_CODE }}</b>
-        </div>
         <div class="auth-code-row">
           <input v-model="code" :placeholder="t('auth.codePlaceholder')" autocomplete="one-time-code" />
           <button class="auth-code-btn" type="button" :disabled="loading || countDown > 0" @click="onSendCode">

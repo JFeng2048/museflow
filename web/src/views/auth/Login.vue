@@ -4,13 +4,7 @@ import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { NIcon } from 'naive-ui'
-import {
-  MailOutline,
-  LogoGithub,
-  LogoWechat,
-  PersonOutline,
-  ShieldCheckmarkOutline,
-} from '@vicons/ionicons5'
+import { MailOutline, LogoGithub, LogoWechat } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/system/user'
 import { useUiStore } from '@/stores/ui'
 import {
@@ -18,7 +12,6 @@ import {
   loginWithCode,
   verifyMfaLogin,
   sendCode,
-  MOCK_CODE,
 } from '@/api/system/auth'
 import type { AuthResult } from '@/types/system/auth'
 import IdentityPicker from '@/components/common/IdentityPicker.vue'
@@ -34,18 +27,11 @@ const ui = useUiStore()
 // 由 AuthLayout 提供的模式切换（翻转用，不重挂路由）
 const setAuthMode = inject<(m: 'login' | 'register') => void>('setAuthMode')
 
-/* Demo 演示账号：仅在 mock 模式下预填，方便演示与截图。生产环境不会执行到。 */
 const tab = ref<'password' | 'code'>('password')
-const email = ref(ui.mockMode ? 'demo@museflow.com' : '')
-const password = ref(ui.mockMode ? 'museflow@museflow.com' : '')
+const email = ref('')
+const password = ref('')
 const code = ref('')
 const loading = ref(false)
-
-function fillDemo(role: 'writer' | 'admin') {
-  email.value = role === 'admin' ? 'admin@museflow.com' : 'demo@museflow.com'
-  password.value = 'museflow@museflow.com'
-  message.success(t('auth.demoFilled'))
-}
 
 // 管理员登录后，先选择进入哪个视图。
 const showIdentity = ref(false)
@@ -121,7 +107,6 @@ function chooseIdentity(view: 'user' | 'admin') {
 }
 
 const countDown = ref(0)
-const showMockCode = ref(false)
 const tsRef = ref<TurnstileWidgetExposed | null>(null)
 let timer: ReturnType<typeof setInterval> | undefined
 async function onSendCode(): Promise<boolean> {
@@ -149,14 +134,8 @@ async function onSendCode(): Promise<boolean> {
   }
   tsRef.value?.reset() // Turnstile 令牌一次性，成功也要重置
   loading.value = false
-  code.value = MOCK_CODE
-  if (ui.mockMode) {
-    // 演示环境：弹出提示并显示验证码，无需真实邮箱。
-    showMockCode.value = true
-    message.info(t('auth.mockCodeTip'), { duration: 6000 })
-  } else {
-    message.success(t('auth.codeSent'))
-  }
+  // 验证码由服务端下发到邮箱，前端不再预填
+  message.success(t('auth.codeSent'))
   countDown.value = 60
   timer = setInterval(() => {
     countDown.value--
@@ -217,9 +196,6 @@ async function onSendCode(): Promise<boolean> {
       </label>
 
       <label v-else class="auth-field auth-field-tight">
-        <div v-if="ui.mockMode && showMockCode" class="auth-mock-code">
-          {{ t('auth.mockCodeEnv') }} <b>{{ MOCK_CODE }}</b>
-        </div>
         <div class="auth-code-row">
           <input v-model="code" :placeholder="t('auth.codePlaceholder')" autocomplete="one-time-code" />
           <button class="auth-code-btn" type="button" :disabled="loading || countDown > 0" @click="onSendCode">
@@ -252,16 +228,6 @@ async function onSendCode(): Promise<boolean> {
       </button>
     </div>
 
-    <!-- Mock 模式提示 + 一键填入：仅演示环境出现，作为页内可见的入口 -->
-    <div v-if="ui.mockMode" class="auth-demo-helper">
-      <span class="auth-demo-lbl">{{ t('auth.demoHelper') }}</span>
-      <button class="auth-demo-chip" type="button" @click="fillDemo('writer')">
-        <n-icon :component="PersonOutline" /> {{ t('auth.demoWriter') }}
-      </button>
-      <button class="auth-demo-chip" type="button" @click="fillDemo('admin')">
-        <n-icon :component="ShieldCheckmarkOutline" /> {{ t('auth.demoAdmin') }}
-      </button>
-    </div>
   </div>
 
   <!-- 弹窗通过 Teleport 送到 body，避开 .auth-flip-wrap 的 transform 新包含块，
