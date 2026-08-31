@@ -16,13 +16,14 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/museflow/pkg/logger"
 	"github.com/museflow/user-service/internal/model"
 	"github.com/museflow/user-service/internal/repository"
 )
 
 // ErrRoleNotFound / ErrPermissionNotFound 透传仓储层错误，便于 handler 映射。
 var (
-	ErrRoleNotFound      = repository.ErrRoleNotFound
+	ErrRoleNotFound       = repository.ErrRoleNotFound
 	ErrPermissionNotFound = repository.ErrPermissionNotFound
 )
 
@@ -42,9 +43,9 @@ const (
 
 // Service RBAC 业务服务。
 type Service struct {
-	repo     repository.RBACRepository
-	store    repository.TokenStore
-	permTTL  time.Duration
+	repo    repository.RBACRepository
+	store   repository.TokenStore
+	permTTL time.Duration
 }
 
 // NewService 构造 RBAC 服务。
@@ -56,18 +57,24 @@ func NewService(repo repository.RBACRepository, store repository.TokenStore, per
 // 优先读 Redis 缓存；未命中则查库并回填缓存（缓存不可用时不报错，直接返回库结果）。
 func (s *Service) GetUserPermissions(ctx context.Context, userUUID uuid.UUID) ([]string, error) {
 	cached, err := s.store.GetUserPermissions(ctx, userUUID.String())
-	if err == nil && cached != nil {
+	if err != nil {
+		// 缓存读取报错意味着 Redis 可能已不可用。这里降级查库，但必须留痕：
+		// 不记日志的话，缓存故障表现为「接口变慢」，排查时很难定位到 Redis。
+		logger.WarnContext(ctx, "读取用户权限缓存失败，本次降级查库",
+			logger.UserUUID(userUUID.String()), logger.Err(err))
+	} else if cached != nil {
 		return cached, nil
 	}
-	// 未命中或 Redis 故障：降级查库
+
 	perms, err := s.repo.GetUserPermissionCodes(ctx, userUUID)
 	if err != nil {
 		return nil, err
 	}
-	// 回写缓存（失败仅告警，不阻断）
+	// 回写缓存：失败不阻断主流程（下次仍会查库），但同样需要告警，
+	// 否则缓存一直写不进去、每次鉴权都穿透到数据库，只能靠延迟升高才发现
 	if werr := s.store.SetUserPermissions(ctx, userUUID.String(), perms, s.permTTL); werr != nil {
-		// TODO: logger.Warn("回写用户权限缓存失败", ...) 待 logger 注入
-		_ = werr
+		logger.WarnContext(ctx, "回写用户权限缓存失败，后续请求将穿透到数据库",
+			logger.UserUUID(userUUID.String()), logger.Err(werr))
 	}
 	return perms, nil
 }
