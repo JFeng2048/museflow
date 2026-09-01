@@ -78,7 +78,7 @@ Dockerfile.worker            Worker 镜像
 | `USER_CODE_TTL_SECONDS`/`CODE_LENGTH`/`CODE_RESEND_COOLDOWN_SECONDS` | `600`/`6`/`60` | 验证码参数 |
 | `USER_TURNSTILE_SECRET` | — | Turnstile **密钥（Secret Key）**，服务端专用；未配置则人机验证降级为跳过 |
 | `USER_TURNSTILE_ENDPOINT` | Cloudflare 官方地址 | siteverify 地址 |
-| `USER_TURNSTILE_TIMEOUT_SECONDS` | `5` | 单次人机校验超时 |
+| `USER_TURNSTILE_TIMEOUT_SECONDS` | `15` | 单次人机校验超时（秒）；国内访问 Cloudflare 建议 15–30 |
 | `USER_TURNSTILE_ALLOWED_HOSTNAMES` | — | 来源域名白名单（逗号分隔），留空表示不校验 |
 | `USER_SMTP_*` | — | 邮件发送（未配置则日志降级） |
 | `USER_QUEUE_NAME` | `email` | 异步任务队列名 |

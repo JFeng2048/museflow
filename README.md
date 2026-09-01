@@ -47,7 +47,7 @@ The frontend prototype preview entry of MuseFlow. The API Gateway and backend
 microservices (user-service, crawl4ai-service, etc.) are not yet wired in and will
 be exposed as they become available:
 
-> http://museflow.jfeng.asia/
+> https://museflow.jfeng.asia
 
 ## 🧱 Architecture
 

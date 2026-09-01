@@ -78,7 +78,7 @@ Loaded via `pkg/envloader` with layered priority: system env > service `.env` > 
 | `USER_CODE_TTL_SECONDS`/`CODE_LENGTH`/`CODE_RESEND_COOLDOWN_SECONDS` | `600`/`6`/`60` | code params |
 | `USER_TURNSTILE_SECRET` | — | Turnstile **secret key** (server-side only); unset degrades to skip |
 | `USER_TURNSTILE_ENDPOINT` | Cloudflare default | siteverify endpoint |
-| `USER_TURNSTILE_TIMEOUT_SECONDS` | `5` | Per-verification timeout |
+| `USER_TURNSTILE_TIMEOUT_SECONDS` | `15` | Per-verification timeout in seconds; 15–30 recommended if Cloudflare is slow |
 | `USER_TURNSTILE_ALLOWED_HOSTNAMES` | — | Hostname allow-list (comma separated); empty disables the check |
 | `USER_SMTP_*` | — | SMTP (logs if unconfigured) |
 | `USER_QUEUE_NAME` | `email` | Async queue name |

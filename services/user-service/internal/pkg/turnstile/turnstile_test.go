@@ -93,6 +93,39 @@ func TestVerifyAcceptsValidToken(t *testing.T) {
 	}
 }
 
+func TestVerifyOmitsLoopbackRemoteIP(t *testing.T) {
+	var got url.Values
+	srv := fakeCloudflare(t, func(form url.Values) verifyResponse {
+		got = form
+		return verifyResponse{Success: true}
+	})
+	c := newTestClient(t, "secret", srv.URL)
+
+	if err := c.Verify(context.Background(), "tok", "::1", ""); err != nil {
+		t.Fatalf("省略回环 IP 后应能通过: %v", err)
+	}
+	if got.Get("remoteip") != "" {
+		t.Errorf("回环地址不应提交给 siteverify，实际: %q", got.Get("remoteip"))
+	}
+}
+
+func TestVerifyParsesHTTP400JSON(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(verifyResponse{
+			Success:    false,
+			ErrorCodes: []string{"invalid-input-secret"},
+		})
+	}))
+	t.Cleanup(srv.Close)
+	c := newTestClient(t, "site-key-not-secret", srv.URL)
+
+	if err := c.Verify(context.Background(), "tok", "127.0.0.1", ""); err != ErrServiceUnavailable {
+		t.Errorf("密钥无效应返回 ErrServiceUnavailable，实际: %v", err)
+	}
+}
+
 func TestVerifyRejectsInvalidToken(t *testing.T) {
 	srv := fakeCloudflare(t, func(url.Values) verifyResponse {
 		return verifyResponse{Success: false, ErrorCodes: []string{"invalid-input-response"}}
@@ -195,6 +228,25 @@ func TestVerifyHonoursContextCancellation(t *testing.T) {
 	cancel()
 	if err := c.Verify(ctx, "tok", "", ""); err != ErrServiceUnavailable {
 		t.Errorf("ctx 已取消应返回 ErrServiceUnavailable，实际: %v", err)
+	}
+}
+
+func TestSanitizeRemoteIP(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"203.0.113.7", "203.0.113.7"},
+		{"::1", ""},
+		{"127.0.0.1", ""},
+		{"[::1]:5173", ""},
+		{"192.168.1.8", ""},
+		{"  203.0.113.7, 10.0.0.1 ", "203.0.113.7"},
+		{"localhost", ""},
+	}
+	for _, tc := range cases {
+		if got := sanitizeRemoteIP(tc.in); got != tc.want {
+			t.Errorf("sanitizeRemoteIP(%q)=%q, want %q", tc.in, got, tc.want)
+		}
 	}
 }
 

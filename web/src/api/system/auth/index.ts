@@ -189,7 +189,7 @@ export function sendCode(payload: SendCodePayload): Promise<SendCodeResult> {
       email: payload.email,
       scene: payload.scene,
       captcha_token: payload.turnstileToken,
-    })
+    }, { timeout: 60000 })
     .then((data) => ({
       taskId: data?.task_id ?? '',
       expiresIn: data?.expires_in ?? 600,

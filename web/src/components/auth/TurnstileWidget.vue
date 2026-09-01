@@ -32,10 +32,12 @@ function theme(): 'light' | 'dark' {
   return ui.themeId === 'dark' || ui.themeId === 'premium' ? 'dark' : 'light'
 }
 
+const siteKey = String(import.meta.env.VITE_TURNSTILE_SITE_KEY ?? '').trim()
+
 function renderWidget() {
-  if (!el.value || !window.turnstile) return
+  if (!el.value || !window.turnstile || !siteKey) return
   widgetId = window.turnstile.render(el.value, {
-    sitekey: '0x4AAAAAAEiEuf6sgPSil8qR',
+    sitekey: siteKey,
     action: props.action,
     theme: theme(),
     callback: (t: string) => {
@@ -65,7 +67,7 @@ function renderWidget() {
  */
 async function ensureToken(): Promise<string | null> {
   if (token.value) return token.value
-  if (!scriptReady || !isTurnstileAvailable()) {
+  if (!siteKey || !scriptReady || !isTurnstileAvailable()) {
     return props.allowFallback ? null : Promise.reject(new Error('turnstile_unavailable'))
   }
   // 显示 widget 并等待 callback

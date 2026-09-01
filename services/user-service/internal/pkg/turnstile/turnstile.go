@@ -1,8 +1,6 @@
 // Package turnstile 封装 Cloudflare Turnstile 的服务端校验（siteverify）。
 //
 // 完整链路：前端渲染 widget → 用户通过验证拿到一次性 token → 业务请求携带 token →
-// 本包调用 Cloudflare siteverify 核验 → 通过后才继续业务逻辑（本项目中即发送邮箱验证码）。
-//
 // 三个容易踩的坑，实现里都有对应处理：
 //  1. token 一次性：无论核验成功与否，同一 token 再次提交都会被判为 timeout-or-duplicate。
 //     因此前端每次发送都必须重新取 token，不能缓存复用。
@@ -17,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -75,11 +74,14 @@ func (c Config) Enabled() bool { return c.Secret != "" }
 
 // applyDefaults 补全默认值。
 func (c *Config) applyDefaults() {
+	c.Secret = strings.TrimSpace(strings.Trim(c.Secret, `"'`))
 	if c.Endpoint == "" {
 		c.Endpoint = DefaultEndpoint
 	}
 	if c.Timeout <= 0 {
-		c.Timeout = 5 * time.Second
+		// 默认 15s：国内访问 challenges.cloudflare.com 常见 TLS/首包偏慢，
+		// 5s 容易在「等待响应头」阶段直接超时。
+		c.Timeout = 15 * time.Second
 	}
 }
 
@@ -92,9 +94,16 @@ type Client struct {
 // New 构造校验客户端。
 func New(cfg Config) *Client {
 	cfg.applyDefaults()
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ForceAttemptHTTP2 = true
+	transport.TLSHandshakeTimeout = min(10*time.Second, cfg.Timeout)
+	transport.ResponseHeaderTimeout = cfg.Timeout
 	return &Client{
 		cfg: cfg,
-		hc:  &http.Client{Timeout: cfg.Timeout},
+		hc: &http.Client{
+			Timeout:   cfg.Timeout,
+			Transport: transport,
+		},
 	}
 }
 
@@ -129,17 +138,19 @@ func (c *Client) Verify(ctx context.Context, token, remoteIP, expectedAction str
 		logger.WarnContext(ctx, "人机验证未配置（TURNSTILE_SECRET 为空），已跳过校验；生产环境必须配置以防止验证码接口被刷")
 		return nil
 	}
+	token = strings.TrimSpace(token)
 	if token == "" {
 		return ErrTokenMissing
 	}
 
-	// siteverify 使用表单编码，不是 JSON
+	// siteverify 使用表单编码。remoteip 仅提交公网地址：
+	// 本地 ::1 / 127.0.0.1 会让 Cloudflare 直接回 HTTP 400。
 	form := url.Values{
 		"secret":   {c.cfg.Secret},
 		"response": {token},
 	}
-	if remoteIP != "" {
-		form.Set("remoteip", remoteIP)
+	if ip := sanitizeRemoteIP(remoteIP); ip != "" {
+		form.Set("remoteip", ip)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.Endpoint, strings.NewReader(form.Encode()))
@@ -147,10 +158,17 @@ func (c *Client) Verify(ctx context.Context, token, remoteIP, expectedAction str
 		return fmt.Errorf("构造人机验证请求失败: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "MuseFlow-user-service/turnstile")
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		logger.WarnContext(ctx, "调用人机验证服务失败", logger.Err(err))
+		logger.WarnContext(ctx, "调用人机验证服务失败",
+			logger.Err(err),
+			"endpoint", c.cfg.Endpoint,
+			"timeout", c.cfg.Timeout.String(),
+			"hint", "多为访问 Cloudflare 超时：提高 USER_TURNSTILE_TIMEOUT_SECONDS，或为进程配置 HTTPS_PROXY；本地可先清空 USER_TURNSTILE_SECRET 跳过校验",
+		)
 		return ErrServiceUnavailable
 	}
 	defer resp.Body.Close()
@@ -160,30 +178,42 @@ func (c *Client) Verify(ctx context.Context, token, remoteIP, expectedAction str
 	if err != nil {
 		return ErrServiceUnavailable
 	}
-	if resp.StatusCode != http.StatusOK {
-		logger.WarnContext(ctx, "人机验证服务返回异常状态码", "status", resp.StatusCode)
-		return ErrServiceUnavailable
-	}
 
 	var out verifyResponse
 	if err := json.Unmarshal(body, &out); err != nil {
-		logger.WarnContext(ctx, "解析人机验证响应失败", logger.Err(err))
+		logger.WarnContext(ctx, "解析人机验证响应失败",
+			logger.Err(err),
+			"status", resp.StatusCode,
+			"body", truncateForLog(body),
+		)
 		return ErrServiceUnavailable
 	}
 
 	if !out.Success {
 		logger.WarnContext(ctx, "人机验证未通过",
+			"status", resp.StatusCode,
 			"errors", strings.Join(describeErrorCodes(out.ErrorCodes), ", "),
 			"hostname", out.Hostname,
 			"action", out.Action,
 		)
-		// 令牌已被使用过：提示用户重新验证，而不是笼统的失败
 		for _, code := range out.ErrorCodes {
-			if code == "timeout-or-duplicate" {
+			switch code {
+			case "invalid-input-secret", "missing-input-secret":
+				logger.ErrorContext(ctx, "USER_TURNSTILE_SECRET 无效：请填 Cloudflare 控制台的 Secret Key，不要填 Site Key")
+				return ErrServiceUnavailable
+			case "timeout-or-duplicate", "invalid-input-response", "missing-input-response", "bad-request":
 				return ErrTokenInvalid
 			}
 		}
+		if resp.StatusCode != http.StatusOK {
+			return ErrServiceUnavailable
+		}
 		return ErrTokenInvalid
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		logger.WarnContext(ctx, "人机验证服务返回异常状态码", "status", resp.StatusCode, "body", truncateForLog(body))
+		return ErrServiceUnavailable
 	}
 
 	// action 校验：widget 未设置 action 时为空，此时跳过（兼容未传 action 的旧客户端）
@@ -226,4 +256,42 @@ func describeErrorCodes(codes []string) []string {
 		out = append(out, c)
 	}
 	return out
+}
+
+// sanitizeRemoteIP 把网关传来的地址整理成 siteverify 可接受的公网 IP。
+// 回环 / 内网 / 非法值一律省略，避免 Cloudflare 返回 HTTP 400。
+func sanitizeRemoteIP(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	if i := strings.IndexByte(raw, ','); i >= 0 {
+		raw = strings.TrimSpace(raw[:i])
+	}
+	raw = strings.Trim(raw, "[]")
+	if i := strings.IndexByte(raw, '%'); i >= 0 {
+		raw = raw[:i]
+	}
+	if host, _, err := net.SplitHostPort(raw); err == nil {
+		raw = host
+	}
+	ip := net.ParseIP(raw)
+	if ip == nil {
+		return ""
+	}
+	if ip.IsLoopback() || ip.IsUnspecified() || ip.IsMulticast() ||
+		ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsPrivate() {
+		return ""
+	}
+	return ip.String()
+}
+
+func truncateForLog(body []byte) string {
+	const max = 256
+	s := strings.TrimSpace(string(body))
+	s = strings.ReplaceAll(s, "\n", " ")
+	if len(s) > max {
+		return s[:max] + "…"
+	}
+	return s
 }

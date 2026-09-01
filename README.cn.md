@@ -45,7 +45,7 @@
 
 当前可访问的线上原型预览入口（MuseFlow 前端）。后端 API 网关与 user-service、crawl4ai-service 等微服务尚未接入，后续随服务就绪陆续开放：
 
-> http://museflow.jfeng.asia/
+> https://museflow.jfeng.asia
 
 ## 🧱 架构概览
 

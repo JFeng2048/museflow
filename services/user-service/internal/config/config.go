@@ -114,7 +114,7 @@ func Load() (*Config, error) {
 			// 密钥属于服务端机密，只从环境变量读取，绝不进仓库
 			Secret:           env.Get("TURNSTILE_SECRET", ""),
 			Endpoint:         env.Get("TURNSTILE_ENDPOINT", turnstile.DefaultEndpoint),
-			Timeout:          env.GetDuration("TURNSTILE_TIMEOUT_SECONDS", 5*time.Second),
+			Timeout:          env.GetDuration("TURNSTILE_TIMEOUT_SECONDS", 15*time.Second),
 			AllowedHostnames: splitList(env.Get("TURNSTILE_ALLOWED_HOSTNAMES", "")),
 		},
 		Log: loadLogConfig(env),
