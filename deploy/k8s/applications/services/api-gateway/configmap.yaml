@@ -1,0 +1,17 @@
+# ============================================================
+# api-gateway ConfigMap - 非敏感环境变量
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: default
+data:
+  GATEWAY_PORT: "5001"
+  # user-service gRPC 地址（集群内 Service 名）
+  GATEWAY_USER_SERVICE_URL: user-service:5002
+  # CORS 允许的来源：生产按实际域名调整
+  GATEWAY_ALLOW_ORIGINS: http://web
+  GATEWAY_COOKIE_SECURE: "false"
+  GATEWAY_COOKIE_SAMESITE: lax
+  LOG_SERVICE_NAME: api-gateway
