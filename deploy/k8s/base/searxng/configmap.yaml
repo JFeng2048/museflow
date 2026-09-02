@@ -5,7 +5,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: searxng-config
-  namespace: default
+  namespace: museflow
 data:
   settings.yml: |
     # settings.yml

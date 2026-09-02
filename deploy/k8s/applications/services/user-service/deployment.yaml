@@ -5,7 +5,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: user-service
-  namespace: default
+  namespace: museflow
   labels:
     app: user-service
 spec:

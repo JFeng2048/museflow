@@ -5,7 +5,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-config
-  namespace: default
+  namespace: museflow
 data:
   postgresql.conf: |
     # =============================================
@@ -83,7 +83,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: postgres-init-scripts
-  namespace: default
+  namespace: museflow
 data:
   01-create-extension.sql: |
     -- 启用 pgvector 扩展

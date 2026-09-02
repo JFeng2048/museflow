@@ -5,7 +5,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: crawl4ai-config
-  namespace: default
+  namespace: museflow
 data:
   PORT: "5003"
   DEFAULT_MAX_CONCURRENT: "5"

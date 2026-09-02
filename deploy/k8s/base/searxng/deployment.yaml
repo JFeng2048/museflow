@@ -5,7 +5,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: searxng
-  namespace: default
+  namespace: museflow
   labels:
     app: searxng
 spec:

@@ -5,7 +5,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: api-gateway-config
-  namespace: default
+  namespace: museflow
 data:
   GATEWAY_PORT: "5001"
   # user-service gRPC 地址（集群内 Service 名）

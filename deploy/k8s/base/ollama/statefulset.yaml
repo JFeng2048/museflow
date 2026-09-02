@@ -5,7 +5,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: ollama
-  namespace: default
+  namespace: museflow
   labels:
     app: ollama
 spec:

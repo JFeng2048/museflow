@@ -10,7 +10,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: crawl4ai-service
-  namespace: default
+  namespace: museflow
   labels:
     app: crawl4ai-service
 spec:

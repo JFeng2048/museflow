@@ -5,7 +5,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: user-service-config
-  namespace: default
+  namespace: museflow
 data:
   USER_PORT: "5002"
   USER_ACCESS_TTL_SECONDS: "3600"

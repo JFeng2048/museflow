@@ -5,7 +5,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: searxng
-  namespace: default
+  namespace: museflow
   labels:
     app: searxng
     service: searxng

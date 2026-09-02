@@ -5,7 +5,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: api-gateway
-  namespace: default
+  namespace: museflow
   labels:
     app: api-gateway
 spec:
