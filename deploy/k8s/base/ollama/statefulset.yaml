@@ -1,0 +1,70 @@
+# ============================================================
+# Ollama StatefulSet - 有状态应用部署（含模型持久化）
+# ============================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ollama
+  namespace: default
+  labels:
+    app: ollama
+spec:
+  serviceName: ollama
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ollama
+  template:
+    metadata:
+      labels:
+        app: ollama
+    spec:
+      containers:
+        - name: ollama
+          image: ollama/ollama:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: ollama-config
+            - secretRef:
+                name: ollama-secret
+          ports:
+            - containerPort: 11434
+              name: ollama
+          volumeMounts:
+            # 模型与环境目录持久化
+            - name: ollama-data
+              mountPath: /root/.ollama
+          resources:
+            limits:
+              memory: 8Gi
+              cpu: "4"
+            requests:
+              memory: 4Gi
+              cpu: "2"
+          # 健康检查（Ollama 内置 HTTP 接口）
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 11434
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 11434
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+  # 持久化卷声明模板 - StatefulSet 自动为每个 Pod 创建 PVC
+  volumeClaimTemplates:
+    - metadata:
+        name: ollama-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi

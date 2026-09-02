@@ -1,0 +1,102 @@
+# ============================================================
+# PostgreSQL StatefulSet - 有状态应用部署
+# ============================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: default
+  labels:
+    app: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:pg18
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          env:
+            # 将 PGDATA 指向子目录，避免挂载点根目录的文件干扰
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            # 指定自定义配置文件路径
+            - name: POSTGRES_CONFIG_FILE
+              value: /etc/postgresql/postgresql.conf
+          ports:
+            - containerPort: 5432
+              name: postgres
+          volumeMounts:
+            # 数据持久化
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+            # 挂载自定义配置文件
+            - name: postgres-config
+              mountPath: /etc/postgresql/postgresql.conf
+              subPath: postgresql.conf
+              readOnly: true
+            # 挂载初始化脚本目录
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          resources:
+            limits:
+              memory: 2Gi
+              cpu: "2"
+            requests:
+              memory: 512Mi
+              cpu: "200m"
+          # 健康检查
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "pg_isready -U jfeng -d pgvector"
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "pg_isready -U jfeng -d pgvector"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # 优雅停止时间
+          terminationGracePeriodSeconds: 60
+      volumes:
+        # 配置文件 ConfigMap
+        - name: postgres-config
+          configMap:
+            name: postgres-config
+        # 初始化脚本 ConfigMap
+        - name: init-scripts
+          configMap:
+            name: postgres-init-scripts
+  # 持久化卷声明模板 - StatefulSet 自动为每个 Pod 创建 PVC
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # 使用 K3s 默认的 local-path StorageClass
+        # 如需指定其他存储类，取消注释下一行
+        # storageClassName: local-path
+        resources:
+          requests:
+            storage: 10Gi

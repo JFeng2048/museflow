@@ -1,0 +1,85 @@
+# ============================================================
+# SearXNG Deployment - 无状态应用部署
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: searxng
+  namespace: default
+  labels:
+    app: searxng
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: searxng
+  template:
+    metadata:
+      labels:
+        app: searxng
+    spec:
+      containers:
+        - name: searxng
+          image: searxng/searxng:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            # 部署在集群内部，按实际访问地址调整
+            - name: SEARXNG_BASE_URL
+              value: http://searxng:8080
+            # 注入秘钥（替代 settings.yml 中的 server.secret_key）
+            - name: SEARXNG_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: searxng-secret
+                  key: SEARXNG_SECRET
+          ports:
+            - containerPort: 8080
+              name: searxng
+          volumeMounts:
+            # 挂载自定义配置文件
+            - name: searxng-config
+              mountPath: /etc/searxng/settings.yml
+              subPath: settings.yml
+              readOnly: true
+            # 缓存目录（可丢弃，使用 emptyDir）
+            - name: cache
+              mountPath: /var/cache/searxng
+          resources:
+            limits:
+              memory: 512Mi
+              cpu: "1"
+            requests:
+              memory: 128Mi
+              cpu: "100m"
+          # 健康检查（SearXNG 在根路径返回索引页）
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+      volumes:
+        # 配置文件 ConfigMap
+        - name: searxng-config
+          configMap:
+            name: searxng-config
+        # 缓存目录使用临时存储
+        - name: cache
+          emptyDir: {}

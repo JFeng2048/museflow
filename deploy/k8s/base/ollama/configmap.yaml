@@ -1,0 +1,16 @@
+# ============================================================
+# Ollama ConfigMap - 非敏感环境变量配置
+# ============================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ollama-config
+  namespace: default
+data:
+  OLLAMA_HOST: 0.0.0.0:11434
+  OLLAMA_ORIGINS: "*"
+  OLLAMA_NUM_PARALLEL: "2"
+  OLLAMA_MAX_LOADED_MODELS: "2"
+  OLLAMA_KEEP_ALIVE: 5m
+  OLLAMA_DEBUG: "false"
+  DEFAULT_EMBED_MODEL: qwen3-embedding:4b

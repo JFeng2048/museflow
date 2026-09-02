@@ -1,0 +1,20 @@
+# ============================================================
+# SearXNG Service - 集群内访问
+# ============================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: searxng
+  namespace: default
+  labels:
+    app: searxng
+    service: searxng
+spec:
+  selector:
+    app: searxng
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: searxng
+  # ClusterIP 为默认类型，仅在集群内部可访问
+  type: ClusterIP
