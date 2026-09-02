@@ -1,0 +1,80 @@
+# ============================================================
+# crawl4ai-service Deployment - 爬虫服务
+#
+# 注意：
+#   - 使用 sharedMemory 卷扩容 /dev/shm，供 Playwright Chromium 使用，
+#     避免大页面渲染时因共享内存不足而崩溃（对应 compose 的 shm_size）。
+#   - 镜像由 docker/Dockerfile 构建，tag 与 docker-compose 保持一致。
+# ============================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crawl4ai-service
+  namespace: default
+  labels:
+    app: crawl4ai-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crawl4ai-service
+  template:
+    metadata:
+      labels:
+        app: crawl4ai-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: crawl4ai-service
+          image: museflow/crawl4ai-service:0.1.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: crawl4ai-config
+            - secretRef:
+                name: crawl4ai-secret
+          ports:
+            - containerPort: 5003
+              name: http
+          resources:
+            limits:
+              memory: 8Gi
+              cpu: "4"
+            requests:
+              memory: 1Gi
+              cpu: "500m"
+          # Playwright Chromium 需要较大共享内存
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+          # 健康检查（gRPC/HTTP 共用端口，使用 TCP 探针）
+          startupProbe:
+            tcpSocket:
+              port: 5003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 40
+          readinessProbe:
+            tcpSocket:
+              port: 5003
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket:
+              port: 5003
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          terminationGracePeriodSeconds: 60
+      volumes:
+        # 扩占 /dev/shm（内存型卷），避免 Chromium 崩溃
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi
