@@ -1,0 +1,13 @@
+namespace: museflow
+
+apiGateway:
+  replicaCount: 1
+
+userService:
+  replicaCount: 1
+
+crawl4aiService:
+  replicaCount: 1
+
+web:
+  replicaCount: 1
