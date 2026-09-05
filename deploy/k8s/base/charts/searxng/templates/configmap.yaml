@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: searxng
+  namespace: {{ .Values.namespace }}
+data:
+  settings.yml: |
+{{ .Values.searxng.settings | indent 4 }}

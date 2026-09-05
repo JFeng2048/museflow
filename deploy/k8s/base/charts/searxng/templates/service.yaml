@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: searxng
+  namespace: {{ .Values.namespace }}
+spec:
+  type: {{ .Values.searxng.service.type }}
+  selector:
+    app.kubernetes.io/name: searxng
+  ports:
+    - name: searxng
+      port: {{ .Values.searxng.service.port }}
+      targetPort: 8080

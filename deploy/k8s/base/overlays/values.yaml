@@ -1,0 +1,48 @@
+namespace: museflow
+
+# PostgreSQL
+postgres:
+  database: pgvector
+  storage:
+    size: 5Gi
+  service:
+    type: NodePort
+    port: 15432
+    nodePort: 30432
+  resources:
+    limits:
+      memory: 1Gi
+      cpu: "1"
+    requests:
+      memory: 256Mi
+      cpu: "100m"
+
+# Ollama
+ollama:
+  resources:
+    limits:
+      memory: 4Gi
+      cpu: "2"
+    requests:
+      memory: 2Gi
+      cpu: "1"
+
+# Redis
+redis:
+  resources:
+    limits:
+      memory: 512Mi
+      cpu: "500m"
+    requests:
+      memory: 256Mi
+      cpu: "200m"
+
+# SearXNG
+searxng:
+  resources:
+    limits:
+      memory: 512Mi
+      cpu: "500m"
+    requests:
+      memory: 256Mi
+      cpu: "200m"

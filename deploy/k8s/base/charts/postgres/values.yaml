@@ -1,0 +1,30 @@
+namespace: museflow
+image:
+  repository: pgvector/pgvector
+  tag: pg18
+  pullPolicy: IfNotPresent
+postgres:
+  image:
+    repository: pgvector/pgvector
+    tag: pg18
+    pullPolicy: IfNotPresent
+  user: admin
+  password: ""
+  database: museflow
+  service:
+    type: ClusterIP
+    port: 5432
+    nodePort: ""
+  storage:
+    size: 10Gi
+  resources:
+    requests: { cpu: 200m, memory: 512Mi }
+    limits: { cpu: "2", memory: 2Gi }
+  config: |
+    max_connections = 50
+    shared_buffers = 512MB
+    work_mem = 16MB
+    maintenance_work_mem = 256MB
+    effective_cache_size = 1.5GB
+    synchronous_commit = off
+    timezone = 'Asia/Shanghai'

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: {{ .Values.namespace }}
+data:
+  postgresql.conf: |
+{{ .Values.postgres.config | indent 4 }}
+  01-create-extension.sql: |
+    CREATE EXTENSION IF NOT EXISTS vector;

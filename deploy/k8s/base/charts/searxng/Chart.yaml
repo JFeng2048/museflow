@@ -1,0 +1,6 @@
+apiVersion: v2
+name: searxng
+description: SearXNG metasearch service for MuseFlow
+type: application
+version: 0.1.0
+appVersion: latest

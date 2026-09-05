@@ -1,0 +1,30 @@
+namespace: museflow
+image:
+  repository: redis
+  tag: latest
+  pullPolicy: IfNotPresent
+redis:
+  image:
+    repository: redis
+    tag: latest
+    pullPolicy: IfNotPresent
+  password: ""
+  service:
+    type: ClusterIP
+    port: 6379
+  storage:
+    size: 5Gi
+  config: |
+    bind 0.0.0.0
+    port 6379
+    protected-mode no
+    dir /data
+    appendonly yes
+    appendfilename "appendonly.aof"
+    appendfsync everysec
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+    daemonize no
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 1Gi }

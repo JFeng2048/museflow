@@ -1,0 +1,36 @@
+namespace: museflow
+image:
+  repository: searxng/searxng
+  tag: latest
+  pullPolicy: IfNotPresent
+searxng:
+  image:
+    repository: searxng/searxng
+    tag: latest
+    pullPolicy: IfNotPresent
+  secretKey: ""
+  baseUrl: http://searxng:8080
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  settings: |
+    use_default_settings: true
+    search:
+      formats: [html, json]
+    server:
+      limiter: false
+      public_instance: false
+    engines:
+      - name: duckduckgo
+        engine: duckduckgo
+        disabled: false
+        timeout: 10.0
+      - name: bing
+        disabled: false
+        timeout: 10.0
+      - name: baidu
+        disabled: false
+        timeout: 10.0

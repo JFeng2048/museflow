@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: searxng
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: searxng
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: searxng
+    spec:
+      containers:
+        - name: searxng
+          image: "{{ .Values.searxng.image.repository }}:{{ .Values.searxng.image.tag }}"
+          imagePullPolicy: {{ .Values.searxng.image.pullPolicy }}
+          env:
+            - name: SEARXNG_BASE_URL
+              value: {{ .Values.searxng.baseUrl | quote }}
+            - name: SEARXNG_SECRET
+              valueFrom:
+                secretKeyRef: { name: searxng, key: SEARXNG_SECRET }
+          ports:
+            - name: searxng
+              containerPort: 8080
+          resources: {{- toYaml .Values.searxng.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/searxng/settings.yml
+              subPath: settings.yml
+            - name: cache
+              mountPath: /var/cache/searxng
+          readinessProbe:
+            httpGet: { path: /, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap: { name: searxng }
+        - name: cache
+          emptyDir: {}

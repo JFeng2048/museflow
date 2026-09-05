@@ -1,0 +1,6 @@
+apiVersion: v2
+name: ollama
+description: Ollama model serving for MuseFlow
+type: application
+version: 0.1.0
+appVersion: latest

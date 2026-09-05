@@ -1,0 +1,6 @@
+apiVersion: v2
+name: postgres
+description: PostgreSQL with pgvector for MuseFlow
+type: application
+version: 0.1.0
+appVersion: "pg18"
