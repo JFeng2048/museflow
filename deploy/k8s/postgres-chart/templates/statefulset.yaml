@@ -1,0 +1,126 @@
+#
+# ============================================================
+# statefulset.yaml - PostgreSQL 有状态应用部署
+# ============================================================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "postgres-chart.fullname" . }}
+  namespace: {{ include "postgres-chart.namespace" . }}
+  labels:
+    {{- include "postgres-chart.labels" . | nindent 4 }}
+spec:
+  serviceName: {{ include "postgres-chart.fullname" . }}
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "postgres-chart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "postgres-chart.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: postgres
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          envFrom:
+            - secretRef:
+                name: {{ include "postgres-chart.secretName" . }}
+          env:
+            # 将 PGDATA 指向子目录，避免挂载点根目录的文件干扰
+            - name: PGDATA
+              value: {{ printf "/var/lib/postgresql/data/%s" .Values.persistence.pgdataSubPath | quote }}
+            # 指定自定义配置文件路径
+            - name: POSTGRES_CONFIG_FILE
+              value: /etc/postgresql/postgresql.conf
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+              name: {{ .Values.service.portName }}
+          volumeMounts:
+            # 数据持久化
+            - name: pgdata
+              mountPath: /var/lib/postgresql/data
+            # 挂载自定义配置文件
+            - name: postgres-config
+              mountPath: /etc/postgresql/postgresql.conf
+              subPath: postgresql.conf
+              readOnly: true
+            # 挂载初始化脚本目录
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          # 健康检查（探针用户名/数据库默认取自 credentials，避免账号变更后探针失效）
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "pg_isready -U {{ default .Values.credentials.user .Values.probe.username }} -d {{ default .Values.credentials.database .Values.probe.database }}"
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - "pg_isready -U {{ default .Values.credentials.user .Values.probe.username }} -d {{ default .Values.credentials.database .Values.probe.database }}"
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      volumes:
+        # 配置文件 ConfigMap
+        - name: postgres-config
+          configMap:
+            name: {{ include "postgres-chart.configName" . }}
+        # 初始化脚本 ConfigMap
+        - name: init-scripts
+          configMap:
+            name: {{ include "postgres-chart.initScriptsName" . }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  # 持久化卷声明模板 - StatefulSet 自动为每个 Pod 创建 PVC
+  {{- if .Values.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: pgdata
+      spec:
+        accessModes:
+          - {{ .Values.persistence.accessMode }}
+        {{- if .Values.persistence.storageClass }}
+        storageClassName: {{ .Values.persistence.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.persistence.size }}
+  {{- end }}

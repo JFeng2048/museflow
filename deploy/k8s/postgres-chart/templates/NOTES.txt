@@ -1,0 +1,29 @@
+PostgreSQL with pgvector has been installed.
+
+{{- $postgresUser := .Values.credentials.user }}
+{{- $postgresPassword := .Values.credentials.password }}
+{{- $postgresDb := .Values.credentials.database }}
+{{- $postgresFullname := include "postgres-chart.fullname" . }}
+{{- $postgresNamespace := include "postgres-chart.namespace" . }}
+
+**集群内访问（推荐）**:
+  PostgreSQL 地址: {{ $postgresFullname }}.{{ $postgresNamespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+**连接信息**:
+  用户: {{ $postgresUser }}
+  数据库: {{ $postgresDb }}
+  {{- if .Values.credentials.existingSecret }}
+  密码: 来自已存在的 Secret "{{ .Values.credentials.existingSecret }}"
+  {{- else }}
+  密码: {{ $postgresPassword }}（注意: 生产环境请覆盖或使用 existingSecret）
+  {{- end }}
+
+**验证 pgvector 扩展**:
+  kubectl exec -n {{ $postgresNamespace }} {{ $postgresFullname }}-0 -- \
+    psql -U {{ $postgresUser }} -d {{ $postgresDb }} -c "SELECT extversion FROM pg_extension WHERE extname='vector';"
+
+**卸载**:
+  helm uninstall {{ .Release.Name }} -n {{ $postgresNamespace }}
+
+**注意**: 卸载不会自动删除 PVC，如需清除数据请手动删除:
+  kubectl delete pvc -n {{ $postgresNamespace }} -l app.kubernetes.io/instance={{ .Release.Name }}

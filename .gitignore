@@ -42,6 +42,9 @@ tmp-worker/
 .env.local
 .env.*.local
 
+# Helm values 环境覆盖文件：本地环境配置，不提交；values.yaml 作为模板提交
+deploy/k8s/postgres-chart/values-*.yaml
+
 # 例外：提交示例文件
 !.env.example
 !services/**/.env.example
