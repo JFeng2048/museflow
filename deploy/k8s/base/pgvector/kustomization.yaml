@@ -12,9 +12,10 @@ resources:
   - statefulset.yaml
 
 # 统一添加标签（可选）
-commonLabels:
-  app.kubernetes.io/part-of: infrastructure
-  app.kubernetes.io/managed-by: kustomize
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: infrastructure
+      app.kubernetes.io/managed-by: kustomize
 
 # 统一添加命名空间
 namespace: museflow

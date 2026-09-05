@@ -62,7 +62,7 @@ spec:
               command:
                 - sh
                 - -c
-                - "pg_isready -U jfeng -d pgvector"
+                - "pg_isready -U admin -d museflow"
             initialDelaySeconds: 30
             periodSeconds: 10
             timeoutSeconds: 5
@@ -72,13 +72,13 @@ spec:
               command:
                 - sh
                 - -c
-                - "pg_isready -U jfeng -d pgvector"
+                - "pg_isready -U admin -d museflow"
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
-          # 优雅停止时间
-          terminationGracePeriodSeconds: 60
+      # ✅ 关键修复：terminationGracePeriodSeconds 移到 containers 外面，与 containers 平级
+      terminationGracePeriodSeconds: 60
       volumes:
         # 配置文件 ConfigMap
         - name: postgres-config
