@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.apiGateway.replicaCount }}
+  selector:
+    matchLabels: { app: api-gateway }
+  template:
+    metadata:
+      labels: { app: api-gateway }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: api-gateway
+          image: "{{ .Values.apiGateway.image.repository }}:{{ .Values.apiGateway.image.tag }}"
+          imagePullPolicy: {{ .Values.apiGateway.image.pullPolicy }}
+          envFrom:
+            - configMapRef: { name: api-gateway-config }
+            - secretRef: { name: api-gateway-secret }
+          ports:
+            - name: http
+              containerPort: 5001
+          resources: {{- toYaml .Values.apiGateway.resources | nindent 12 }}
+          readinessProbe:
+            httpGet: { path: /health, port: 5001 }
+          livenessProbe:
+            httpGet: { path: /health, port: 5001 }

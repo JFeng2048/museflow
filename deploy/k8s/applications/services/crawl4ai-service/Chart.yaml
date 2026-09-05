@@ -1,0 +1,6 @@
+apiVersion: v2
+name: crawl4ai-service
+description: MuseFlow Crawl4AI service
+type: application
+version: 0.1.0
+appVersion: 0.1.0

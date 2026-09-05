@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service-worker
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.userService.replicaCount }}
+  selector:
+    matchLabels: { app: user-service-worker }
+  template:
+    metadata:
+      labels: { app: user-service-worker }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: user-service-worker
+          image: "{{ .Values.userService.workerImage.repository }}:{{ .Values.userService.workerImage.tag }}"
+          imagePullPolicy: {{ .Values.userService.workerImage.pullPolicy }}
+          envFrom:
+            - configMapRef: { name: user-service-config }
+            - secretRef: { name: user-service-secret }
+          resources: {{- toYaml .Values.userService.workerResources | nindent 12 }}

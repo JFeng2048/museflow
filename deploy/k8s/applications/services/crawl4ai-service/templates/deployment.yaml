@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crawl4ai-service
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.crawl4aiService.replicaCount }}
+  selector:
+    matchLabels: { app: crawl4ai-service }
+  template:
+    metadata:
+      labels: { app: crawl4ai-service }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: crawl4ai-service
+          image: "{{ .Values.crawl4aiService.image.repository }}:{{ .Values.crawl4aiService.image.tag }}"
+          imagePullPolicy: {{ .Values.crawl4aiService.image.pullPolicy }}
+          envFrom:
+            - configMapRef: { name: crawl4ai-config }
+            - secretRef: { name: crawl4ai-secret }
+          ports:
+            - name: http
+              containerPort: 5003
+          resources: {{- toYaml .Values.crawl4aiService.resources | nindent 12 }}
+          volumeMounts:
+            - name: dshm
+              mountPath: /dev/shm
+          readinessProbe: { tcpSocket: { port: 5003 } }
+          livenessProbe: { tcpSocket: { port: 5003 } }
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 2Gi

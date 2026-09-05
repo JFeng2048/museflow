@@ -1,0 +1,22 @@
+namespace: museflow
+crawl4aiService:
+ image:
+  repository: museflow/crawl4ai-service
+  tag: 0.1.0
+  pullPolicy: IfNotPresent
+ replicaCount: 1
+ resources:
+  requests: { cpu: 500m, memory: 1Gi }
+  limits: { cpu: "4", memory: 8Gi }
+ config:
+  PORT: "5003"
+  DEFAULT_MAX_CONCURRENT: "5"
+  DEFAULT_TIMEOUT: "60"
+  MAX_RETRIES: "3"
+  RETRY_BACKOFF_FACTOR: "2.0"
+  RESPECT_ROBOTS_TXT: "true"
+  ENABLE_STEALTH: "true"
+  HEADLESS: "true"
+  LOG_LEVEL: INFO
+ secret:
+  API_KEY: change-me

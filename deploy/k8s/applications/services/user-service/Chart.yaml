@@ -1,0 +1,6 @@
+apiVersion: v2
+name: user-service
+description: MuseFlow user gRPC service and worker
+type: application
+version: 0.1.0
+appVersion: latest

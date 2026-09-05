@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.userService.replicaCount }}
+  selector:
+    matchLabels: { app: user-service }
+  template:
+    metadata:
+      labels: { app: user-service }
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: user-service
+          image: "{{ .Values.userService.image.repository }}:{{ .Values.userService.image.tag }}"
+          imagePullPolicy: {{ .Values.userService.image.pullPolicy }}
+          envFrom:
+            - configMapRef: { name: user-service-config }
+            - secretRef: { name: user-service-secret }
+          ports:
+            - name: grpc
+              containerPort: 5002
+          resources: {{- toYaml .Values.userService.resources | nindent 12 }}
+          readinessProbe: { tcpSocket: { port: 5002 } }
+          livenessProbe: { tcpSocket: { port: 5002 } }

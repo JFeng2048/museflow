@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crawl4ai-config
+  namespace: {{ .Values.namespace }}
+data:
+{{- range $key, $value := .Values.crawl4aiService.config }}
+  {{ $key }}: {{ $value | quote }}
+{{- end }}
