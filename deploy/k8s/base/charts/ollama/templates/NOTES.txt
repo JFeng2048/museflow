@@ -1,0 +1,15 @@
+Ollama 已成功部署到 namespace {{ .Values.namespace }}。
+
+Service:
+  ollama:{{ .Values.ollama.service.port }}
+
+查看状态：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> get pods,svc,statefulset,pvc -n {{ .Values.namespace }}
+
+查看日志：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> logs -n {{ .Values.namespace }} statefulset/ollama --tail=100
+
+验证 Ollama 服务：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> run curl-check --rm -i --restart=Never -n {{ .Values.namespace }} --image=curlimages/curl -- curl -fsS http://ollama:{{ .Values.ollama.service.port }}/
+
+模型数据保存在 PVC 中，卸载 Helm release 不会自动删除 PVC。

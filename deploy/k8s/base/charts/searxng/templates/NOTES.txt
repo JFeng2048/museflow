@@ -1,0 +1,15 @@
+SearXNG 已成功部署到 namespace {{ .Values.namespace }}。
+
+Service:
+  searxng:{{ .Values.searxng.service.port }}
+
+查看状态：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> get pods,svc,deploy -n {{ .Values.namespace }}
+
+查看日志：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> logs -n {{ .Values.namespace }} deployment/searxng --tail=100
+
+验证 SearXNG 服务：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> run curl-check --rm -i --restart=Never -n {{ .Values.namespace }} --image=curlimages/curl -- curl -fsS http://searxng:{{ .Values.searxng.service.port }}/
+
+SearXNG 使用临时缓存目录，不创建持久化 PVC。

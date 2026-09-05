@@ -1,0 +1,18 @@
+user-service 已成功部署到 namespace {{ .Values.namespace }}。
+
+Service:
+  user-service:5002
+Worker:
+  user-service-worker
+
+查看状态：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> get pods,svc,deploy -n {{ .Values.namespace }}
+
+查看主服务日志：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> logs -n {{ .Values.namespace }} deployment/user-service --tail=100
+
+查看 Worker 日志：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> logs -n {{ .Values.namespace }} deployment/user-service-worker --tail=100
+
+User service 集群内地址：
+  user-service:5002

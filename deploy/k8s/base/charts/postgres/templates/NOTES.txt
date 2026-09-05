@@ -1,0 +1,33 @@
+PostgreSQL 已成功部署到 namespace {{ .Values.namespace }}。
+
+Release:
+  {{ .Release.Name }}
+Service:
+  postgres:{{ .Values.postgres.service.port }}
+
+检查部署状态：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> get pods,svc,statefulset,pvc -n {{ .Values.namespace }}
+
+查看数据库日志：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> logs -n {{ .Values.namespace }} statefulset/postgres --tail=100
+
+验证 PostgreSQL 是否就绪：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> exec -n {{ .Values.namespace }} postgres-0 -- pg_isready -U <数据库用户名> -d {{ .Values.postgres.database }}
+
+验证 pgvector 扩展：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> exec -n {{ .Values.namespace }} postgres-0 -- psql -U <数据库用户名> -d {{ .Values.postgres.database }} -c "SELECT extversion FROM pg_extension WHERE extname='vector';"
+{{- if eq .Values.postgres.service.type "NodePort" }}
+
+NodePort 访问：
+  节点地址:{{ .Values.postgres.service.nodePort }}
+  集群内 Service 端口:{{ .Values.postgres.service.port }}
+  注意：默认 NodePort 范围为 30000-32767，外部端口由 nodePort 决定。
+{{- end }}
+{{- if eq .Values.postgres.service.type "LoadBalancer" }}
+
+LoadBalancer 访问：
+  外部端口:{{ .Values.postgres.service.port }}
+  使用 kubectl get service postgres -n {{ .Values.namespace }} 查看 EXTERNAL-IP。
+{{- end }}
+
+注意：数据库用户名和密码不会显示在 Helm 安装提示中，请从 secrets.yaml 中读取用户名，并妥善保管密码。

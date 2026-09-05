@@ -12,6 +12,8 @@ postgres:
   password: ""
   database: museflow
   service:
+    # NodePort 模式下，port 是集群内 Service 端口，nodePort 是节点对外端口。
+    # Kubernetes 默认 NodePort 范围为 30000-32767。
     type: ClusterIP
     port: 5432
     nodePort: ""

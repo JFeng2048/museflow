@@ -1,0 +1,13 @@
+# Helm files
+.DS_Store
+.git/
+.gitignore
+*.swp
+*.tmp
+*.tgz
+*.tar.gz
+# Local secrets and environment files
+secrets.yaml
+values-*.yaml
+.env
+.env.*

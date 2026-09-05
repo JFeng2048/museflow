@@ -1,0 +1,13 @@
+crawl4ai-service 已成功部署到 namespace {{ .Values.namespace }}。
+
+Service:
+  crawl4ai-service:5003
+
+查看状态：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> get pods,svc,deploy -n {{ .Values.namespace }}
+
+查看日志：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> logs -n {{ .Values.namespace }} deployment/crawl4ai-service --tail=100
+
+Crawl4AI service 集群内地址：
+  http://crawl4ai-service:5003

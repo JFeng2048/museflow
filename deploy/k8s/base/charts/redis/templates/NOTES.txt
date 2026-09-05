@@ -1,0 +1,15 @@
+Redis 已成功部署到 namespace {{ .Values.namespace }}。
+
+Service:
+  redis:{{ .Values.redis.service.port }}
+
+查看状态：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> get pods,svc,statefulset,pvc -n {{ .Values.namespace }}
+
+查看日志：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> logs -n {{ .Values.namespace }} statefulset/redis --tail=100
+
+验证 Redis 服务：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> exec -n {{ .Values.namespace }} redis-0 -- sh -c 'redis-cli -a "$REDIS_PASSWORD" ping'
+
+Redis 数据保存在 PVC 中，卸载 Helm release 不会自动删除 PVC。
