@@ -140,6 +140,7 @@ StatefulSet 的 PVC 默认保留。删除 `data-postgres-0`、`data-ollama-0` �
 
 - `base/charts/` 只放基础服务 Chart，`applications/` 只放业务应用 Chart。
 - PostgreSQL 使用 `pgvector/pgvector:pg18` 镜像，并在初始化脚本中创建 pgvector 扩展。
+- 应用连接数据库和 Redis 时，`DB_HOST`、`DB_PORT`、`REDIS_ADDR` 支持集群内服务名、集群外 IP 或域名；集群外服务必须确保网络路由、防火墙和访问白名单已放行。
 - PostgreSQL 开发配置中 `Service port=15432`、`NodePort=30432`：集群内使用 `postgres:15432`，集群外使用 `节点IP:30432`。
 - 如果云集群提供 LoadBalancer，并且要求集群外使用 `15432`，将 `base/overlays/values.yaml` 中 PostgreSQL Service 改为 `type: LoadBalancer`、`port: 15432`，并删除 `nodePort`。
 - 也可以通过命令行临时使用 LoadBalancer 暴露 `15432`：

@@ -2,12 +2,71 @@ namespace: museflow
 
 apiGateway:
   replicaCount: 1
+  config:
+    GATEWAY_PORT: "5001"
+    GATEWAY_USER_SERVICE_URL: user-service:5002
+    GATEWAY_ALLOW_ORIGINS: http://web
+    GATEWAY_COOKIE_SECURE: "false"
+    GATEWAY_COOKIE_SAMESITE: lax
+    GATEWAY_COOKIE_DOMAIN: ""
+    GATEWAY_GIN_MODE: ""
+    LOG_LEVEL: info
+    LOG_FORMAT: json
+    LOG_OUTPUT_PATH: ./logs
+    LOG_SERVICE_NAME: api-gateway
+    LOG_CONSOLE: "true"
+    LOG_MAX_SIZE: "10"
+    LOG_MAX_BACKUPS: "30"
+    LOG_MAX_AGE: "7"
+    LOG_COMPRESS: "true"
 
 userService:
   replicaCount: 1
+  config:
+    USER_PORT: "5002"
+    USER_ACCESS_TTL_SECONDS: "3600"
+    USER_REFRESH_TTL_SECONDS: "2592000"
+    USER_BCRYPT_COST: "10"
+    USER_CODE_TTL_SECONDS: "600"
+    USER_CODE_LENGTH: "6"
+    USER_CODE_RESEND_COOLDOWN_SECONDS: "60"
+    USER_QUEUE_NAME: email
+    USER_QUEUE_MAX_RETRY: "3"
+    USER_QUEUE_TIMEOUT_SECONDS: "30"
+    USER_QUEUE_RETENTION_SECONDS: "3600"
+    USER_QUEUE_STATUS_TTL_SECONDS: "600"
+    USER_WORKER_CONCURRENCY: "20"
+    USER_TURNSTILE_ENDPOINT: https://challenges.cloudflare.com/turnstile/v0/siteverify
+    USER_TURNSTILE_TIMEOUT_SECONDS: "40"
+    USER_TURNSTILE_ALLOWED_HOSTNAMES: museflow.jfeng.asia,localhost,127.0.0.1
+    MFA_TICKET_TTL_SECONDS: "300"
+    MFA_ISSUER: MuseFlow
+    MFA_SKEW: "1"
+    MFA_RECOVERY_CODE_COUNT: "8"
+    MFA_RECOVERY_CODE_LENGTH: "10"
+    LOG_LEVEL: info
+    LOG_FORMAT: json
+    LOG_OUTPUT_PATH: ./logs
+    LOG_SERVICE_NAME: user-service
+    LOG_CONSOLE: "true"
+    LOG_MAX_SIZE: "10"
+    LOG_MAX_BACKUPS: "30"
+    LOG_MAX_AGE: "7"
+    LOG_COMPRESS: "true"
 
 crawl4aiService:
   replicaCount: 1
+  config:
+    PORT: "5003"
+    DEFAULT_MAX_CONCURRENT: "5"
+    DEFAULT_TIMEOUT: "60"
+    MAX_RETRIES: "3"
+    RETRY_BACKOFF_FACTOR: "2.0"
+    RESPECT_ROBOTS_TXT: "true"
+    ENABLE_STEALTH: "true"
+    HEADLESS: "true"
+    BROWSER_EXECUTABLE_PATH: /usr/bin/google-chrome
+    BROWSER_TYPE: chrome
 
 web:
   replicaCount: 1
