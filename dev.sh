@@ -53,11 +53,6 @@ if [[ "${TARGET}" != "web" ]] && ! command -v air >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ ! -f "${ROOT}/.env" ]]; then
-  echo "[WARN] ${ROOT}/.env not found; services fall back to defaults / system env."
-  echo "       Copy .env.example to .env and fill in the values."
-fi
-
 echo
 echo "  MuseFlow dev launcher"
 echo "  root : ${ROOT}"

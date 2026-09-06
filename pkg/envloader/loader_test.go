@@ -6,10 +6,9 @@ import (
 	"testing"
 )
 
-// 临时仓库根目录 + .env 文件，作为「全局 .env」层
+// 在当前服务目录写入临时 .env，模拟服务自身配置。
 func setupRootEnv(t *testing.T) func() {
 	t.Helper()
-	dir := t.TempDir()
 	content := "GATEWAY_PORT=5001\n" +
 		"JWT_SECRET=shared-secret\n" +
 		"DB_HOST=localhost\n" +
@@ -17,12 +16,20 @@ func setupRootEnv(t *testing.T) func() {
 		"USER_BCRYPT_COST=12\n" +
 		"# 注释行应被忽略\n" +
 		"SHARED_IGNORED=1\n"
-	if err := os.WriteFile(filepath.Join(dir, ".env"), []byte(content), 0o644); err != nil {
-		t.Fatalf("写根配置失败: %v", err)
+	path := filepath.Join(mustGetwd(t), ".env")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("写服务配置失败: %v", err)
 	}
-	old := os.Getenv("MUSEFLOW_ENV_DIR")
-	os.Setenv("MUSEFLOW_ENV_DIR", dir)
-	return func() { os.Setenv("MUSEFLOW_ENV_DIR", old) }
+	return func() { _ = os.Remove(path) }
+}
+
+func mustGetwd(t *testing.T) string {
+	t.Helper()
+	dir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("获取工作目录失败: %v", err)
+	}
+	return dir
 }
 
 // 在指定目录写入 .env（模拟「服务自身 .env」层）
@@ -65,12 +72,8 @@ func TestDBCommonConfig(t *testing.T) {
 	}
 }
 
-// TestLayeredOverride 验证分层优先级：服务自身 .env 覆盖根 .env。
+// TestServiceConfigOverride 验证服务自身 .env 的配置优先于默认值。
 func TestLayeredOverride(t *testing.T) {
-	cleanup := setupRootEnv(t)
-	defer cleanup()
-
-	// 服务目录与根目录不同，写入服务自身 .env 覆盖部分键
 	svcDir := t.TempDir()
 	writeServiceEnv(t, svcDir, "GATEWAY_PORT=6001\nDB_NAME=museflow_user\n")
 
@@ -82,16 +85,15 @@ func TestLayeredOverride(t *testing.T) {
 
 	g := New("GATEWAY", ".env")
 	if got := g.Get("PORT", "X"); got != "6001" {
-		t.Errorf("服务 .env 应覆盖根 .env，GATEWAY_PORT 期望 6001，实际 %q", got)
+		t.Errorf("服务 .env 应覆盖默认值，GATEWAY_PORT 期望 6001，实际 %q", got)
 	}
 
 	db := New("DB", ".env")
 	if got := db.GetCommon("DB_NAME", "X"); got != "museflow_user" {
-		t.Errorf("服务 .env 应覆盖根 .env，DB_NAME 期望 museflow_user，实际 %q", got)
+		t.Errorf("服务 .env 应覆盖默认值，DB_NAME 期望 museflow_user，实际 %q", got)
 	}
-	// 服务 .env 未覆盖的键仍取自根 .env
-	if got := db.GetCommon("DB_HOST", "X"); got != "localhost" {
-		t.Errorf("未覆盖键应取自根 .env，DB_HOST 期望 localhost，实际 %q", got)
+	if got := db.GetCommon("DB_HOST", "X"); got != "X" {
+		t.Errorf("未配置键应回退默认值，DB_HOST 期望 X，实际 %q", got)
 	}
 }
 
@@ -118,10 +120,6 @@ func TestOtherPrefixIgnored(t *testing.T) {
 }
 
 func TestMissingFileFallsBackToDefault(t *testing.T) {
-	dir := t.TempDir()
-	os.Setenv("MUSEFLOW_ENV_DIR", dir)
-	defer os.Unsetenv("MUSEFLOW_ENV_DIR")
-
 	g := New("GATEWAY", ".env")
 	if got := g.Get("PORT", "5001"); got != "5001" {
 		t.Errorf("文件缺失应回退默认值，期望 5001，实际 %q", got)

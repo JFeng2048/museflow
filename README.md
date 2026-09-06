@@ -112,7 +112,7 @@ MuseFlow/
 ├── proto/                       # Shared gRPC API contracts (incl. generated code)
 │   └── user/                    # user.proto + generated code (user.pb.go / user_grpc.pb.go)
 ├── pkg/                         # Cross-service shared Go libraries (independent go.mod)
-│   ├── envloader/               # Layered .env loading (system > service .env > root .env > defaults)
+│   ├── envloader/               # Service-local .env loading (system > service .env > defaults)
 │   ├── errcode/                 # Unified error codes & i18n (zh/en) responses
 │   └── logger/                  # slog + lumberjack logger (with file rotation)
 ├── services/
@@ -154,8 +154,6 @@ MuseFlow/
 ├── docs/                        # Design docs (incl. dual-token auth design, api/)
 ├── web/                         # Frontend (Vue 3 + TypeScript + Vite)
 ├── scripts/                     # Codegen & helper scripts
-├── .env                         # Global config (gitignored, holds dev defaults)
-├── .env.example                 # Global config template (committed; copy to .env)
 ├── go.work                      # Go Workspace (local multi-module dev)
 ├── dev.bat / dev.sh             # One-shot hot-reload for all services (Windows / Linux·macOS)
 ├── Makefile                     # Root build script (Air hot-reload, proto gen, etc.)
@@ -192,21 +190,22 @@ psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f services/user-se
 
 ### 3. Configure environment variables (layered)
 
-Configuration is loaded **in layers**. Each service may place its own `.env` in its directory to override same-named keys from the root `.env`:
+Each microservice owns its `.env` and `.env.example`; the repository-root `.env` configuration layer is not used:
 
 ```
 services/
 ├── user-service/
-│   └── .env        # service-specific config (overrides global same-named vars)
+│   ├── .env.example # service config template (committed)
+│   └── .env         # service config (gitignored)
 └── api-gateway/
+    ├── .env.example
     └── .env
-.env                # repo-root global config (default / shared values)
 ```
 
 **Load priority (high → low):**
 
 ```
-System env vars  >  service .env  >  repo-root .env  >  code defaults
+System env vars  >  service .env  >  code defaults
 ```
 
 | Prefix | Service | Key variables |
@@ -216,11 +215,12 @@ System env vars  >  service .env  >  repo-root .env  >  code defaults
 | (none) | shared | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (shared DB connection); `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB` (shared Redis); `JWT_SECRET` (shared JWT signing key for gateway + user-service) |
 | `LOG_` | all services | `LOG_LEVEL`, `LOG_FORMAT`, `LOG_OUTPUT_PATH`, `LOG_CONSOLE`, etc. |
 
-`.env` / `services/*/.env` are gitignored (they may contain real secrets). The repo ships `.env.example` and `services/user-service/.env.example` as templates — copy to `.env` locally and edit as needed:
+`services/*/.env` are gitignored (they may contain real secrets). Each service ships its own `.env.example` template — copy it to that service's `.env` locally:
 
 ```bash
-cp .env.example .env                              # global
-cp services/user-service/.env.example services/user-service/.env   # service-specific
+cp services/user-service/.env.example services/user-service/.env
+cp services/api-gateway/.env.example services/api-gateway/.env
+cp services/crawl4ai-service/.env.example services/crawl4ai-service/.env
 ```
 
 To override a single key, set a system env var (highest priority), e.g.:

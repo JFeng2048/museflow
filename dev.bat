@@ -46,12 +46,6 @@ if /i not "%TARGET%"=="web" (
   )
 )
 
-if not exist "%ROOT%\.env" (
-  echo   [WARN] %ROOT%\.env not found; services fall back to defaults / system env.
-  echo         Copy .env.example to .env and fill in the values.
-  echo.
-)
-
 set "STARTED=0"
 
 if /i "%TARGET%"=="all"      call :start_gateway & call :start_user & call :start_worker & goto :done

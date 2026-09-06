@@ -144,8 +144,6 @@ MuseFlow/
 ├── docs/                        # 设计文档（含双令牌认证系统设计文档）
 ├── web/                         # 前端（Vue 3 + TypeScript + Vite）
 ├── scripts/                     # 代码生成等脚本
-├── .env                         # 全局配置文件（已 gitignore，含开发默认值）
-├── .env.example                 # 全局配置模板（已提交，复制为 .env 后填写）
 ├── go.work                      # Go Workspace（本地多模块开发）
 ├── dev.bat / dev.sh             # 一键热重载全部服务（Windows / Linux·macOS）
 ├── Makefile                     # 根目录构建脚本（含 Air 热重载、proto 生成等）
@@ -182,21 +180,22 @@ psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f services/user-se
 
 ### 3. 配置环境变量（分层管理）
 
-配置采用**分层加载**，每个服务除根目录 `.env` 外，还可在自身目录放置 `.env` 覆盖同名项：
+每个微服务独立维护自己的 `.env` 和 `.env.example`，不再使用仓库根目录 `.env`：
 
 ```
 services/
 ├── user-service/
-│   └── .env        # 服务专属配置（覆盖全局同名变量）
+│   ├── .env.example # 服务配置模板（提交）
+│   └── .env         # 服务实际配置（不提交）
 └── api-gateway/
+    ├── .env.example
     └── .env
-.env                # 仓库根目录全局配置（默认/公共值）
 ```
 
 **加载优先级（由高到低）：**
 
 ```
-系统环境变量  >  服务自身 .env  >  仓库根 .env  >  代码默认值
+系统环境变量  >  服务自身 .env  >  代码默认值
 ```
 
 | 前缀 | 服务 | 关键变量 |
@@ -206,12 +205,13 @@ services/
 | （无前缀） | 公共 | `DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`（所有服务共用的数据库连接）；`REDIS_ADDR`、`REDIS_PASSWORD`、`REDIS_DB`（所有服务共用的 Redis 连接）；`JWT_SECRET`（gateway 与 user-service 共用的 JWT 签名密钥） |
 | `LOG_` | 所有服务 | `LOG_LEVEL`、`LOG_FORMAT`、`LOG_OUTPUT_PATH`、`LOG_CONSOLE` 等日志配置 |
 
-`.env` / `services/*/.env` 已被 `.gitignore` 忽略（含真实密钥，不入库）。仓库提供 `.env.example` 与
-`services/user-service/.env.example` 作为模板，本地复制为 `.env` 后按需修改：
+`services/*/.env` 已被 `.gitignore` 忽略（含真实密钥，不入库）。各服务目录提供自己的
+`.env.example`，本地复制为 `.env` 后按需修改：
 
 ```bash
-cp .env.example .env                              # 全局
-cp services/user-service/.env.example services/user-service/.env   # 服务专属
+cp services/user-service/.env.example services/user-service/.env
+cp services/api-gateway/.env.example services/api-gateway/.env
+cp services/crawl4ai-service/.env.example services/crawl4ai-service/.env
 ```
 
 如需覆盖某项，可设置系统环境变量（优先级最高），例如：

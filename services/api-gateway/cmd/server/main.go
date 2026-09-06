@@ -40,7 +40,7 @@ import (
 // @name						Authorization
 // @description				请填入 "Bearer {access_token}"
 func main() {
-	// 配置从仓库根目录 .env（前缀 GATEWAY_）读取，系统环境变量可覆盖
+	// 配置从 api-gateway 服务目录 .env（前缀 GATEWAY_）读取，系统环境变量可覆盖
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("加载配置失败: %v", err)

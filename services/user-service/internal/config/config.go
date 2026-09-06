@@ -1,6 +1,6 @@
 // Package config 负责从环境变量加载 user-service 配置。
 //
-// 配置集中存放于仓库根目录 .env 文件，使用 USER_ 前缀；
+// 配置集中存放于 user-service 服务目录的 .env 文件，使用 USER_ 前缀；
 // 系统环境变量优先级高于文件，缺失时回退默认值。
 package config
 

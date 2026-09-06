@@ -7,7 +7,7 @@ Contributor guide for MuseFlow, an AI-powered novel generation platform. The bac
 Monorepo with a Go Workspace (`go.work`) at the repo root. Each service and each shared package has its own `go.mod` (referenced via `replace` directives in `go.work`). No root `go.mod`.
 
 - `pkg/` — shared Go libraries, each an independent module:
-  - `envloader/` — layered `.env` loading (system env > service `.env` > repo-root `.env` > defaults). Service-prefixed keys via `Get`, shared keys via `GetCommon` (e.g. `JWT_SECRET`, `REDIS_*`, `DB_*`).
+  - `envloader/` — service-local `.env` loading (system env > service `.env` > defaults). Service-prefixed keys via `Get`, shared keys via `GetCommon` (e.g. `JWT_SECRET`, `REDIS_*`, `DB_*`).
   - `errcode/` — unified error codes (2000+) with bilingual (zh/en) messages driven by `Accept-Language`; `SuccessGin`/`ErrorGin` for HTTP, gRPC status mapping in handlers.
   - `logger/` — `slog` + `lumberjack` logger with `Config` (level/format/output/path/rotation), `Init`, context and field helpers (`logger.Err`, `logger.UserUUID`, `logger.WithTraceID`).
 - `proto/user/` — shared gRPC contract (`user.proto` + generated `user.pb.go` / `user_grpc.pb.go`), independent module.
@@ -22,7 +22,7 @@ Monorepo with a Go Workspace (`go.work`) at the repo root. Each service and each
 - `services/user-service/database/user_svc.sql` — PostgreSQL DDL; creates schema `user_svc` and table `user_svc.users` (schema is fixed, not driven by config).
 - `web/` — Vue 3 + TS + Vite frontend.
 - `docs/cn/develop/双令牌认证系统设计文档.md` — dual-token auth design reference.
-- `.env` (gitignored) + `.env.example` (committed) — global config; each service dir has its own `.env.example` for overrides.
+- Each microservice owns its `.env` (gitignored) and `.env.example` (committed); there is no repository-root `.env` configuration layer.
 
 ## Build, Test, and Development Commands
 
@@ -63,7 +63,7 @@ These conventions are mandatory for contributions to this repo:
    feat(user-service): 拆分 auth/token/dto 子包 / split auth/token/dto subpackages
    ```
    复杂改动按功能原子分拆为多个提交，而非一次性大提交。
-2. **配置分层与环境变量**：所有配置统一走 `envloader`，禁止直接使用 `os.Getenv`。共享键无前缀（`JWT_SECRET`、`REDIS_*`、`DB_*`），通过 `envloader.New("REDIS",...)` + `GetCommon` 读取；服务专属键使用前缀（`USER_`、`GATEWAY_`、`LOG_`），通过 `Get` 读取。分层优先级：系统环境变量 > 服务 `.env` > 仓库根 `.env` > 默认值。
+2. **配置分层与环境变量**：所有配置统一走 `envloader`，禁止直接使用 `os.Getenv`。共享键无前缀（`JWT_SECRET`、`REDIS_*`、`DB_*`），通过 `envloader.New("REDIS",...)` + `GetCommon` 读取；服务专属键使用前缀（`USER_`、`GATEWAY_`、`LOG_`），通过 `Get` 读取。分层优先级：系统环境变量 > 服务自身 `.env` > 默认值。
 3. **注释与文案用中文**：代码注释、文档（如 `*.md`）、日志文案以中文为主；变量名/函数名等标识符仍用英文，保持 `gofmt`/`go vet` 规范。
 4. **无循环依赖分层**：`service` 内部按 `auth`/`token`/`dto` 子包拆分，依赖单向、禁止循环：`auth` → `token` + `dto`；`token`/`dto` 不反向依赖 `auth` 或任何内部包。跨层调用同样保持单向（handler → service → repository）。
 
@@ -79,4 +79,4 @@ PRs should link the related issue, describe the change and motivation, and inclu
 
 ## Security & Configuration Tips
 
-Never commit secrets. `.env` files are gitignored; supply configuration through environment variables or `.env.example` copies. Shared secrets use unprefixed keys: `JWT_SECRET` (gateway + user-service sign/verify), `REDIS_*` (token whitelist/blacklist), `DB_*` (PostgreSQL). Per-service config uses prefixes `USER_`, `GATEWAY_`, `LOG_`. Build artifacts (`dist/`, `bin/`, `*.test`, `coverage.*`) are excluded from version control. `go.work` is gitignored by default — keep `go.work.use` listing all modules.
+Never commit secrets. Each service owns a gitignored `.env` and a committed `.env.example`; supply production configuration through environment variables or Kubernetes secrets. Shared secrets use unprefixed keys: `JWT_SECRET` (gateway + user-service sign/verify), `REDIS_*` (token whitelist/blacklist), `DB_*` (PostgreSQL). Per-service config uses prefixes `USER_`, `GATEWAY_`, `LOG_`. Build artifacts (`dist/`, `bin/`, `*.test`, `coverage.*`) are excluded from version control. `go.work` is gitignored by default — keep `go.work.use` listing all modules.
