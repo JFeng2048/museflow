@@ -1,0 +1,20 @@
+# 版本控制目录
+.git
+.gitignore
+
+# 依赖与构建产物
+**/node_modules
+**/dist
+**/tmp
+**/tmp-worker
+**/.venv
+**/__pycache__
+**/coverage
+*.test
+*.exe
+*.out
+
+# 环境与日志（敏感信息不进入镜像）
+.env
+**/.env
+logs/
