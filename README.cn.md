@@ -203,7 +203,7 @@ services/
 | `GATEWAY_` | api-gateway | `GATEWAY_PORT`、`GATEWAY_USER_SERVICE_URL`、`GATEWAY_ALLOW_ORIGINS`、`GATEWAY_COOKIE_*` |
 | `USER_` | user-service | `USER_PORT`、`USER_ACCESS_TTL_SECONDS` 等 |
 | （无前缀） | 公共 | `DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`（所有服务共用的数据库连接）；`REDIS_ADDR`、`REDIS_PASSWORD`、`REDIS_DB`（所有服务共用的 Redis 连接）；`JWT_SECRET`（gateway 与 user-service 共用的 JWT 签名密钥） |
-| `LOG_` | 所有服务 | `LOG_LEVEL`、`LOG_FORMAT`、`LOG_OUTPUT_PATH`、`LOG_CONSOLE` 等日志配置 |
+| `LOG_` | 所有服务 | `LOG_LEVEL`、`LOG_FORMAT`、`LOG_CONSOLE`（日志输出到 stdout，由容器运行时 / k8s 收集） |
 
 `services/*/.env` 已被 `.gitignore` 忽略（含真实密钥，不入库）。各服务目录提供自己的
 `.env.example`，本地复制为 `.env` 后按需修改：

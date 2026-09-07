@@ -213,7 +213,7 @@ System env vars  >  service .env  >  code defaults
 | `GATEWAY_` | api-gateway | `GATEWAY_PORT`, `GATEWAY_USER_SERVICE_URL`, `GATEWAY_ALLOW_ORIGINS`, `GATEWAY_COOKIE_*` |
 | `USER_` | user-service | `USER_PORT`, `USER_ACCESS_TTL_SECONDS`, etc. |
 | (none) | shared | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (shared DB connection); `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB` (shared Redis); `JWT_SECRET` (shared JWT signing key for gateway + user-service) |
-| `LOG_` | all services | `LOG_LEVEL`, `LOG_FORMAT`, `LOG_OUTPUT_PATH`, `LOG_CONSOLE`, etc. |
+| `LOG_` | all services | `LOG_LEVEL`, `LOG_FORMAT`, `LOG_CONSOLE` (logs go to stdout, collected by the container runtime / k8s) |
 
 `services/*/.env` are gitignored (they may contain real secrets). Each service ships its own `.env.example` template — copy it to that service's `.env` locally:
 

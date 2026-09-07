@@ -1,19 +1,16 @@
 // Package logger 提供 MuseFlow 所有微服务统一的日志能力。
 //
-// 基于标准库 log/slog + lumberjack（日志轮转），零其它外部依赖。
+// 基于标准库 log/slog，零外部依赖。日志统一输出到标准输出/错误流
+// （stdout/stderr），不做文件落盘：容器日志由容器运行时 / k8s 收集。
 // 设计原则：极简、统一，所有服务共享同一套初始化与全局函数。
 package logger
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
-
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 // Config 日志配置。
@@ -22,35 +19,9 @@ type Config struct {
 	Level string
 	// Format 输出格式：text, json（默认 json）。
 	Format string
-	// OutputPath 日志根目录，如 "./logs"。
-	OutputPath string
-	// ServiceName 服务名，用于分目录，如 "user-service"。
-	ServiceName string
-	// Console 是否同时输出到控制台。
+	// Console 是否输出到 stdout（默认 true）；false 时输出到 stderr。
 	Console bool
-
-	// 以下为日志轮转参数（lumberjack），缺省时使用默认值。
-
-	// MaxSize 单个日志文件大小上限，单位 MB（默认 100）。
-	MaxSize int
-	// MaxBackups 保留的历史文件数（默认 30）。
-	MaxBackups int
-	// MaxAge 历史文件保留天数（默认 7）。
-	MaxAge int
-	// Compress 是否压缩历史文件（默认 true）。
-	Compress bool
-	// CompressSet 标记 Compress 是否被调用方显式设置。
-	// 用于区分"未设置（用默认 true）"和"显式设为 false"。
-	CompressSet bool
 }
-
-// lumberjack 轮转参数默认值。
-const (
-	defaultRotateMaxSize    = 100  // MB
-	defaultRotateMaxBackups = 30   // 保留文件数
-	defaultRotateMaxAge     = 7    // 天
-	defaultRotateCompress   = true // 压缩旧文件
-)
 
 // 全局默认 logger 句柄。
 var defaultLogger *slog.Logger
@@ -60,7 +31,11 @@ func init() {
 	defaultLogger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 }
 
-// Init 初始化日志：创建目录、配置轮转、设置全局 logger。
+// Init 初始化日志并设置全局 logger。
+//
+// 日志不落盘，统一写标准流：
+//   - Console 为 true（默认）输出到 stdout；
+//   - Console 为 false 输出到 stderr。
 func Init(cfg *Config) error {
 	if cfg == nil {
 		cfg = &Config{}
@@ -72,43 +47,13 @@ func Init(cfg *Config) error {
 		format = "json"
 	}
 
-	// 组装输出目标。
-	var writers []io.Writer
-
-	// 文件输出：OutputPath/ServiceName/app.log
-	if dir := strings.TrimSpace(cfg.OutputPath); dir != "" {
-		base := dir
-		if name := strings.TrimSpace(cfg.ServiceName); name != "" {
-			base = filepath.Join(dir, name)
-		}
-		if err := os.MkdirAll(base, 0o755); err != nil {
-			return fmt.Errorf("创建日志目录失败: %w", err)
-		}
-		filePath := filepath.Join(base, "app.log")
-		lj := &lumberjack.Logger{
-			Filename:   filePath,
-			MaxSize:    orDefaultInt(cfg.MaxSize, defaultRotateMaxSize),
-			MaxBackups: orDefaultInt(cfg.MaxBackups, defaultRotateMaxBackups),
-			MaxAge:     orDefaultInt(cfg.MaxAge, defaultRotateMaxAge),
-			Compress:   compressValue(cfg),
-		}
-		writers = append(writers, lj)
+	var dest io.Writer = os.Stdout
+	if !cfg.Console {
+		dest = os.Stderr
 	}
 
-	// 控制台输出。
-	if cfg.Console {
-		writers = append(writers, os.Stdout)
-	}
-
-	// 若两者皆无，则兜底输出到 stdout，避免无目标。
-	if len(writers) == 0 {
-		writers = append(writers, os.Stdout)
-	}
-
-	dest := io.MultiWriter(writers...)
-
-	var handler slog.Handler
 	opts := &slog.HandlerOptions{Level: level}
+	var handler slog.Handler
 	if format == "json" {
 		handler = slog.NewJSONHandler(dest, opts)
 	} else {
@@ -131,23 +76,6 @@ func parseLevel(s string) slog.Level {
 	default:
 		return slog.LevelInfo
 	}
-}
-
-// orDefaultInt 当 v<=0 时返回默认值 d。
-func orDefaultInt(v, d int) int {
-	if v <= 0 {
-		return d
-	}
-	return v
-}
-
-// compressValue 返回压缩开关：未显式设置时返回默认 true，
-// 显式设置（无论 true/false）后尊重调用方值。
-func compressValue(cfg *Config) bool {
-	if cfg.CompressSet {
-		return cfg.Compress
-	}
-	return defaultRotateCompress
 }
 
 // Logger 返回当前全局 logger 句柄。

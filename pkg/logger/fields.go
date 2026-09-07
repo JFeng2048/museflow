@@ -28,4 +28,3 @@ func UserUUID(uuid string) any {
 func Module(name string) any {
 	return slogAttr("module", name)
 }
-
