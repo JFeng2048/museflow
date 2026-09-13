@@ -55,6 +55,20 @@ deploy/k8s/
 - **覆盖文件分层**：Chart 自带 `values.yaml` 是默认值，两组 `overlays/` 是环境覆盖，部署时必须同时传 `-f overlays/values.yaml -f overlays/secrets.yaml`。
 - **部署范围**：部署脚本不区分 dev/staging/production，按范围选择 `base`（数据库、Redis、Ollama、SearXNG）、`app`（业务应用 + `edge/ingress`）或 `all`，默认 `all`。
 
+### 首次部署必须替换的密钥
+
+`example.secrets.yaml` 里都是占位符；部署脚本会在部署前扫描 `change-me` 一类的占位符并给出警告（这类值错了通常要到运行期才暴露）。几个重点键：
+
+| 键 | 填错的后果 |
+| --- | --- |
+| `userService.secret.USER_TURNSTILE_SECRET` | 必须填 Cloudflare 的 **Secret Key**，不是前端的 Site Key。填成 Site Key 或保留占位符 → 人机验证接口报 `invalid-input-secret`（user-service 日志可见）；留空 → 人机验证降级为「跳过」，接口不再受保护 |
+| `userService.secret.JWT_SECRET` 与 `apiGateway.JWT_SECRET` | 两者必须完全一致，否则网关验签失败、登录态不可用 |
+| `userService.secret.USER_SMTP_*` | 未配置 `USER_SMTP_HOST` 时降级为「日志模式」：验证码只写日志、不真实发信 |
+| `userService.secret.DB_*` / `REDIS_*` | 服务启动即失败（连不上数据库 / Redis） |
+
+前端站点密钥（`web/.env.production` 的 `VITE_TURNSTILE_SITE_KEY`）在**构建时**写进产物，
+更换 Cloudflare 站点后需要重新构建并重新导入 `museflow/web` 镜像。
+
 ## 部署
 
 ### 使用部署脚本
