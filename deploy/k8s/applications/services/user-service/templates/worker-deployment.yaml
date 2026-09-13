@@ -5,6 +5,12 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   replicas: {{ .Values.userService.replicaCount }}
+  # 同 user-service：单节点下改为先删后建，避免 surge 造成的资源死锁。
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels: { app: user-service-worker }
   template:

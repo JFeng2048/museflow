@@ -5,6 +5,13 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   replicas: {{ .Values.crawl4aiService.replicaCount }}
+  # 单节点集群没有多余资源做 surge：先删旧 Pod 再起新 Pod。该服务还额外挂了
+  # /dev/shm 的 emptyDir（sizeLimit 2Gi），surge 时等于要多挤一份内存。
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels: { app: crawl4ai-service }
   template:

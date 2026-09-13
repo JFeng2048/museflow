@@ -5,6 +5,13 @@ metadata:
   namespace: {{ .Values.namespace }}
 spec:
   replicas: {{ .Values.apiGateway.replicaCount }}
+  # 单节点集群没有多余资源做 surge：先删旧 Pod 再起新 Pod，否则新 Pod 会因资源不足
+  # 一直 Pending，而旧 Pod 又不会被回收，rollout 会卡死（代价是更新期间短暂不可用）。
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels: { app: api-gateway }
   template:
