@@ -69,4 +69,6 @@ if [[ "$SCOPE" == "app" || "$SCOPE" == "all" ]]; then
     --namespace museflow --values "$APP_VALUES" --values "$APP_SECRETS" "${KUBECONFIG_ARGS[@]}"
   helm upgrade --install web "$K8S_DIR/applications/web/frontend" \
     --namespace museflow --values "$APP_VALUES" --values "$APP_SECRETS" "${KUBECONFIG_ARGS[@]}"
+  helm upgrade --install ingress "$K8S_DIR/edge/ingress" \
+    --namespace museflow --values "$APP_VALUES" --values "$APP_SECRETS" "${KUBECONFIG_ARGS[@]}"
 fi

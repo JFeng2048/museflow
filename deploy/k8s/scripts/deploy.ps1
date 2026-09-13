@@ -47,4 +47,5 @@ if ($Scope -eq 'app' -or $Scope -eq 'all') {
     Install-Chart 'user-service' (Join-Path $k8sDir 'applications/services/user-service') $appValues $appSecrets
     Install-Chart 'crawl4ai-service' (Join-Path $k8sDir 'applications/services/crawl4ai-service') $appValues $appSecrets
     Install-Chart 'web' (Join-Path $k8sDir 'applications/web/frontend') $appValues $appSecrets
+    Install-Chart 'ingress' (Join-Path $k8sDir 'edge/ingress') $appValues $appSecrets
 }
