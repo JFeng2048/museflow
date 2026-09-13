@@ -295,6 +295,24 @@ INSERT INTO "user_svc"."role_permission" VALUES (3, 11, '2026-08-29 14:06:00.788
 INSERT INTO "user_svc"."role_permission" VALUES (3, 12, '2026-08-29 14:06:00.788852');
 INSERT INTO "user_svc"."role_permission" VALUES (3, 13, '2026-08-29 14:06:00.788852');
 INSERT INTO "user_svc"."role_permission" VALUES (3, 16, '2026-08-29 14:06:00.788852');
+-- admin 角色：除 system:admin(15) 外的全部权限，可进入后台并管理用户与内容，
+-- 但系统级配置（角色权限 / 模型 / 日志 / 服务）保留给 super_admin。
+INSERT INTO "user_svc"."role_permission" VALUES (2, 1, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 2, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 3, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 4, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 5, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 6, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 7, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 8, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 9, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 10, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 11, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 12, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 13, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 14, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 16, '2026-08-29 14:06:00.788852');
+INSERT INTO "user_svc"."role_permission" VALUES (2, 17, '2026-08-29 14:06:00.788852');
 
 -- 注意：上面的角色、权限与角色-权限映射，服务启动时也会按同样内容播种
 -- （见 internal/bootstrap：缺什么补什么，已存在不覆盖），因此空库可直接启动、

@@ -101,15 +101,25 @@ var systemPermissions = []model.Permission{
 }
 
 // rolePermissionCodes 各系统角色的默认权限，与 database/user_svc.sql 的
-// role_permission 种子一致：super_admin 拥有全部，user 拥有创作相关的 8 条。
+// role_permission 种子一致：super_admin 拥有全部，admin 拥有除 system:admin 外的全部，
+// user 拥有创作相关的 8 条。
 //
 // super_admin 的映射在校验上其实是冗余的（该角色在 rbac 服务里走通配，直接放行），
 // 之所以仍然写入，是为了和 SQL 导出保持一致、并在后台「角色权限」界面上可见。
 //
-// admin 角色在种子数据里没有任何权限，这里不擅自扩大它的范围；
-// 需要时在后台「角色权限」里配置（配置后播种不会再覆盖，见 ensureRolePermissions）。
+// admin 与 super_admin 两个管理员身份都能进入后台（都持有 user:admin），但 admin 不持有
+// system:admin，因此后台里「角色权限 / 模型配置 / 系统日志 / 服务监控」这几项系统级菜单对它
+// 不可见——这正是前端动态菜单按权限码展示不同功能的依据。admin 的权限可在后台「角色权限」
+// 里按需调整（播种不会覆盖，见 ensureRolePermissions）。
 var rolePermissionCodes = map[string][]string{
 	rbac.RoleSuperAdmin: permissionCodes(),
+	rbac.RoleAdmin: {
+		"user:read", "user:write", "user:delete", "user:admin",
+		"novel:read", "novel:write", "novel:delete", "novel:publish", "novel:admin",
+		"material:read", "material:write",
+		"publish:read", "publish:write", "publish:admin",
+		"hotspot:read", "hotspot:write",
+	},
 	rbac.RoleUser: {
 		"novel:read", "novel:write", "novel:publish",
 		"material:read", "material:write",

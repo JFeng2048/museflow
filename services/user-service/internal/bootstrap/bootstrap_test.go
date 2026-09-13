@@ -201,15 +201,15 @@ func TestRunSeedsPermissionsAndRoleMappings(t *testing.T) {
 	}
 
 	// 角色权限映射：角色由 CreateRole 依次拿到 id 1/2/3
-	// super_admin 全部 17 条、user 8 条、admin 在种子里没有权限
+	// super_admin 全部 17 条、admin 16 条（不含 system:admin）、user 8 条
 	if got := store.setCalls[1]; len(got) != 17 {
 		t.Errorf("super_admin 应得到全部权限，实际 %d 条", len(got))
 	}
+	if got := store.setCalls[2]; len(got) != 16 {
+		t.Errorf("admin 应得到 16 条权限（不含 system:admin），实际 %d 条", len(got))
+	}
 	if got := store.setCalls[3]; len(got) != 8 {
 		t.Errorf("user 应得到 8 条权限，实际 %d 条", len(got))
-	}
-	if _, ok := store.setCalls[2]; ok {
-		t.Error("admin 在种子数据里没有权限，不应写入映射")
 	}
 }
 
@@ -224,6 +224,7 @@ func TestRunOnlyFillsMissingPermissionsAndKeepsCustomizedRoles(t *testing.T) {
 		perms: []model.Permission{{ID: 1, Code: "user:read"}},
 		rolePerms: map[int16][]string{
 			1: {"system:admin"},
+			2: {"user:admin"},
 			3: {"novel:read"},
 		},
 	}
