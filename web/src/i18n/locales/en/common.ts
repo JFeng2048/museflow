@@ -12,13 +12,6 @@ export default {
     statistics: 'Stats',
     settings: 'Settings',
   },
-  sidebar: {
-    dashboard: 'My Projects',
-    material: 'Materials',
-    lorebook: 'Lorebook',
-    task: 'Tasks',
-    publish: 'Publishing',
-  },
   userMenu: {
     profile: 'Profile',
     model: 'Model Settings',

@@ -1,11 +1,32 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { fetchProfile, logout as logoutApi } from '@/api/system/auth'
+import { fetchProfile, fetchMyPermissions, logout as logoutApi } from '@/api/system/auth'
 import { TOKEN_KEY } from '@/constants/auth'
 import type { User, UserBindings, BindingProvider, ViewMode } from '@/types/system/auth'
 
 const USER_KEY = 'mf.user'
 const VIEW_KEY = 'mf.view'
+const PERM_KEY = 'mf.perms'
+
+/**
+ * 进入管理后台所需的权限码，与网关对 /admin 路由的校验保持一致。
+ *
+ * 后端 UserInfo 不含角色字段，所以「是不是管理员」由权限码推导，而不是 user.role：
+ * 这样自定义角色只要拿到该权限码，同样能进后台。
+ */
+export const ADMIN_PERMISSION = 'user:admin'
+
+/** 从 localStorage 恢复权限码，解析失败按「无权限」处理。 */
+function readStoredPermissions(): string[] {
+  try {
+    const raw = localStorage.getItem(PERM_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((p): p is string => typeof p === 'string') : []
+  } catch {
+    return []
+  }
+}
 
 /** 兜底用户：未登录时使用，确保页面始终有可显示的身份信息。 */
 const DEFAULT_USER: User = {
@@ -40,17 +61,33 @@ export const useUserStore = defineStore('user', () => {
     (localStorage.getItem(VIEW_KEY) as ViewMode) || 'user',
   )
 
+  // 权限码清单：先用本地缓存的，刷新瞬间也能保住管理员的入口与路由权限
+  const permissions = ref<string[]>(readStoredPermissions())
+
   const isLoggedIn = computed(() => !!token.value)
   const displayName = computed(() => user.value?.name || DEFAULT_USER.name)
   const initial = computed(() => displayName.value.slice(0, 1).toUpperCase())
-  const role = computed(() => user.value?.role || 'writer')
-  const isAdmin = computed(() => role.value === 'admin')
+  const isAdmin = computed(() => hasPermission(ADMIN_PERMISSION))
+  const canEnterAdmin = computed(() => hasPermission(ADMIN_PERMISSION))
+  const role = computed(() => (isAdmin.value ? 'admin' : user.value?.role || 'writer'))
+
+  /** 是否持有某权限码（与后端 rbac 校验口径一致）。 */
+  function hasPermission(code: string): boolean {
+    return permissions.value.includes(code)
+  }
+
+  /** 是否持有给定权限码中的任意一个。 */
+  function hasAnyPermission(codes: string[]): boolean {
+    return codes.some((c) => permissions.value.includes(c))
+  }
 
   function setAuth(nextToken: string, nextUser: User) {
     token.value = nextToken
     user.value = nextUser
-    // 普通用户强制工作台视图；管理员默认进入工作台，稍后由登录页决定。
-    currentView.value = nextUser.role === 'admin' ? currentView.value || 'user' : 'user'
+    // 视图先回到工作台；是否是管理员要等权限码拉回来才知道（见 loadPermissions）
+    currentView.value = 'user'
+    // 换账号时清掉上一个账号的权限，避免沿用它的后台入口
+    setPermissions([])
     profileLoaded.value = true
     persist()
   }
@@ -93,9 +130,11 @@ export const useUserStore = defineStore('user', () => {
     user.value = { ...DEFAULT_USER }
     profileLoaded.value = false
     currentView.value = 'user'
+    setPermissions([])
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
     localStorage.removeItem(VIEW_KEY)
+    localStorage.removeItem(PERM_KEY)
   }
 
   /**
@@ -142,15 +181,42 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /**
+   * 拉取当前用户的权限码。
+   *
+   * 前端不做逐请求的权限校验（那是网关的职责），但菜单/按钮与「能否进入管理后台」
+   * 需要这份清单；接口抖动时保留上一次结果，避免管理员入口凭空中断。
+   */
+  async function loadPermissions() {
+    if (!isLoggedIn.value) {
+      setPermissions([])
+      return
+    }
+    try {
+      setPermissions(await fetchMyPermissions())
+    } catch {
+      // 保留上一次结果
+    }
+  }
+
+  function setPermissions(next: string[]) {
+    permissions.value = next
+    localStorage.setItem(PERM_KEY, JSON.stringify(next))
+  }
+
   return {
     token,
     user,
+    permissions,
     currentView,
     isLoggedIn,
     displayName,
     initial,
     role,
     isAdmin,
+    canEnterAdmin,
+    hasPermission,
+    hasAnyPermission,
     setAuth,
     setView,
     enterAdmin,
@@ -159,6 +225,7 @@ export const useUserStore = defineStore('user', () => {
     setBinding,
     logout,
     loadProfile,
+    loadPermissions,
   }
 })
 

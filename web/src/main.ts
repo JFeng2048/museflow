@@ -25,6 +25,8 @@ ui.initLang()
 // 启动时拉取用户基本信息（未登录时直接用兜底用户，不会发起请求）
 const userStore = useUserStore(pinia)
 userStore.loadProfile()
+// 权限码决定菜单/按钮与「能否进入管理后台」，刷新后同样需要恢复
+userStore.loadPermissions()
 
 // 全局快捷键：Ctrl/Cmd + Shift + T 循环主题；Ctrl/Cmd + Shift + L 切换语言
 window.addEventListener('keydown', (e) => {

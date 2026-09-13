@@ -717,30 +717,6 @@
   font-weight: 600;
 }
 
-/* Sidebar 菜单项（active/hover 依赖状态类，统一在此定义） */
-.sidebar-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 10px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  cursor: pointer;
-  color: var(--c-ink-soft);
-  font-size: 14px;
-  text-align: left;
-  transition: background 0.15s, color 0.15s;
-}
-.sidebar-item:hover {
-  background: var(--c-warm-2);
-}
-.sidebar-item.active {
-  background: var(--c-amber-soft);
-  color: var(--c-amber-deep);
-  font-weight: 600;
-}
-
 /* 登录 / 注册 页面 */
 .auth-page {
   min-height: 100vh;

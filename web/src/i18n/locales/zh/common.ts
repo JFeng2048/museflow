@@ -13,13 +13,6 @@ export default {
     statistics: '统计',
     settings: '设置',
   },
-  sidebar: {
-    dashboard: '我的作品',
-    material: '素材库',
-    lorebook: '设定集',
-    task: '生成任务',
-    publish: '发布管理',
-  },
   userMenu: {
     profile: '个人资料',
     model: '模型配置',

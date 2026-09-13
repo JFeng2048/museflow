@@ -5,15 +5,8 @@ import { storeToRefs } from 'pinia'
 import { NIcon } from 'naive-ui'
 import { useUserStore } from '@/stores/system/user'
 import { useCreditStore } from '@/stores/credit'
-import {
-  BookOutline,
-  BulbOutline,
-  RocketOutline,
-  FolderOutline,
-  BarChartOutline,
-  SettingsOutline,
-  EnterOutline,
-} from '@vicons/ionicons5'
+import { EnterOutline } from '@vicons/ionicons5'
+import { filterNav } from '@/config/menu'
 import ThemeSwitcher from '@/components/common/ThemeSwitcher.vue'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import UserMenu from '@/components/layout/UserMenu.vue'
@@ -31,14 +24,7 @@ const ui = useUiStore()
 const mockLabel = computed(() => (ui.currentLang === 'zh' ? '演示数据' : 'Demo Data'))
 const { activityBalance, permanentBalance, validBalance } = storeToRefs(creditStore)
 
-const nav = computed(() => [
-  { label: t('nav.novels'), name: 'novels', icon: BookOutline },
-  { label: t('nav.inspiration'), name: 'inspiration', icon: BulbOutline },
-  { label: t('nav.publish'), name: 'publish', icon: RocketOutline },
-  { label: t('nav.tasks'), name: 'tasks', icon: FolderOutline },
-  { label: t('nav.statistics'), name: 'statistics', icon: BarChartOutline },
-  { label: t('nav.settings'), name: 'settings', icon: SettingsOutline },
-])
+const nav = computed(() => filterNav('user', userStore.permissions))
 
 const active = computed(() => String(route.name))
 function go(name: string) {
@@ -74,7 +60,7 @@ function enterAdmin() {
           @click="go(item.name)"
         >
           <n-icon :component="item.icon" class="layout-nav-ico" />
-          <span>{{ item.label }}</span>
+          <span>{{ t(item.labelKey) }}</span>
         </button>
       </nav>
 
@@ -82,9 +68,9 @@ function enterAdmin() {
         <!-- 演示（Mock）模式标识：仅未接入真实后端时显示 -->
         <span v-if="ui.mockMode" class="mock-flag" :title="t('app.mockTip')">{{ mockLabel }}</span>
 
-        <!-- 管理员可一键进入管理后台 -->
+        <!-- 持有后台权限的用户可一键进入管理后台（权限码驱动，无需身份选择器） -->
         <button
-          v-if="userStore.isAdmin"
+          v-if="userStore.canEnterAdmin"
           class="switch-btn"
           @click="enterAdmin"
           :title="t('admin.enterAdmin')"

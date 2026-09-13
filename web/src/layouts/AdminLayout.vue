@@ -1,19 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { storeToRefs } from 'pinia'
 import { NIcon } from 'naive-ui'
 import { useUserStore } from '@/stores/system/user'
-import {
-  GridOutline,
-  PeopleOutline,
-  ShieldOutline,
-  ConstructOutline,
-  MegaphoneOutline,
-  ListOutline,
-  PulseOutline,
-  ExitOutline,
-} from '@vicons/ionicons5'
+import { ExitOutline } from '@vicons/ionicons5'
+import { filterNav } from '@/config/menu'
 import ThemeSwitcher from '@/components/common/ThemeSwitcher.vue'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import UserMenu from '@/components/layout/UserMenu.vue'
@@ -25,20 +16,11 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const { currentView } = storeToRefs(userStore)
 const ui = useUiStore()
 
 const mockLabel = computed(() => (ui.currentLang === 'zh' ? '演示数据' : 'Demo Data'))
 
-const nav = computed(() => [
-  { label: t('admin.nav.dashboard'), name: 'admin-dashboard', icon: GridOutline },
-  { label: t('admin.nav.users'), name: 'admin-users', icon: PeopleOutline },
-  { label: t('admin.nav.roles'), name: 'admin-roles', icon: ShieldOutline },
-  { label: t('admin.nav.models'), name: 'admin-models', icon: ConstructOutline },
-  { label: t('admin.nav.announcements'), name: 'admin-announcements', icon: MegaphoneOutline },
-  { label: t('admin.nav.logs'), name: 'admin-logs', icon: ListOutline },
-  { label: t('admin.nav.services'), name: 'admin-services', icon: PulseOutline },
-])
+const nav = computed(() => filterNav('admin', userStore.permissions))
 
 const active = computed(() => String(route.name))
 function go(name: string) {
@@ -68,7 +50,7 @@ function backToUser() {
           @click="go(item.name)"
         >
           <n-icon :component="item.icon" class="layout-nav-ico" />
-          <span>{{ item.label }}</span>
+          <span>{{ t(item.labelKey) }}</span>
         </button>
       </nav>
 

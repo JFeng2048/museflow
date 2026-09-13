@@ -32,15 +32,15 @@ const routes: RouteRecordRaw[] = [
     path: '/admin',
     component: () => import('@/layouts/AdminLayout.vue'),
     redirect: '/admin/dashboard',
-    meta: { requiresAuth: true, requiresAdmin: true },
+    meta: { requiresAuth: true },
     children: [
-      { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue') },
-      { path: 'users', name: 'admin-users', component: () => import('@/views/admin/Users.vue') },
-      { path: 'roles', name: 'admin-roles', component: () => import('@/views/admin/Roles.vue') },
-      { path: 'models', name: 'admin-models', component: () => import('@/views/admin/Models.vue') },
-      { path: 'announcements', name: 'admin-announcements', component: () => import('@/views/admin/Announcements.vue') },
-      { path: 'logs', name: 'admin-logs', component: () => import('@/views/admin/Logs.vue') },
-      { path: 'services', name: 'admin-services', component: () => import('@/views/admin/Services.vue') },
+      { path: 'dashboard', name: 'admin-dashboard', component: () => import('@/views/admin/Dashboard.vue'), meta: { permission: 'user:admin' } },
+      { path: 'users', name: 'admin-users', component: () => import('@/views/admin/Users.vue'), meta: { permission: 'user:admin' } },
+      { path: 'roles', name: 'admin-roles', component: () => import('@/views/admin/Roles.vue'), meta: { permission: 'system:admin' } },
+      { path: 'models', name: 'admin-models', component: () => import('@/views/admin/Models.vue'), meta: { permission: 'system:admin' } },
+      { path: 'announcements', name: 'admin-announcements', component: () => import('@/views/admin/Announcements.vue'), meta: { permission: 'user:admin' } },
+      { path: 'logs', name: 'admin-logs', component: () => import('@/views/admin/Logs.vue'), meta: { permission: 'system:admin' } },
+      { path: 'services', name: 'admin-services', component: () => import('@/views/admin/Services.vue'), meta: { permission: 'system:admin' } },
     ],
   },
   { path: '/:pathMatch(.*)*', redirect: '/novels' },
@@ -56,13 +56,15 @@ router.beforeEach((to) => {
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  // 管理后台仅管理员可访问。
-  if (to.meta.requiresAdmin && !userStore.isAdmin) {
+  // 按路由声明的权限码校验：无权限则退回工作台（菜单本就按权限码隐藏，这里兜住直链访问）。
+  if (to.meta.permission && !userStore.hasPermission(to.meta.permission as string)) {
     return { name: 'novels' }
   }
   if (to.name === 'login' && userStore.isLoggedIn) {
     // 已登录用户访问登录页：按当前视图跳回对应工作台。
-    return userStore.currentView === 'admin' ? { name: 'admin-dashboard' } : { name: 'novels' }
+    return userStore.canEnterAdmin && userStore.currentView === 'admin'
+      ? { name: 'admin-dashboard' }
+      : { name: 'novels' }
   }
 })
 

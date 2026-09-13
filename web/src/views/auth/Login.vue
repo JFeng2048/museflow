@@ -14,7 +14,6 @@ import {
   sendCode,
 } from '@/api/system/auth'
 import type { AuthResult } from '@/types/system/auth'
-import IdentityPicker from '@/components/common/IdentityPicker.vue'
 import TurnstileWidget from '@/components/auth/TurnstileWidget.vue'
 import type { TurnstileWidgetExposed } from '@/components/auth/TurnstileWidget.vue'
 
@@ -33,9 +32,6 @@ const password = ref('')
 const code = ref('')
 const loading = ref(false)
 
-// 管理员登录后，先选择进入哪个视图。
-const showIdentity = ref(false)
-
 // 2FA 二次验证中间态
 const showMfa = ref(false)
 const mfaTicket = ref('')
@@ -45,13 +41,12 @@ const useRecovery = ref(false)
 
 async function finishLogin(result: AuthResult) {
   userStore.setAuth(result.token, result.user)
+  // 后端按权限码下发明细：菜单与后台入口都由权限码驱动，登录后直接进入用户工作台，
+  // 若该账号持有后台权限，「进入管理后台」按钮会出现在顶部栏，无需登录后弹窗选择身份。
+  await userStore.loadPermissions()
   message.success(t('auth.loginSuccess'))
-  if (result.user.role === 'admin') {
-    showIdentity.value = true
-  } else {
-    userStore.enterUser()
-    router.replace('/novels')
-  }
+  userStore.enterUser()
+  router.replace('/novels')
 }
 
 async function onSubmit() {
@@ -92,17 +87,6 @@ async function onSubmitMfa() {
     message.error(t('auth.mfaInvalid'))
   } finally {
     mfaLoading.value = false
-  }
-}
-
-function chooseIdentity(view: 'user' | 'admin') {
-  showIdentity.value = false
-  if (view === 'admin') {
-    userStore.enterAdmin()
-    router.replace('/admin')
-  } else {
-    userStore.enterUser()
-    router.replace('/novels')
   }
 }
 
@@ -233,8 +217,6 @@ async function onSendCode(): Promise<boolean> {
   <!-- 弹窗通过 Teleport 送到 body，避开 .auth-flip-wrap 的 transform 新包含块，
        保证 position: fixed 始终以视口为参照居中。 -->
   <Teleport to="body">
-    <IdentityPicker v-model:show="showIdentity" @choose="chooseIdentity" />
-
     <div v-if="showMfa" class="mfa-mask" @click.self="showMfa = false">
       <div class="mfa-card">
         <h3>{{ t('auth.mfaTitle') }}</h3>
