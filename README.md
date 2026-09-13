@@ -293,6 +293,10 @@ Per-module docs (with detailed routes and fields) live under [`docs/en/api/`](do
 
 Each service also ships Swagger (gateway at `/swagger/index.html`, crawl4ai-service at `/docs`).
 
+Architecture docs live under [`docs/en/architecture/`](docs/en/architecture/): deployment architecture
+(Kubernetes component cheat sheet, edge Nginx → Traefik Ingress → Service chain, domain & certificates)
+and service architecture.
+
 ---
 
 ## 📦 Containerization

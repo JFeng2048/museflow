@@ -285,6 +285,8 @@ make docker      # 构建 Docker 镜像（上下文为仓库根目录）
 
 各服务均提供 Swagger（网关在 `/swagger/index.html`，crawl4ai-service 在 `/docs`）。
 
+架构文档见 [`docs/cn/architecture/`](docs/cn/architecture/)：部署架构（K8s 组件速查、边缘 Nginx → Traefik Ingress → Service 链路、域名与证书）与服务架构设计。
+
 ---
 
 ## 📦 容器化

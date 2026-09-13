@@ -108,10 +108,12 @@ user-service reads configuration through `envloader`. Variables in the service `
 USER_TURNSTILE_SECRET=0x...
 USER_TURNSTILE_ENDPOINT=https://challenges.cloudflare.com/turnstile/v0/siteverify
 USER_TURNSTILE_TIMEOUT_SECONDS=40
-USER_TURNSTILE_ALLOWED_HOSTNAMES=museflow.jfeng.asia,localhost,127.0.0.1
+USER_TURNSTILE_ALLOWED_HOSTNAMES=museflow.com,localhost,127.0.0.1
 ```
 
 The precedence is system environment > service `.env` > repository root `.env` > defaults. The Secret Key must remain backend-only; never put it in a `VITE_*` variable, logs, responses, or source control.
+
+> Under Kubernetes this value is derived from `domain.host` (plus `userService.extraTurnstileHostnames`); do not maintain it by hand — see [Deployment Architecture](../architecture/deployment.md).
 
 The send-code request path must allow more time than the Turnstile timeout:
 
