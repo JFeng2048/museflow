@@ -3,15 +3,23 @@
 // 依赖方向：rbac -> repository（token/repository）。rbac 不反向依赖 auth，
 // 因此 auth 包可安全地依赖 rbac（auth -> rbac -> repository），不形成循环。
 //
+// 角色与权限数据的来源：启动播种（internal/bootstrap）负责保证系统角色、权限定义与
+// 角色默认权限映射存在，管理员可在后台调整映射；本包不写入，只做读取与缓存。
+//
+// super_admin 视为通配：不逐条授予权限，缓存里只存通配标记，CheckPermission 命中即放行。
+// 这样新增权限后无需再给系统管理员补授权，也不存在「缓存里缺新权限」的窗口期；
+// 对外查询权限列表时再展开成全部权限编码，前端菜单/按钮无需特殊处理。
+//
 // 权限缓存设计（与需求一致）：
-//   - key: perm:user:{userUUID}，value: 逗号分隔的权限编码字符串
-//   - TTL: 7 天（与 Refresh Token 有效期一致）
+//   - key: perm:user:{userUUID}，value: 逗号分隔的权限编码字符串（super_admin 为 "*"）
+//   - TTL: 与 Refresh Token 有效期一致（USER_REFRESH_TTL_SECONDS，默认 30 天）
 //   - 登录成功 / 显式查询时写入；权限变更时删除（降级到查库）
 package rbac
 
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,17 +37,20 @@ var (
 
 // 内置角色编码。
 //
-// 角色与权限数据一律由数据库维护（见 services/user-service/database/user_svc.sql），
-// 代码内不做任何种子写入，仅保留「注册默认角色」等必要的角色编码常量。
-// 需要新增角色或调整权限时，直接在数据库中维护，或通过管理后台接口创建。
+// 这三个系统角色由启动播种保证存在（见 internal/bootstrap），权限映射可在后台调整。
 const (
-	// RoleSuperAdmin 超级管理员。
+	// RoleSuperAdmin 超级管理员：免权限校验（通配），由启动播种授予配置里的管理员账号。
 	RoleSuperAdmin = "super_admin"
 	// RoleAdmin 管理员。
 	RoleAdmin = "admin"
 	// RoleUser 默认注册用户，注册与第三方登录自动授予该角色。
 	RoleUser = "user"
 )
+
+// PermWildcard 权限缓存中的通配标记。
+// 拥有 super_admin 角色的用户在缓存里只存该标记：校验直接放行，
+// 对外查询权限列表时展开为全部权限编码。
+const PermWildcard = "*"
 
 // Service RBAC 业务服务。
 type Service struct {
@@ -53,20 +64,46 @@ func NewService(repo repository.RBACRepository, store repository.TokenStore, per
 	return &Service{repo: repo, store: store, permTTL: permTTL}
 }
 
-// GetUserPermissions 返回用户权限编码列表。
-// 优先读 Redis 缓存；未命中则查库并回填缓存（缓存不可用时不报错，直接返回库结果）。
+// GetUserPermissions 返回用户的完整权限编码列表（供前端渲染菜单与按钮）。
+// super_admin 在此展开为权限表中的全部权限编码。
 func (s *Service) GetUserPermissions(ctx context.Context, userUUID uuid.UUID) ([]string, error) {
+	perms, err := s.cachedPermissions(ctx, userUUID)
+	if err != nil {
+		return nil, err
+	}
+	if isWildcard(perms) {
+		return s.allPermissionCodes(ctx)
+	}
+	return perms, nil
+}
+
+// CheckPermission 校验用户是否拥有指定权限（走缓存优先策略）。
+// 拥有 super_admin 的用户命中通配标记，直接放行。
+func (s *Service) CheckPermission(ctx context.Context, userUUID uuid.UUID, perm string) (bool, error) {
+	perms, err := s.cachedPermissions(ctx, userUUID)
+	if err != nil {
+		return false, err
+	}
+	for _, p := range perms {
+		if p == perm || p == PermWildcard {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// cachedPermissions 取用户权限（缓存优先）；super_admin 返回通配标记而非逐条权限。
+// 缓存不可用时降级查库，但会留痕——否则缓存故障只表现为「接口变慢」，很难定位。
+func (s *Service) cachedPermissions(ctx context.Context, userUUID uuid.UUID) ([]string, error) {
 	cached, err := s.store.GetUserPermissions(ctx, userUUID.String())
 	if err != nil {
-		// 缓存读取报错意味着 Redis 可能已不可用。这里降级查库，但必须留痕：
-		// 不记日志的话，缓存故障表现为「接口变慢」，排查时很难定位到 Redis。
 		logger.WarnContext(ctx, "读取用户权限缓存失败，本次降级查库",
 			logger.UserUUID(userUUID.String()), logger.Err(err))
 	} else if cached != nil {
 		return cached, nil
 	}
 
-	perms, err := s.repo.GetUserPermissionCodes(ctx, userUUID)
+	perms, err := s.resolvePermissions(ctx, userUUID)
 	if err != nil {
 		return nil, err
 	}
@@ -79,18 +116,35 @@ func (s *Service) GetUserPermissions(ctx context.Context, userUUID uuid.UUID) ([
 	return perms, nil
 }
 
-// CheckPermission 校验用户是否拥有指定权限（走缓存优先策略）。
-func (s *Service) CheckPermission(ctx context.Context, userUUID uuid.UUID, perm string) (bool, error) {
-	perms, err := s.GetUserPermissions(ctx, userUUID)
+// resolvePermissions 计算用户的权限集合：
+// super_admin 记通配（不逐条授权，新增权限无需补授权），其余角色按 role_permission 汇总。
+func (s *Service) resolvePermissions(ctx context.Context, userUUID uuid.UUID) ([]string, error) {
+	roles, err := s.repo.GetUserRoleCodes(ctx, userUUID)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
+	if slices.Contains(roles, RoleSuperAdmin) {
+		return []string{PermWildcard}, nil
+	}
+	return s.repo.GetUserPermissionCodes(ctx, userUUID)
+}
+
+// allPermissionCodes 返回权限表中的全部权限编码。
+func (s *Service) allPermissionCodes(ctx context.Context) ([]string, error) {
+	perms, err := s.repo.ListPermissions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	codes := make([]string, 0, len(perms))
 	for _, p := range perms {
-		if p == perm {
-			return true, nil
-		}
+		codes = append(codes, p.Code)
 	}
-	return false, nil
+	return codes, nil
+}
+
+// isWildcard 判断权限集合是否为通配标记。
+func isWildcard(perms []string) bool {
+	return len(perms) == 1 && perms[0] == PermWildcard
 }
 
 // ClearUserCache 删除用户权限缓存（权限变更后调用）。
