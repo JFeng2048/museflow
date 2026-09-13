@@ -1,1 +1,4 @@
 **/secrets.yaml
+
+# push-image 导出的镜像 tar（默认落在仓库根 tmp/images，这里再兜一层）
+**/*.tar
