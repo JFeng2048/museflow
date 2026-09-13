@@ -14,19 +14,18 @@ web:
       server_name _;
       root /usr/share/nginx/html;
       index index.html;
+
       gzip on;
       gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
-      location /api/ {
-          proxy_pass http://api-gateway:5001;
-          proxy_set_header Host $host;
-          proxy_set_header X-Real-IP $remote_addr;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto $scheme;
+      gzip_min_length 1024;
+
+      # 静态资源缓存
+      location ~* \.(?:css|js|png|jpg|jpeg|gif|svg|ico|woff2?)$ {
+          expires 7d;
+          add_header Cache-Control "public";
       }
-      location /health {
-          proxy_pass http://api-gateway:5001/health;
-          proxy_set_header Host $host;
-      }
+
+      # SPA 路由回退；/api 由集群内 Traefik Ingress 转发到 api-gateway
       location / {
           try_files $uri $uri/ /index.html;
       }

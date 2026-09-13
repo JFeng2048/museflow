@@ -1,0 +1,18 @@
+{{- $domain := include "ingress.domainHost" . -}}
+Ingress 已成功部署到 namespace {{ .Values.namespace }}：{{ .Values.ingress.name | default "museflow" }}。
+
+对外域名（唯一来源 applications/overlays/secrets.yaml 的 domain.host）：
+  {{ $domain }}
+
+路由：
+{{- range .Values.ingress.paths }}
+  {{ .path }} -> {{ .service }}:{{ .port }}
+{{- end }}
+
+查看状态：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> get ingress -n {{ .Values.namespace }}
+
+集群外请通过边缘 Nginx 终止 HTTPS 后转发到 Traefik NodePort（31380），并保留 Host: {{ $domain }}
+
+验证路由（集群内）：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> run curl-check --rm -i --restart=Never -n {{ .Values.namespace }} --image=curlimages/curl -- curl -fsS -H 'Host: {{ $domain }}' http://<节点IP>:31380/health

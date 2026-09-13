@@ -1,0 +1,36 @@
+namespace: museflow
+
+# 集群内路由入口（Traefik Ingress）。
+#
+# 分工约定：HTTPS 与证书由集群外的边缘 Nginx 终止，边缘 Nginx 再把请求
+# 转发到 Traefik 的 NodePort（31380/31443），集群内由本 Ingress 负责路由：
+#   /       -> web:80           前端静态产物，frontend 自身不做任何反向代理
+#   /api    -> api-gateway:5001 /api/v1/... 原样透传，网关不感知前缀变化
+#   /health -> api-gateway:5001 网关健康检查，不需要时可从 paths 中移除
+#
+# Traefik 路径匹配按“最长前缀优先”，/api 不会被 / 覆盖。
+ingress:
+  enabled: true
+  name: museflow
+  # host 不在这里配置：唯一来源是 applications/overlays/secrets.yaml 的 domain.host，
+  # 由 templates/_helpers.tpl 的 ingress.domainHost 注入。
+  className: traefik
+  annotations: {}
+  # 边缘 Nginx 已负责 HTTPS，默认不在集群内重复终止 TLS；
+  # 若改为 cert-manager 签发证书，置 enabled=true 并填写 secretName。
+  tls:
+    enabled: false
+    secretName: ""
+  paths:
+    - path: /api
+      pathType: Prefix
+      service: api-gateway
+      port: 5001
+    - path: /health
+      pathType: Prefix
+      service: api-gateway
+      port: 5001
+    - path: /
+      pathType: Prefix
+      service: web
+      port: 80

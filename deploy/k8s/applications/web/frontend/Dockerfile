@@ -1,8 +1,8 @@
 # ============================================================
 # web Dockerfile - 前端 SPA 镜像
 #
-# 多阶段构建：Node 构建静态产物，Nginx 托管并在 k8s 中由 ConfigMap
-# 覆盖站点配置（/api 反向代理）。
+# 多阶段构建：Node 构建静态产物，Nginx 只托管静态文件。
+# /api 由集群内 Traefik Ingress 转发到 api-gateway，Nginx 不做反向代理。
 #
 # 构建命令（仓库根目录，构建上下文为仓库根）：
 #   docker build -f deploy/k8s/applications/web/frontend/Dockerfile -t museflow/web .
