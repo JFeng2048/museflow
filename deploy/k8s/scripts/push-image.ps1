@@ -189,7 +189,11 @@ function Install-SshPublicKey {
     if (-not (Test-Path $keyPath)) {
         Write-Info "未找到密钥，正在生成：$keyPath"
         New-Item -ItemType Directory -Path (Join-Path $HOME '.ssh') -Force | Out-Null
-        if ((Invoke-Native 'ssh-keygen' @('-t', 'ed25519', '-N', '', '-f', $keyPath, '-C', 'museflow-push-image')) -ne 0) {
+        # 不要用 -N ''：Windows PowerShell 5.1 调用原生命令会丢弃空字符串参数，
+        # 导致 -N 把后面的 -f 当成口令值，ssh-keygen 报 Too many arguments。
+        # 改为不传 -N，由 ssh-keygen 交互提问：直接回车两次即为空口令。
+        Write-Info 'ssh-keygen 会提示设置口令，直接回车两次表示不设口令'
+        if ((Invoke-Native 'ssh-keygen' @('-t', 'ed25519', '-f', $keyPath, '-C', 'museflow-push-image')) -ne 0) {
             return $false
         }
     }
