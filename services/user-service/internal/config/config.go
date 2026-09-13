@@ -11,6 +11,7 @@ import (
 
 	"github.com/museflow/pkg/envloader"
 	"github.com/museflow/pkg/logger"
+	"github.com/museflow/user-service/internal/bootstrap"
 	"github.com/museflow/user-service/internal/pkg/email"
 	"github.com/museflow/user-service/internal/pkg/queue"
 	"github.com/museflow/user-service/internal/pkg/turnstile"
@@ -49,6 +50,9 @@ type Config struct {
 	// 人机验证（Cloudflare Turnstile），用于保护发送验证码等易被刷的接口
 	Turnstile turnstile.Config
 
+	// 管理员账号播种（USER_ADMIN_*）：启动时按配置补齐系统角色与管理员账号
+	Admin bootstrap.Config
+
 	Log *logger.Config // 日志配置（由 LOG_ 前缀读取）
 }
 
@@ -69,6 +73,9 @@ func Load() (*Config, error) {
 
 	dsn := buildPostgresDSN(dbHost, dbPort, dbUser, dbPass, dbName)
 
+	// bcrypt 成本同时用于业务侧加密与管理员播种，读一次保持一致
+	bcryptCost := env.GetInt("BCRYPT_COST", 10)
+
 	cfg := &Config{
 		Port:       env.Get("PORT", "5002"),
 		DBDSN:      dsn,
@@ -78,7 +85,7 @@ func Load() (*Config, error) {
 		JWTSecret:  env.GetCommon("JWT_SECRET", ""),
 		AccessTTL:  env.GetDuration("ACCESS_TTL_SECONDS", 3600*time.Second),
 		RefreshTTL: env.GetDuration("REFRESH_TTL_SECONDS", 2592000*time.Second),
-		BcryptCost: env.GetInt("BCRYPT_COST", 10),
+		BcryptCost: bcryptCost,
 		// 2FA 中间票据默认 5 分钟有效
 		MFATicketTTL: env.GetDuration("MFA_TICKET_TTL_SECONDS", 300*time.Second),
 		// 2FA 参数：发行方、时钟偏移步数、恢复码数量与长度
@@ -115,6 +122,15 @@ func Load() (*Config, error) {
 			Endpoint:         env.Get("TURNSTILE_ENDPOINT", turnstile.DefaultEndpoint),
 			Timeout:          env.GetDuration("TURNSTILE_TIMEOUT_SECONDS", 15*time.Second),
 			AllowedHostnames: splitList(env.Get("TURNSTILE_ALLOWED_HOSTNAMES", "")),
+		},
+		// 管理员账号播种：Email 为空即不播种（默认行为），按 .env / Secret 显式配置
+		Admin: bootstrap.Config{
+			Email:    env.Get("ADMIN_EMAIL", ""),
+			Password: env.Get("ADMIN_PASSWORD", ""),
+			// 昵称默认「系统管理员」，可用 USER_ADMIN_NICKNAME 覆盖
+			Nickname:      env.Get("ADMIN_NICKNAME", bootstrap.DefaultAdminNickname),
+			ResetPassword: env.GetBool("ADMIN_RESET_PASSWORD", false),
+			BcryptCost:    bcryptCost,
 		},
 		Log: loadLogConfig(env),
 	}

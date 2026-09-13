@@ -27,6 +27,9 @@ type RBACRepository interface {
 	ListRoles(ctx context.Context) ([]model.Role, error)
 	// ListPermissions 列出全部权限。
 	ListPermissions(ctx context.Context) ([]model.Permission, error)
+	// CreatePermissions 批量创建权限（启动播种用）。按 code 幂等：已存在的跳过。
+	// id 为 0 时自动取当前 max(id) + 1（permission.id 未绑定序列）。
+	CreatePermissions(ctx context.Context, perms []model.Permission) error
 	// GetRolePermissions 返回某角色拥有的权限编码列表。
 	GetRolePermissions(ctx context.Context, roleID int16) ([]string, error)
 	// SetRolePermissions 覆盖设置某角色的权限（先删后插）。
@@ -112,6 +115,44 @@ func (r *rbacRepository) ListPermissions(ctx context.Context) ([]model.Permissio
 		return nil, err
 	}
 	return perms, nil
+}
+
+// CreatePermissions 批量创建权限，供启动播种补齐缺失的权限定义。
+//
+// permission.id 未绑定自增序列（见 database/user_svc.sql），因此这里显式按当前
+// max(id) 递增值；按 code 冲突忽略，保证重复启动不会产生重复数据或主键冲突。
+func (r *rbacRepository) CreatePermissions(ctx context.Context, perms []model.Permission) error {
+	if len(perms) == 0 {
+		return nil
+	}
+
+	var maxID *int16
+	if err := r.db.WithContext(ctx).
+		Model(&model.Permission{}).
+		Select("MAX(id)").
+		Scan(&maxID).Error; err != nil {
+		return err
+	}
+	next := int16(1)
+	if maxID != nil {
+		next = *maxID + 1
+	}
+
+	rows := make([]model.Permission, 0, len(perms))
+	for _, p := range perms {
+		if p.ID == 0 {
+			p.ID = next
+			next++
+		}
+		rows = append(rows, p)
+	}
+
+	return r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "code"}},
+			DoNothing: true,
+		}).
+		Create(&rows).Error
 }
 
 // GetRolePermissions 返回某角色拥有的权限编码列表。

@@ -21,6 +21,7 @@ import (
 
 	"github.com/museflow/pkg/logger"
 	userpb "github.com/museflow/proto/user"
+	"github.com/museflow/user-service/internal/bootstrap"
 	"github.com/museflow/user-service/internal/config"
 	"github.com/museflow/user-service/internal/handler"
 	"github.com/museflow/user-service/internal/pkg/queue"
@@ -68,6 +69,8 @@ func main() {
 	tokenStore := repository.NewTokenStore(rdb)
 	codeStore := repository.NewVerifyCodeStore(rdb)
 	taskStore := repository.NewTaskStore(rdb)
+	// 启动播种：补齐系统角色与管理员账号（幂等；失败只记日志，不阻断服务）
+	seedDatabase(cfg.Admin, userRepo, rbacRepo)
 	// 邮件等慢速操作走 asynq 队列：这里的客户端只负责投递，消费在 cmd/worker
 	queueClient := queue.New(cfg.Queue, taskStore)
 	defer queueClient.Close()
@@ -75,7 +78,7 @@ func main() {
 	captcha := captchaVerifier(cfg.Turnstile)
 	taskService := task.NewService(taskStore)
 	tokenManager := token.NewTokenManager(cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL, cfg.MFATicketTTL)
-	// 权限缓存 TTL 与 Refresh Token 一致（7 天）
+	// 权限缓存 TTL 与 Refresh Token 一致（USER_REFRESH_TTL_SECONDS，默认 30 天）
 	rbacService := rbac.NewService(rbacRepo, tokenStore, cfg.RefreshTTL)
 	auditService := audit.NewService(auditRepo)
 	oauthService := oauth.NewService(oauthRepo, userRepo, rbacService, auditService)
@@ -104,7 +107,8 @@ func main() {
 	adminService := admin.NewService(userRepo, rbacService, auditService)
 	userHandler := handler.NewUserHandler(authService, adminService, taskService)
 
-	// 角色与权限数据由数据库维护（database/user_svc.sql），代码不做种子写入
+	// 角色与权限明细由 database/user_svc.sql 维护；启动播种（bootstrap 包）只保证
+	// 系统角色与管理员账号存在，不写入权限数据
 	grpcServer := grpc.NewServer()
 	userpb.RegisterUserServiceServer(grpcServer, userHandler)
 
@@ -142,6 +146,18 @@ func main() {
 	if err := grpcServer.Serve(lis); err != nil {
 		logger.Error("gRPC 服务异常退出", logger.Err(err))
 		log.Fatalf("gRPC 服务异常退出: %v", err)
+	}
+}
+
+// seedDatabase 执行启动播种（系统角色 + 管理员账号）。
+//
+// 失败只记录日志、不阻断启动：缺少管理员账号不该让服务起不来（已有账号仍可登录），
+// 但错误必须显眼，方便部署时立刻发现配置遗漏。
+func seedDatabase(cfg bootstrap.Config, users repository.UserRepository, rbacRepo repository.RBACRepository) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if err := bootstrap.Run(ctx, users, rbacRepo, cfg); err != nil {
+		logger.Error("启动播种失败（系统角色或管理员账号可能不完整）", logger.Err(err))
 	}
 }
 
