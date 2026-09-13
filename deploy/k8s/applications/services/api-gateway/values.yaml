@@ -5,8 +5,9 @@ apiGateway:
   tag: latest
   pullPolicy: IfNotPresent
  replicaCount: 1
+ # 同 user-service：单节点下 request 按稳态用量给，避免滚动更新调度不上。
  resources:
-  requests: { cpu: 100m, memory: 256Mi }
+  requests: { cpu: 100m, memory: 128Mi }
   limits: { cpu: "1", memory: 1Gi }
  config:
   GATEWAY_PORT: "5001"

@@ -5,8 +5,9 @@ web:
   tag: latest
   pullPolicy: IfNotPresent
  replicaCount: 1
+ # 静态站点 + Nginx，实际占用很小；request 给足即可，别占调度额度。
  resources:
-  requests: { cpu: 100m, memory: 128Mi }
+  requests: { cpu: 50m, memory: 64Mi }
   limits: { cpu: "1", memory: 512Mi }
  nginxConfig: |
   server {

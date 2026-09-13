@@ -9,11 +9,14 @@ userService:
   tag: latest
   pullPolicy: IfNotPresent
  replicaCount: 1
+ # 单节点 1.9Gi 的调度现实：requests 是「调度货币」，与实际占用无关。request 虚高会让
+ # 滚动更新时新 Pod 排不上（曾导致 user-service rollout 卡死），故按稳态用量给 request，
+ # limits 保留余量——真涨上去由容器自己 OOM，不会拖累节点。
  resources:
-  requests: { cpu: 100m, memory: 256Mi }
+  requests: { cpu: 100m, memory: 128Mi }
   limits: { cpu: "1", memory: 1Gi }
  workerResources:
-  requests: { cpu: 100m, memory: 128Mi }
+  requests: { cpu: 100m, memory: 64Mi }
   limits: { cpu: "1", memory: 512Mi }
  config:
   USER_PORT: "5002"
@@ -36,3 +39,12 @@ userService:
   REDIS_PASSWORD: change-me
   REDIS_DB: "0"
   JWT_SECRET: change-me-in-prod
+  # 以下键由 applications/overlays/secrets.yaml 按环境注入，服务侧读取的键名与语义
+  # 见 services/user-service/.env.example，这里只作说明，不要在此填真实值：
+  #   USER_SMTP_HOST / USER_SMTP_PORT / USER_SMTP_USERNAME / USER_SMTP_PASSWORD / USER_SMTP_FROM
+  #     未配置 USER_SMTP_HOST 时服务降级为「日志模式」：验证码只写日志、不真实发信。
+  #   USER_TURNSTILE_SECRET
+  #     Cloudflare Turnstile 服务端 Secret Key，必须与前端构建时写入的
+  #     VITE_TURNSTILE_SITE_KEY（站点密钥）配套。
+  #     填了站点密钥或占位符 -> 校验失败，日志出现 invalid-input-secret；
+  #     留空 -> 人机验证降级为「跳过」，仅适合本地。
