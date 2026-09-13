@@ -55,10 +55,11 @@ Dockerfile.worker            Worker 镜像
 - **两步验证（TOTP）**：基于 RFC 6238，开启后登录第一步返回 `mfa_ticket`，第二步用 TOTP 换取令牌；提供一次性恢复码。
 - **邮箱验证码**：场景化（register/login/reset_password/change_email），Redis 键前缀隔离 + `SetNX` 重发冷却；注册校验通过后标记 `email_verified`；修改邮箱走 `change_email` 场景。
 - **人机验证（Cloudflare Turnstile）**：发送验证码是易被脚本刷的接口，发送前服务端调用 siteverify 核验一次性令牌（`internal/pkg/turnstile`）。校验位于最前置——未通过时不生成验证码、不占重发冷却、不入队，避免机器人把冷却期刷满导致真实用户发不出验证码。未配置密钥时降级为跳过（仅适用于本地开发，启动会有告警）；校验服务故障时 **fail-closed**（拒绝而非放行）。
+- **启动播种（`internal/bootstrap`）**：`cmd/server` 启动时自愈整套 RBAC 参考数据——系统角色（`super_admin` / `admin` / `user`）、17 条权限定义、角色默认权限映射（`super_admin` 全部、`user` 创作相关 8 条），并按 `USER_ADMIN_EMAIL` / `USER_ADMIN_PASSWORD` 创建管理员账号、授予 `super_admin`。所以**空库也能直接启动**，不需要先手工导入参考数据。幂等：已存在的角色/权限/账号一律跳过；**不覆盖**已有账号的密码（忘记密码用 `USER_ADMIN_RESET_PASSWORD=true` 重启一次重置，之后改回 `false`）；**不覆盖**后台调整过的角色权限（只在角色权限为空时才写默认值）。播种失败只记日志、不阻断启动。
 - **邮件异步化 + 进度可订阅**：SMTP 是慢速外部依赖，放在 gRPC 请求链路内会拖慢接口。现在 `SendVerifyCode` 只生成验证码并把发信任务投递到 asynq 队列（返回 `task_id`），由独立 Worker 进程并发消费；Worker 把 `pending → sending → retrying → success/failed` 写入 Redis 并通过 Pub/Sub 广播，网关经 `WatchTask` 流式 RPC 转 SSE 推送给前端。
 - **入队失败的补偿**：投递失败时回滚已写入的验证码与重发冷却锁，避免用户白等一个冷却周期。
 - **邮箱免密登录**：`LoginWithCode` 复用双令牌签发，兼容 2FA。
-- **RBAC 缓存**：权限查询结果缓存至 Redis，TTL 与 refresh token 一致（7 天），降低库压力。
+- **RBAC 缓存 + `super_admin` 通配**：权限查询结果缓存至 Redis，TTL 与 refresh token 一致（7 天），降低库压力。`super_admin` **不逐条授权**——缓存里只存通配标记（`*`），`CheckPermission` 命中即放行，因此新增权限码无需再给系统管理员补授权，也不存在「缓存里缺新权限」的窗口期；对外查询权限列表时展开为全部权限编码，前端菜单/按钮无需特殊处理。
 - **防账号枚举**：密码/验证码登录对未知邮箱返回与错误凭证一致的统一错误。
 
 ## 配置

@@ -51,7 +51,7 @@ Deployment shape, entry layering and network reachability: see [Deployment Archi
 
 - **Dual tokens**: access (stateless JWT, 1h) + refresh (JWT + Redis allow-list, 30d, HttpOnly cookie) — see [Dual Token Auth](../develop/dual-token-auth.md).
 - **2FA**: TOTP two-step login + recovery codes — see [2FA Design](../develop/2fa.md).
-- **Authorization**: built-in three roles + permission-code comparison — see [RBAC Design](../develop/rbac.md).
+- **Authorization**: RBAC reference data (roles, permissions, mappings) is self-healed by startup seeding; `super_admin` bypasses per-code checks via a wildcard — see [RBAC Design](../develop/rbac.md).
 - **Human verification**: Cloudflare Turnstile on login/registration; allowed hostnames come from the deployment domain — see [Turnstile Design](../develop/turnstile.md).
 - **Async email**: codes are queued and sent by the user-service worker; progress is pushed to the frontend over SSE (`/api/v1/common/tasks/{task_id}/stream`).
 

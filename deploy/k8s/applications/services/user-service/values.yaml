@@ -48,3 +48,7 @@ userService:
   #     VITE_TURNSTILE_SITE_KEY（站点密钥）配套。
   #     填了站点密钥或占位符 -> 校验失败，日志出现 invalid-input-secret；
   #     留空 -> 人机验证降级为「跳过」，仅适合本地。
+  #   USER_ADMIN_EMAIL / USER_ADMIN_PASSWORD / USER_ADMIN_NICKNAME / USER_ADMIN_RESET_PASSWORD
+  #     管理员账号的邮箱、初始密码与昵称，集中定义在 overlays/secrets.yaml。
+  #     服务启动时角色或账号缺失才创建并授予 super_admin，已存在不会覆盖密码；
+  #     昵称默认「系统管理员」；RESET 置 "true" 可在忘记密码时重置一次。

@@ -64,10 +64,17 @@ deploy/k8s/
 | `userService.secret.USER_TURNSTILE_SECRET` | 必须填 Cloudflare 的 **Secret Key**，不是前端的 Site Key。填成 Site Key 或保留占位符 → 人机验证接口报 `invalid-input-secret`（user-service 日志可见）；留空 → 人机验证降级为「跳过」，接口不再受保护 |
 | `userService.secret.JWT_SECRET` 与 `apiGateway.JWT_SECRET` | 两者必须完全一致，否则网关验签失败、登录态不可用 |
 | `userService.secret.USER_SMTP_*` | 未配置 `USER_SMTP_HOST` 时降级为「日志模式」：验证码只写日志、不真实发信 |
+| `userService.secret.USER_ADMIN_EMAIL` / `USER_ADMIN_PASSWORD` / `USER_ADMIN_NICKNAME` | 管理员账号的邮箱、初始密码与昵称（昵称默认「系统管理员」），集中配置在 secrets 里。服务启动时账号**不存在才创建**并授予 `super_admin`，已存在不覆盖密码；`USER_ADMIN_EMAIL` 留空则跳过播种，后台可能无账号可登录 |
 | `userService.secret.DB_*` / `REDIS_*` | 服务启动即失败（连不上数据库 / Redis） |
 
 前端站点密钥（`web/.env.production` 的 `VITE_TURNSTILE_SITE_KEY`）在**构建时**写进产物，
 更换 Cloudflare 站点后需要重新构建并重新导入 `museflow/web` 镜像。
+
+RBAC 参考数据与管理员账号采用「启动播种」：`user-service` 启动时检查系统角色、权限定义、
+角色权限映射与管理员账号，缺失才创建（见 `services/user-service/internal/bootstrap`），
+所以首次部署不需要手工插数据，空库也能直接启动。忘记密码时，
+把 `userService.secret.USER_ADMIN_RESET_PASSWORD` 置 `"true"` 重启一次即可重置为
+`USER_ADMIN_PASSWORD`，之后请改回 `"false"`。
 
 ## 部署
 

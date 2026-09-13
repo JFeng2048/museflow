@@ -163,6 +163,8 @@ K3s containerd with `ctr -n k8s.io images import`; see "离线镜像导入" in `
 | 404 rendered by Traefik | Ingress did not match: `kubectl get ingress -n museflow` — is `host` equal to the browser's domain? |
 | Cookie not sent by the browser | Is the edge really HTTPS? With `GATEWAY_COOKIE_SECURE=true` browsers drop cookies over HTTP |
 | SSE stream not real time | Both `proxy_buffering off` on the edge Nginx and `X-Accel-Buffering: no` from the gateway must be present |
+| Registration fails with `duplicate key ... "user_pkey"` yet succeeds on retry | The sequence is out of sync with the seeded `max(id)`: seed rows insert explicit ids and the sequence never advances. Realign with `SELECT setval(pg_get_serial_sequence('user_svc."user"', 'id'), (SELECT max(id) FROM user_svc."user"), true)`; both `database/user_svc.sql` and `platform_svc.sql` now realign by `max(id)` automatically |
+| `invalid-input-secret` in the logs | Turnstile is holding the frontend Site Key or a placeholder: fix `USER_TURNSTILE_SECRET` in `applications/overlays/secrets.yaml`; leaving it empty skips verification (local only) |
 
 Handy commands:
 
