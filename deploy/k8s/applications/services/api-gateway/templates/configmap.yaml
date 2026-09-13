@@ -7,3 +7,5 @@ data:
 {{- range $key, $value := .Values.apiGateway.config }}
   {{ $key }}: {{ $value | quote }}
 {{- end }}
+  # 由 domain 派生，不要在 values.yaml 中重复配置；额外来源见 apiGateway.extraAllowOrigins。
+  GATEWAY_ALLOW_ORIGINS: {{ include "api-gateway.allowOrigins" . | quote }}

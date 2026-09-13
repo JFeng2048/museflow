@@ -11,9 +11,12 @@ apiGateway:
  config:
   GATEWAY_PORT: "5001"
   GATEWAY_USER_SERVICE_URL: user-service:5002
-  GATEWAY_ALLOW_ORIGINS: http://web
+  # GATEWAY_ALLOW_ORIGINS 由 applications/overlays/secrets.yaml 的 domain 派生，
+  # 见 templates/_helpers.tpl，不要在这里配置。
   GATEWAY_COOKIE_SECURE: "false"
   GATEWAY_COOKIE_SAMESITE: lax
   LOG_SERVICE_NAME: api-gateway
+ # 除对外域名外额外允许的 CORS 来源，例如本地联调 ["http://localhost:5173"]。
+ extraAllowOrigins: []
  secret:
   JWT_SECRET: change-me-in-prod

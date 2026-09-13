@@ -1,13 +1,20 @@
 namespace: museflow
 
+# 对外域名不在这里配置：唯一来源是 applications/overlays/secrets.yaml 的 domain，
+# 由各 Chart 模板派生（Ingress host / CORS 白名单 / Turnstile hostname），
+# 详见 docs/cn/architecture/部署架构.md。
+
 apiGateway:
   replicaCount: 1
   config:
     GATEWAY_PORT: "5001"
     GATEWAY_USER_SERVICE_URL: user-service:5002
-    GATEWAY_ALLOW_ORIGINS: http://web
-    GATEWAY_COOKIE_SECURE: "false"
+    # GATEWAY_ALLOW_ORIGINS 由 domain 派生（<scheme>://<host>），不要在这里配置；
+    # 需要额外来源时用同级 extraAllowOrigins。
+    # 边缘 Nginx 终止 HTTPS，浏览器侧始终是 https，Cookie 必须带 Secure。
+    GATEWAY_COOKIE_SECURE: "true"
     GATEWAY_COOKIE_SAMESITE: lax
+    # 留空表示 host-only Cookie，作用域即 domain.host，无需填写父域。
     GATEWAY_COOKIE_DOMAIN: ""
     GATEWAY_GIN_MODE: ""
     # 日志只输出到 stdout，由 k8s 收集，不落盘
@@ -33,7 +40,8 @@ userService:
     USER_WORKER_CONCURRENCY: "20"
     USER_TURNSTILE_ENDPOINT: https://challenges.cloudflare.com/turnstile/v0/siteverify
     USER_TURNSTILE_TIMEOUT_SECONDS: "40"
-    USER_TURNSTILE_ALLOWED_HOSTNAMES: museflow.jfeng.asia,localhost,127.0.0.1
+    # USER_TURNSTILE_ALLOWED_HOSTNAMES 由 domain.host 加 extraTurnstileHostnames 拼装，
+    # 不要在这里配置。
     MFA_TICKET_TTL_SECONDS: "300"
     MFA_ISSUER: MuseFlow
     MFA_SKEW: "1"

@@ -7,3 +7,6 @@ data:
 {{- range $key, $value := .Values.userService.config }}
   {{ $key }}: {{ $value | quote }}
 {{- end }}
+  # 由 domain.host 派生，不要在 values.yaml 中重复配置；
+  # 额外 hostname 见 userService.extraTurnstileHostnames。
+  USER_TURNSTILE_ALLOWED_HOSTNAMES: {{ include "user-service.turnstileHostnames" . | quote }}
