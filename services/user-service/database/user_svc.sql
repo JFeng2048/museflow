@@ -296,6 +296,10 @@ INSERT INTO "user_svc"."role_permission" VALUES (3, 12, '2026-08-29 14:06:00.788
 INSERT INTO "user_svc"."role_permission" VALUES (3, 13, '2026-08-29 14:06:00.788852');
 INSERT INTO "user_svc"."role_permission" VALUES (3, 16, '2026-08-29 14:06:00.788852');
 
+-- 注意：上面的角色、权限与角色-权限映射，服务启动时也会按同样内容播种
+-- （见 internal/bootstrap：缺什么补什么，已存在不覆盖），因此空库可直接启动、
+-- 不必先执行本文件。本文件保留完整导出，用于对照与手工重建。
+
 -- ----------------------------
 -- Table structure for session
 -- ----------------------------
@@ -379,8 +383,11 @@ COMMENT ON TABLE "user_svc"."user" IS '用户主表';
 -- ----------------------------
 -- Records of user
 -- ----------------------------
-INSERT INTO "user_svc"."user" VALUES (1, 'd1a2b3c4-1234-5678-90ab-cdef12345678', 'admin@museflow.com', NULL, '$2a$10$N9qo8uLOickgx2ZMRZoMy.Mr/.wZ6E2FvFqNtT1XKqVqKqVqKqVqK', '系统管理员', NULL, NULL, 1, 't', 'f', NULL, NULL, NULL, 0, NULL, '2026-08-29 14:06:00.790015', '2026-08-29 14:06:00.790015');
-INSERT INTO "user_svc"."user" VALUES (2, 'e2b3c4d5-2345-6789-01bc-def234567890', 'user@museflow.com', NULL, '$2a$10$N9qo8uLOickgx2ZMRZoMy.Mr/.wZ6E2FvFqNtT1XKqVqKqVqKqVqK', '测试用户', NULL, NULL, 1, 't', 'f', NULL, NULL, NULL, 0, NULL, '2026-08-29 14:06:00.791474', '2026-08-29 14:06:00.791474');
+-- 这里不插种子用户：管理员账号由服务启动时按 USER_ADMIN_EMAIL / USER_ADMIN_PASSWORD
+-- 创建并授予 super_admin（见 internal/bootstrap），密码属于环境配置，写死在 SQL 里
+-- 既不便于换环境也不安全。
+-- 原先的两条演示用户（admin@museflow.com / user@museflow.com）已移除：它们的密码哈希
+-- 无法校验，且会占用 USER_ADMIN_EMAIL 的邮箱，导致启动播种误判「账号已存在」而跳过。
 
 -- ----------------------------
 -- Table structure for user_role
@@ -402,8 +409,7 @@ COMMENT ON TABLE "user_svc"."user_role" IS '用户-角色关联表';
 -- ----------------------------
 -- Records of user_role
 -- ----------------------------
-INSERT INTO "user_svc"."user_role" VALUES ('d1a2b3c4-1234-5678-90ab-cdef12345678', 1, NULL, '2026-08-29 14:06:00.792642');
-INSERT INTO "user_svc"."user_role" VALUES ('e2b3c4d5-2345-6789-01bc-def234567890', 3, NULL, '2026-08-29 14:06:00.794102');
+-- 同上：用户-角色关联由启动播种写入（后台账号授予 super_admin，注册用户授予 user）。
 
 -- ----------------------------
 -- Function structure for trigger_set_updated_at
@@ -421,52 +427,32 @@ $BODY$
 COMMENT ON FUNCTION "user_svc"."trigger_set_updated_at"() IS '自动更新updated_at字段的触发器函数';
 
 -- ----------------------------
--- Alter sequences owned by
+-- 序列对齐（必须）
 -- ----------------------------
-SELECT setval('"user_svc"."audit_log_id_seq"', 1, false);
-
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
+-- 上面的种子数据是用显式 id 插入的，而序列不会因此前进，所以必须在这里手工对齐：
+--   setval(seq, n, true)  -> 下一次 nextval 返回 n+1
+--   setval(seq, n, false) -> 下一次 nextval 返回 n
+-- 两者差一格，写错就会让 INSERT 撞上已有 id，报
+--   duplicate key value violates unique constraint "user_pkey" (SQLSTATE 23505)
+-- 且失败同样消耗一个序号，表现为「第一次失败、重试就好了」，极易误判为偶发。
+-- 因此这里一律按现有数据的 max(id) 计算，不要再硬编码数字：
+-- 种子行数改了也无需同步修改本段。
+SELECT setval('"user_svc"."audit_log_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."audit_log"), 0), true);
 ALTER SEQUENCE "user_svc"."audit_log_id_seq1"
 OWNED BY "user_svc"."audit_log"."id";
-SELECT setval('"user_svc"."audit_log_id_seq1"', 1, false);
-
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
-SELECT setval('"user_svc"."oauth_id_seq"', 1, false);
-
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
+SELECT setval('"user_svc"."audit_log_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."audit_log"), 0), true);
+SELECT setval('"user_svc"."oauth_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."oauth"), 0), true);
 ALTER SEQUENCE "user_svc"."oauth_id_seq1"
 OWNED BY "user_svc"."oauth"."id";
-SELECT setval('"user_svc"."oauth_id_seq1"', 1, false);
-
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
-SELECT setval('"user_svc"."session_id_seq"', 1, false);
-
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
+SELECT setval('"user_svc"."oauth_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."oauth"), 0), true);
+SELECT setval('"user_svc"."session_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."session"), 0), true);
 ALTER SEQUENCE "user_svc"."session_id_seq1"
 OWNED BY "user_svc"."session"."id";
-SELECT setval('"user_svc"."session_id_seq1"', 1, false);
-
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
-SELECT setval('"user_svc"."user_id_seq"', 1, false);
-
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
+SELECT setval('"user_svc"."session_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."session"), 0), true);
+SELECT setval('"user_svc"."user_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."user"), 0), true);
 ALTER SEQUENCE "user_svc"."user_id_seq1"
 OWNED BY "user_svc"."user"."id";
-SELECT setval('"user_svc"."user_id_seq1"', 2, true);
+SELECT setval('"user_svc"."user_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."user"), 0), true);
 
 -- ----------------------------
 -- Indexes structure for table audit_log

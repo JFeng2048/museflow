@@ -259,32 +259,26 @@ COMMENT ON TABLE "platform_svc"."qimao_bindings" IS '七猫小说用户绑定表
 -- ----------------------------
 
 -- ----------------------------
--- Alter sequences owned by
+-- 序列对齐（必须）
 -- ----------------------------
+-- 同 user_svc.sql：种子里用显式 id 插入的数据不会推进序列，必须按现有数据的
+-- max(id) 对齐，否则后续 INSERT 会撞上已有 id 报 SQLSTATE 23505。
+-- 空表时 max(id) 为 NULL，COALESCE 到 0，配合 is_called=true 使下一次 nextval 返回 1。
 ALTER SEQUENCE "platform_svc"."fanqie_bindings_id_seq"
 OWNED BY "platform_svc"."fanqie_bindings"."id";
-SELECT setval('"platform_svc"."fanqie_bindings_id_seq"', 1, false);
+SELECT setval('"platform_svc"."fanqie_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."fanqie_bindings"), 0), true);
 
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
 ALTER SEQUENCE "platform_svc"."publish_records_id_seq"
 OWNED BY "platform_svc"."publish_records"."id";
-SELECT setval('"platform_svc"."publish_records_id_seq"', 1, false);
+SELECT setval('"platform_svc"."publish_records_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."publish_records"), 0), true);
 
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
 ALTER SEQUENCE "platform_svc"."qidian_bindings_id_seq"
 OWNED BY "platform_svc"."qidian_bindings"."id";
-SELECT setval('"platform_svc"."qidian_bindings_id_seq"', 1, false);
+SELECT setval('"platform_svc"."qidian_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."qidian_bindings"), 0), true);
 
--- ----------------------------
--- Alter sequences owned by
--- ----------------------------
 ALTER SEQUENCE "platform_svc"."qimao_bindings_id_seq"
 OWNED BY "platform_svc"."qimao_bindings"."id";
-SELECT setval('"platform_svc"."qimao_bindings_id_seq"', 1, false);
+SELECT setval('"platform_svc"."qimao_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."qimao_bindings"), 0), true);
 
 -- ----------------------------
 -- Indexes structure for table fanqie_bindings
