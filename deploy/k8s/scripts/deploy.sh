@@ -48,6 +48,27 @@ for file in "${REQUIRED_SECRETS[@]}"; do
   fi
 done
 
+# 占位符检查：密钥文件里仍是示例值的键，部署后往往要到运行期才暴露，且错误信息容易误导
+# （典型：USER_TURNSTILE_SECRET 留着 change-me 或误填前端 Site Key，
+#   人机验证接口会报 invalid-input-secret）。
+for file in "${REQUIRED_SECRETS[@]}"; do
+  placeholders="$(grep -nE 'change-me|your-smtp-password|0x\.\.\.' "$file" | grep -vE '^[0-9]+:[[:space:]]*#' || true)"
+  if [[ -n "$placeholders" ]]; then
+    echo "警告：$file 中仍有占位符，请确认已替换为真实值（否则部署后会在运行期报错）：" >&2
+    printf '%s\n' "$placeholders" >&2
+  fi
+done
+
+if [[ "$SCOPE" == "app" || "$SCOPE" == "all" ]]; then
+  if ! grep -qE '^[[:space:]]*USER_TURNSTILE_SECRET:' "$APP_SECRETS"; then
+    echo "警告：$APP_SECRETS 未配置 USER_TURNSTILE_SECRET，人机验证会降级为「跳过」，接口失去保护。" >&2
+  elif grep -qE '^[[:space:]]*USER_TURNSTILE_SECRET:[[:space:]]*("")?[[:space:]]*$' "$APP_SECRETS"; then
+    echo "警告：USER_TURNSTILE_SECRET 为空，人机验证会降级为「跳过」（仅适合本地）。" >&2
+    echo "      生产环境请填 Cloudflare 控制台的 Secret Key——注意不是前端的 Site Key，" >&2
+    echo "      填错会在 user-service 日志里出现 invalid-input-secret。" >&2
+  fi
+fi
+
 if [[ "$SCOPE" == "base" || "$SCOPE" == "all" ]]; then
   helm upgrade --install postgres "$K8S_DIR/base/charts/postgres" \
     --namespace museflow --create-namespace \
