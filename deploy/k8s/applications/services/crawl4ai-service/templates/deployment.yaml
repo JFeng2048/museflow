@@ -17,6 +17,11 @@ spec:
   template:
     metadata:
       labels: { app: crawl4ai-service }
+      # ConfigMap 内容参与 Pod 模板哈希：改配置即自动滚动重启。
+      # 缺少它时 helm upgrade 只换 ConfigMap，运行中的 Pod 仍持旧值，
+      # 表现为「改了 values 不生效且无任何报错」，只能手工 rollout restart。
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       securityContext:
         runAsNonRoot: true
