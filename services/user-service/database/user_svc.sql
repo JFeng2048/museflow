@@ -455,22 +455,26 @@ COMMENT ON FUNCTION "user_svc"."trigger_set_updated_at"() IS '自动更新update
 -- 且失败同样消耗一个序号，表现为「第一次失败、重试就好了」，极易误判为偶发。
 -- 因此这里一律按现有数据的 max(id) 计算，不要再硬编码数字：
 -- 种子行数改了也无需同步修改本段。
-SELECT setval('"user_svc"."audit_log_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."audit_log"), 0), true);
+-- 还有一点：audit_log / oauth / session / user 四张表没有种子数据，空表时 max(id) 为 NULL，
+-- 此时绝不能给 setval 传 0（序列 MINVALUE 为 1，会报
+--   ERROR: setval: value 0 is out of bounds for sequence "xxx" (1..9223372036854775807)）。
+-- 所以统一写成「max(id)+1 配 is_called=false」：空表得 1、非空表得 max(id)+1，两种情况都合法。
+SELECT setval('"user_svc"."audit_log_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."audit_log"), 0) + 1, false);
 ALTER SEQUENCE "user_svc"."audit_log_id_seq1"
 OWNED BY "user_svc"."audit_log"."id";
-SELECT setval('"user_svc"."audit_log_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."audit_log"), 0), true);
-SELECT setval('"user_svc"."oauth_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."oauth"), 0), true);
+SELECT setval('"user_svc"."audit_log_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."audit_log"), 0) + 1, false);
+SELECT setval('"user_svc"."oauth_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."oauth"), 0) + 1, false);
 ALTER SEQUENCE "user_svc"."oauth_id_seq1"
 OWNED BY "user_svc"."oauth"."id";
-SELECT setval('"user_svc"."oauth_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."oauth"), 0), true);
-SELECT setval('"user_svc"."session_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."session"), 0), true);
+SELECT setval('"user_svc"."oauth_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."oauth"), 0) + 1, false);
+SELECT setval('"user_svc"."session_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."session"), 0) + 1, false);
 ALTER SEQUENCE "user_svc"."session_id_seq1"
 OWNED BY "user_svc"."session"."id";
-SELECT setval('"user_svc"."session_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."session"), 0), true);
-SELECT setval('"user_svc"."user_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."user"), 0), true);
+SELECT setval('"user_svc"."session_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."session"), 0) + 1, false);
+SELECT setval('"user_svc"."user_id_seq"', COALESCE((SELECT max(id) FROM "user_svc"."user"), 0) + 1, false);
 ALTER SEQUENCE "user_svc"."user_id_seq1"
 OWNED BY "user_svc"."user"."id";
-SELECT setval('"user_svc"."user_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."user"), 0), true);
+SELECT setval('"user_svc"."user_id_seq1"', COALESCE((SELECT max(id) FROM "user_svc"."user"), 0) + 1, false);
 
 -- ----------------------------
 -- Indexes structure for table audit_log

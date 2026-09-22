@@ -263,22 +263,25 @@ COMMENT ON TABLE "platform_svc"."qimao_bindings" IS '七猫小说用户绑定表
 -- ----------------------------
 -- 同 user_svc.sql：种子里用显式 id 插入的数据不会推进序列，必须按现有数据的
 -- max(id) 对齐，否则后续 INSERT 会撞上已有 id 报 SQLSTATE 23505。
--- 空表时 max(id) 为 NULL，COALESCE 到 0，配合 is_called=true 使下一次 nextval 返回 1。
+-- 取值一律用「max(id)+1 配 is_called=false」，语义是「下一次 nextval 正好取这个值」。
+-- 空表时不能给 setval 传 0：序列 MINVALUE 为 1，传 0 会报
+--   ERROR: setval: value 0 is out of bounds for sequence "xxx" (1..9223372036854775807)
+-- 所以先 COALESCE 回退到 0 再加 1，空表得 1、非空表得 max(id)+1。
 ALTER SEQUENCE "platform_svc"."fanqie_bindings_id_seq"
 OWNED BY "platform_svc"."fanqie_bindings"."id";
-SELECT setval('"platform_svc"."fanqie_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."fanqie_bindings"), 0), true);
+SELECT setval('"platform_svc"."fanqie_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."fanqie_bindings"), 0) + 1, false);
 
 ALTER SEQUENCE "platform_svc"."publish_records_id_seq"
 OWNED BY "platform_svc"."publish_records"."id";
-SELECT setval('"platform_svc"."publish_records_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."publish_records"), 0), true);
+SELECT setval('"platform_svc"."publish_records_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."publish_records"), 0) + 1, false);
 
 ALTER SEQUENCE "platform_svc"."qidian_bindings_id_seq"
 OWNED BY "platform_svc"."qidian_bindings"."id";
-SELECT setval('"platform_svc"."qidian_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."qidian_bindings"), 0), true);
+SELECT setval('"platform_svc"."qidian_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."qidian_bindings"), 0) + 1, false);
 
 ALTER SEQUENCE "platform_svc"."qimao_bindings_id_seq"
 OWNED BY "platform_svc"."qimao_bindings"."id";
-SELECT setval('"platform_svc"."qimao_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."qimao_bindings"), 0), true);
+SELECT setval('"platform_svc"."qimao_bindings_id_seq"', COALESCE((SELECT max(id) FROM "platform_svc"."qimao_bindings"), 0) + 1, false);
 
 -- ----------------------------
 -- Indexes structure for table fanqie_bindings
