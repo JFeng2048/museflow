@@ -49,6 +49,9 @@ deploy/k8s/postgres-chart/values-*.yaml
 !.env.example
 !services/**/.env.example
 
+# 本地联调令牌：与 .env 同属凭据，不提交
+.dev-token.txt
+
 # Editor/IDE
 .idea/
 .vscode/
