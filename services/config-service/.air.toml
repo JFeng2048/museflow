@@ -1,0 +1,35 @@
+# Air 热重载配置 —— config-service（gRPC 服务）
+# 用法：在 services/config-service 目录执行 `air`
+#      或仓库根目录执行 `dev.bat config`
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # 构建命令必须「只构建、不运行」。写成 `go run` 会让 air 把进程退出码
+  # 当成构建结果：DB 未就绪导致退出 1 时误报 "failed to build"。
+  cmd = "go build -o ./tmp/config-service ./cmd/server"
+  # entrypoint 取代已废弃的 bin
+  entrypoint = ["./tmp/config-service"]
+  include_ext = ["go", "mod", "sum"]
+  exclude_dir = ["tmp", "docs", "bin", "test", "logs"]
+  exclude_regex = ["_test\\.go"]
+  # proto 契约变更也需重建
+  include_dir = ["internal", "cmd", "../../proto"]
+  delay = 1000
+  # 构建失败时不再启动旧二进制，避免掩盖编译错误
+  stop_on_error = true
+  exclude_unchanged = true
+  # 启动依赖（PostgreSQL）可能还没就绪：退出后自动重试
+  rerun = true
+  rerun_delay = 3000
+
+# Windows 平台覆盖：可执行文件必须是 .exe，否则 cmd.exe 无法识别
+[build.windows]
+  cmd = "go build -o ./tmp/config-service.exe ./cmd/server"
+  entrypoint = ["./tmp/config-service.exe"]
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true
