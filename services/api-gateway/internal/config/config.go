@@ -14,13 +14,14 @@ import (
 
 // Config api-gateway 运行配置。
 type Config struct {
-	Port           string   // HTTP 监听端口
-	UserServiceURL string   // user-service gRPC 地址
-	JWTSecret      string   // 与 user-service 共享的 JWT 密钥，用于本地验签
-	AllowOrigins   []string // CORS 允许的来源
-	CookieSecure   bool     // Cookie 是否仅 HTTPS 传输（生产置 true）
-	CookieSameSite string   // Cookie SameSite 策略: lax/strict/none
-	CookieDomain   string   // Cookie 作用域
+	Port            string   // HTTP 监听端口
+	UserServiceURL  string   // user-service gRPC 地址
+	ModelServiceURL string   // config-service gRPC 地址（模型目录 / 凭证 / 系统配置）
+	JWTSecret       string   // 与 user-service 共享的 JWT 密钥，用于本地验签
+	AllowOrigins    []string // CORS 允许的来源
+	CookieSecure    bool     // Cookie 是否仅 HTTPS 传输（生产置 true）
+	CookieSameSite  string   // Cookie SameSite 策略: lax/strict/none
+	CookieDomain    string   // Cookie 作用域
 
 	Log *logger.Config // 日志配置（由 LOG_ 前缀读取）
 }
@@ -30,14 +31,15 @@ func Load() (*Config, error) {
 	env := envloader.New("GATEWAY", ".env")
 
 	cfg := &Config{
-		Port:           env.Get("PORT", "5001"),
-		UserServiceURL: env.Get("USER_SERVICE_URL", "localhost:5002"),
-		JWTSecret:      env.GetCommon("JWT_SECRET", ""),
-		AllowOrigins:   splitAndTrim(env.Get("ALLOW_ORIGINS", "http://localhost:5173")),
-		CookieSecure:   env.GetBool("COOKIE_SECURE", false),
-		CookieSameSite: env.Get("COOKIE_SAMESITE", "lax"),
-		CookieDomain:   env.Get("COOKIE_DOMAIN", ""),
-		Log:            loadLogConfig(env),
+		Port:            env.Get("PORT", "5001"),
+		UserServiceURL:  env.Get("USER_SERVICE_URL", "localhost:5002"),
+		ModelServiceURL: env.Get("MODEL_SERVICE_URL", "localhost:5004"),
+		JWTSecret:       env.GetCommon("JWT_SECRET", ""),
+		AllowOrigins:    splitAndTrim(env.Get("ALLOW_ORIGINS", "http://localhost:5173")),
+		CookieSecure:    env.GetBool("COOKIE_SECURE", false),
+		CookieSameSite:  env.Get("COOKIE_SAMESITE", "lax"),
+		CookieDomain:    env.Get("COOKIE_DOMAIN", ""),
+		Log:             loadLogConfig(env),
 	}
 
 	if cfg.JWTSecret == "" {

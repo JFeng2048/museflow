@@ -20,7 +20,7 @@ import (
 )
 
 // Setup 创建 Gin 引擎并注册所有路由。
-func Setup(cfg *config.Config, userClient *client.UserClient) *gin.Engine {
+func Setup(cfg *config.Config, userClient *client.UserClient, modelClient *client.ModelClient) *gin.Engine {
 	r := gin.New()
 	r.Use(middleware.AccessLog(), gin.Recovery())
 	r.Use(middleware.CORS(cfg.AllowOrigins))
@@ -34,7 +34,7 @@ func Setup(cfg *config.Config, userClient *client.UserClient) *gin.Engine {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// 各版本 API 路由
-	v1.Register(r.Group("/api/v1"), cfg, userClient)
+	v1.Register(r.Group("/api/v1"), cfg, userClient, modelClient)
 
 	return r
 }

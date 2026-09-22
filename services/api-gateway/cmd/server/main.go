@@ -59,11 +59,20 @@ func main() {
 	}
 	defer userClient.Close()
 
+	// 建立到 config-service 的 gRPC 连接（惰性连接，不阻塞启动）。
+	// config-service 未就绪时网关照常启动，仅模型相关接口暂时不可用。
+	modelClient, err := client.NewModelClient(cfg.ModelServiceURL)
+	if err != nil {
+		logger.Error("初始化 config-service 客户端失败", logger.Err(err))
+		log.Fatalf("初始化 config-service 客户端失败: %v", err)
+	}
+	defer modelClient.Close()
+
 	if os.Getenv("GIN_MODE") == "" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	engine := router.Setup(cfg, userClient)
+	engine := router.Setup(cfg, userClient, modelClient)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
@@ -78,6 +87,7 @@ func main() {
 	logger.Info("服务地址", "addr", "http://localhost:"+cfg.Port)
 	logger.Info("Swagger 文档", "addr", "http://localhost:"+cfg.Port+"/swagger/index.html")
 	logger.Info("user-service", "target", cfg.UserServiceURL)
+	logger.Info("config-service", "target", cfg.ModelServiceURL)
 
 	// 优雅关闭
 	go func() {
