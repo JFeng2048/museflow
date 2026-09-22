@@ -31,7 +31,9 @@
 param(
     [Parameter(Position = 0)][string]$Server,
     [Parameter(Position = 1)][string]$User,
-    [Parameter(Position = 2)][string[]]$Image,
+    # ValueFromRemainingArguments：文档里的「<镜像> [<镜像>...]」多镜像用法靠它生效，
+    # 否则第 3 个及以后的位置参数会因无可绑定的位置参数而直接报错。
+    [Parameter(Position = 2, ValueFromRemainingArguments = $true)][string[]]$Image,
     [int]$Port = 22,
     [string]$RemoteDir = '/docker/images',
     [ValidateSet('auto', 'force', 'never')][string]$Sudo = 'auto',
