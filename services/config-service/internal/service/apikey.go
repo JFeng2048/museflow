@@ -12,6 +12,17 @@ import (
 // 同时挡住把整段配置粘贴进来的误操作。
 const maxAPIKeyLen = 4096
 
+// validateAPIKey 校验密钥明文长度，空串合法。
+//
+// 空串合法是因为本地部署的渠道（如 Ollama）不需要密钥；长度上限单独抽出来，
+// 是为了让「临时探测」这条不落库的路径复用同一套约束。
+func validateAPIKey(plaintext string) error {
+	if len(plaintext) > maxAPIKeyLen {
+		return invalidArgumentf("api_key 长度不能超过 %d 个字符", maxAPIKeyLen)
+	}
+	return nil
+}
+
 // apiKeySecret 加密后的密钥材料。
 type apiKeySecret struct {
 	// Ciphertext 落库密文，空串表示该渠道未配置密钥。
@@ -33,7 +44,7 @@ func (s *Service) sealAPIKey(plaintext string) (apiKeySecret, error) {
 		return apiKeySecret{}, nil
 	}
 	if len(key) > maxAPIKeyLen {
-		return apiKeySecret{}, invalidArgumentf("api_key 长度不能超过 %d 个字符", maxAPIKeyLen)
+		return apiKeySecret{}, validateAPIKey(key)
 	}
 
 	ciphertext, err := s.secrets.Encrypt(key)

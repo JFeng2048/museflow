@@ -250,6 +250,81 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/model-providers/remote-models": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按 provider_id 读取已保存的平台渠道配置，请求上游 /models 接口并返回可登记的模型清单；api_key 由服务端解密使用，请求与响应都不携带密钥明文",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "拉取平台渠道模型目录",
+                "parameters": [
+                    {
+                        "description": "渠道定位，provider_id 必填",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.FetchRemoteModelsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误或上游调用失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "渠道不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/model-providers/{id}": {
             "put": {
                 "security": [
@@ -2636,6 +2711,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/user/model-providers/remote-models": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按 user_provider_id 读取当前用户自己的渠道配置并请求上游 /models 接口；user_uuid 取自登录态，取不到别人的渠道",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "拉取我的渠道模型目录",
+                "parameters": [
+                    {
+                        "description": "渠道定位，provider_id 填自定义渠道 ID",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.FetchRemoteModelsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误或上游调用失败",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "渠道不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/user/model-providers/{id}": {
             "put": {
                 "security": [
@@ -4344,6 +4488,30 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.FetchRemoteModelsRequest": {
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "type": "string",
+                    "maxLength": 4096,
+                    "example": "sk-proj-xxx"
+                },
+                "base_url": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "https://api.openai.com/v1"
+                },
+                "protocol": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "openai"
+                },
+                "provider_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo": {
             "type": "object",
             "properties": {
@@ -4509,6 +4677,42 @@ const docTemplate = `{
                 "total": {
                     "type": "integer",
                     "example": 1
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelInfo": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-06-01T00:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "gpt-4o"
+                },
+                "object": {
+                    "type": "string",
+                    "example": "model"
+                },
+                "owned_by": {
+                    "type": "string",
+                    "example": "openai"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelList": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelInfo"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },

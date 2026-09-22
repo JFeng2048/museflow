@@ -195,3 +195,16 @@ func toSettingInfo(s *model.SystemSetting, secretValue string) *modelpb.SettingI
 		UpdatedAt:   formatTime(&s.UpdatedAt),
 	}
 }
+
+// toRemoteModelInfo 转换上游模型目录项。
+//
+// 只做字段搬运，不做清洗：api_model 必须是上游原样返回的标识，
+// 在这里改一个字母都会让后续调用指向一个不存在的模型。
+func toRemoteModelInfo(m service.RemoteModel) *modelpb.RemoteModelInfo {
+	return &modelpb.RemoteModelInfo{
+		Id:        m.ID,
+		Object:    m.Object,
+		OwnedBy:   m.OwnedBy,
+		CreatedAt: m.CreatedAt,
+	}
+}

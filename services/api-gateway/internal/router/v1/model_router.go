@@ -31,6 +31,9 @@ func registerModelRoutes(r *gin.RouterGroup, h *Handlers, userClient *client.Use
 		admin.PUT("/model-providers/:id/active", h.Model.SetProviderActive)
 		admin.DELETE("/model-providers/:id", h.Model.DeleteProvider)
 
+		// 上游模型目录探测：拉取后可勾选批量登记模型，省去手抄 api_model
+		admin.POST("/model-providers/remote-models", h.Model.FetchAdminRemoteModels)
+
 		// 平台模型（挂在平台渠道下，用户端可见的主体）
 		admin.GET("/models", h.Model.ListModels)
 		admin.POST("/models", h.Model.CreateModel)
@@ -52,6 +55,9 @@ func registerModelRoutes(r *gin.RouterGroup, h *Handlers, userClient *client.Use
 		user.POST("/model-providers", h.Model.CreateUserProvider)
 		user.PUT("/model-providers/:id", h.Model.UpdateUserProvider)
 		user.DELETE("/model-providers/:id", h.Model.DeleteUserProvider)
+
+		// 上游模型目录探测（只读自己的渠道）
+		user.POST("/model-providers/remote-models", h.Model.FetchUserRemoteModels)
 
 		// 我的自定义模型
 		user.GET("/models", h.Model.ListUserModels)

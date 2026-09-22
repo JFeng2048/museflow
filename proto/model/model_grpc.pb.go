@@ -42,6 +42,7 @@ const (
 	ModelService_GetSetting_FullMethodName          = "/model.ModelService/GetSetting"
 	ModelService_UpsertSetting_FullMethodName       = "/model.ModelService/UpsertSetting"
 	ModelService_DeleteSetting_FullMethodName       = "/model.ModelService/DeleteSetting"
+	ModelService_FetchProviderModels_FullMethodName = "/model.ModelService/FetchProviderModels"
 )
 
 // ModelServiceClient is the client API for ModelService service.
@@ -88,6 +89,8 @@ type ModelServiceClient interface {
 	GetSetting(ctx context.Context, in *GetSettingRequest, opts ...grpc.CallOption) (*SettingInfo, error)
 	UpsertSetting(ctx context.Context, in *UpsertSettingRequest, opts ...grpc.CallOption) (*SettingInfo, error)
 	DeleteSetting(ctx context.Context, in *DeleteSettingRequest, opts ...grpc.CallOption) (*DeleteSettingResponse, error)
+	// ---- 上游模型目录探测 ----
+	FetchProviderModels(ctx context.Context, in *FetchProviderModelsRequest, opts ...grpc.CallOption) (*FetchProviderModelsResponse, error)
 }
 
 type modelServiceClient struct {
@@ -328,6 +331,16 @@ func (c *modelServiceClient) DeleteSetting(ctx context.Context, in *DeleteSettin
 	return out, nil
 }
 
+func (c *modelServiceClient) FetchProviderModels(ctx context.Context, in *FetchProviderModelsRequest, opts ...grpc.CallOption) (*FetchProviderModelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FetchProviderModelsResponse)
+	err := c.cc.Invoke(ctx, ModelService_FetchProviderModels_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ModelServiceServer is the server API for ModelService service.
 // All implementations must embed UnimplementedModelServiceServer
 // for forward compatibility.
@@ -372,6 +385,8 @@ type ModelServiceServer interface {
 	GetSetting(context.Context, *GetSettingRequest) (*SettingInfo, error)
 	UpsertSetting(context.Context, *UpsertSettingRequest) (*SettingInfo, error)
 	DeleteSetting(context.Context, *DeleteSettingRequest) (*DeleteSettingResponse, error)
+	// ---- 上游模型目录探测 ----
+	FetchProviderModels(context.Context, *FetchProviderModelsRequest) (*FetchProviderModelsResponse, error)
 	mustEmbedUnimplementedModelServiceServer()
 }
 
@@ -450,6 +465,9 @@ func (UnimplementedModelServiceServer) UpsertSetting(context.Context, *UpsertSet
 }
 func (UnimplementedModelServiceServer) DeleteSetting(context.Context, *DeleteSettingRequest) (*DeleteSettingResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DeleteSetting not implemented")
+}
+func (UnimplementedModelServiceServer) FetchProviderModels(context.Context, *FetchProviderModelsRequest) (*FetchProviderModelsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FetchProviderModels not implemented")
 }
 func (UnimplementedModelServiceServer) mustEmbedUnimplementedModelServiceServer() {}
 func (UnimplementedModelServiceServer) testEmbeddedByValue()                      {}
@@ -886,6 +904,24 @@ func _ModelService_DeleteSetting_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ModelService_FetchProviderModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FetchProviderModelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ModelServiceServer).FetchProviderModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ModelService_FetchProviderModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ModelServiceServer).FetchProviderModels(ctx, req.(*FetchProviderModelsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ModelService_ServiceDesc is the grpc.ServiceDesc for ModelService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -984,6 +1020,10 @@ var ModelService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteSetting",
 			Handler:    _ModelService_DeleteSetting_Handler,
+		},
+		{
+			MethodName: "FetchProviderModels",
+			Handler:    _ModelService_FetchProviderModels_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

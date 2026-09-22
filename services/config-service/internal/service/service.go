@@ -8,6 +8,7 @@ package service
 
 import (
 	"github.com/museflow/config-service/internal/pkg/secret"
+	"github.com/museflow/config-service/internal/pkg/upstream"
 	"github.com/museflow/config-service/internal/repository"
 )
 
@@ -22,6 +23,10 @@ type Service struct {
 	// secrets 凭证加解密器，只用于写入侧加密。
 	// 本服务没有任何解密下发路径，因此响应里永远只出现 api_key_hint。
 	secrets *secret.Encrypter
+
+	// upstream 上游模型目录客户端，只服务「探测有哪些模型」这一个场景。
+	// 实例无内部可变状态，随 Service 全局复用一个即可。
+	upstream *upstream.Client
 }
 
 // Deps 组装 Service 所需的依赖。
@@ -32,6 +37,7 @@ type Deps struct {
 	UserModels    repository.UserModelRepository
 	Settings      repository.SettingRepository
 	Secrets       *secret.Encrypter
+	Upstream      *upstream.Client
 }
 
 // NewService 组装系统配置域服务。
@@ -43,5 +49,6 @@ func NewService(deps Deps) *Service {
 		userModels:    deps.UserModels,
 		settings:      deps.Settings,
 		secrets:       deps.Secrets,
+		upstream:      deps.Upstream,
 	}
 }

@@ -50,6 +50,9 @@ service ModelService {
   rpc GetSetting(GetSettingRequest) returns (SettingInfo);
   rpc UpsertSetting(UpsertSettingRequest) returns (SettingInfo);
   rpc DeleteSetting(DeleteSettingRequest) returns (DeleteSettingResponse);
+
+  // ---- 上游模型目录探测 ----
+  rpc FetchProviderModels(FetchProviderModelsRequest) returns (FetchProviderModelsResponse);
 }
 
 // ---- 通用结构 ----
@@ -420,4 +423,46 @@ message UpsertSettingRequest {
 message DeleteSettingRequest {
   string config_group = 1;
   string key = 2;
+}
+
+// ---- 上游模型目录探测 ----
+
+// FetchProviderModelsRequest 拉取某个渠道的模型目录。
+//
+// 凭证有三种定位方式，按优先级取第一个非空的：
+//   - provider_id：平台渠道（管理端），api_key 从库里解密后用于本次请求，
+//     请求与响应都不携带密钥明文；
+//   - user_provider_id + user_uuid：用户自定义渠道（用户端），同样读库解密，
+//     带归属校验，取不到别人的渠道；
+//   - base_url + api_key：渠道还没保存时的临时探测，两边都能用，
+//     适合「先填 base_url 与密钥、确认能连通再落库」的操作顺序。
+//
+// 三者为空时视为参数非法：没有凭证就不知道该去问哪家厂商。
+message FetchProviderModelsRequest {
+  int64 provider_id = 1;
+  int64 user_provider_id = 2;
+  string user_uuid = 3;
+  string base_url = 4;
+  string api_key = 5;
+  // protocol 在临时探测时用于拼上游路径；按 ID 定位时以库里保存的值为准。
+  string protocol = 6;
+}
+
+// RemoteModelInfo 上游返回的单条模型目录项。
+//
+// 只带展示与登记所需的最小字段：id 就是后续创建模型时的 api_model。
+message RemoteModelInfo {
+  // id 上游模型标识，如 gpt-4o、claude-sonnet-4-5。
+  string id = 1;
+  // object 对象类型，如 model / embedding。
+  string object = 2;
+  // owned_by 归属方，如 openai / google。
+  string owned_by = 3;
+  // created_at 上游创建时间（RFC3339），上游未返回时为空串。
+  string created_at = 4;
+}
+
+message FetchProviderModelsResponse {
+  repeated RemoteModelInfo items = 1;
+  int32 total = 2;
 }

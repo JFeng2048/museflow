@@ -107,6 +107,20 @@ type UpsertSettingRequest struct {
 	Description string `json:"description" binding:"omitempty,max=2000" example:"生成任务默认积分单价"`
 }
 
+// ---------- 上游模型目录 ----------
+
+// FetchRemoteModelsRequest 拉取渠道模型目录请求。
+//
+// provider_id 与 base_url 三选一，与 config-service 的约定一致：已保存的渠道
+// 用 id 定位（密钥由服务端解密），尚未保存的渠道临时填 base_url 与 api_key。
+// api_key 只在本请求里出现一次，不会写入任何响应。
+type FetchRemoteModelsRequest struct {
+	ProviderID int64  `json:"provider_id" example:"1"`
+	BaseURL    string `json:"base_url" binding:"omitempty,max=500" example:"https://api.openai.com/v1"`
+	APIKey     string `json:"api_key" binding:"max=4096" example:"sk-proj-xxx"`
+	Protocol   string `json:"protocol" binding:"omitempty,max=50" example:"openai"`
+}
+
 // ---------- 共用 ----------
 
 // SetActiveRequest 启用 / 停用请求。

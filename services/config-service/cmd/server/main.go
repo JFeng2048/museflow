@@ -25,6 +25,7 @@ import (
 	"github.com/museflow/config-service/internal/config"
 	"github.com/museflow/config-service/internal/handler"
 	"github.com/museflow/config-service/internal/pkg/secret"
+	"github.com/museflow/config-service/internal/pkg/upstream"
 	"github.com/museflow/config-service/internal/repository"
 	"github.com/museflow/config-service/internal/service"
 	"github.com/museflow/pkg/logger"
@@ -63,6 +64,9 @@ func main() {
 	userModelRepo := repository.NewUserModelRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
 
+	// 上游模型目录客户端：超时取包内默认值，实例全局复用（内部只有无状态的 http.Client）
+	upstreamClient := upstream.NewClient(upstream.DefaultTimeout)
+
 	modelService := service.NewService(service.Deps{
 		Providers:     providerRepo,
 		Models:        modelRepo,
@@ -70,6 +74,7 @@ func main() {
 		UserModels:    userModelRepo,
 		Settings:      settingRepo,
 		Secrets:       encrypter,
+		Upstream:      upstreamClient,
 	})
 	modelHandler := handler.NewModelHandler(modelService)
 

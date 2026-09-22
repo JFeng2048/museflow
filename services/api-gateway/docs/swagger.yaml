@@ -607,6 +607,24 @@ definitions:
         example: true
         type: boolean
     type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.FetchRemoteModelsRequest:
+    properties:
+      api_key:
+        example: sk-proj-xxx
+        maxLength: 4096
+        type: string
+      base_url:
+        example: https://api.openai.com/v1
+        maxLength: 500
+        type: string
+      protocol:
+        example: openai
+        maxLength: 50
+        type: string
+      provider_id:
+        example: 1
+        type: integer
+    type: object
   github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo:
     properties:
       api_model:
@@ -726,6 +744,31 @@ definitions:
         type: integer
       total:
         example: 1
+        type: integer
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelInfo:
+    properties:
+      created_at:
+        example: "2024-06-01T00:00:00Z"
+        type: string
+      id:
+        example: gpt-4o
+        type: string
+      object:
+        example: model
+        type: string
+      owned_by:
+        example: openai
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelList:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelInfo'
+        type: array
+      total:
+        example: 42
         type: integer
     type: object
   github_com_museflow_api-gateway_internal_dto_model_dto.SetActiveRequest:
@@ -1476,6 +1519,51 @@ paths:
       security:
       - BearerAuth: []
       summary: 启用 / 停用平台渠道
+      tags:
+      - model-模型与系统配置
+  /admin/model-providers/remote-models:
+    post:
+      consumes:
+      - application/json
+      description: 按 provider_id 读取已保存的平台渠道配置，请求上游 /models 接口并返回可登记的模型清单；api_key 由服务端解密使用，请求与响应都不携带密钥明文
+      parameters:
+      - description: 渠道定位，provider_id 必填
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.FetchRemoteModelsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelList'
+              type: object
+        "400":
+          description: 参数错误或上游调用失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 渠道不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 拉取平台渠道模型目录
       tags:
       - model-模型与系统配置
   /admin/models:
@@ -2875,6 +2963,47 @@ paths:
       security:
       - BearerAuth: []
       summary: 编辑自定义渠道
+      tags:
+      - model-模型与系统配置
+  /user/model-providers/remote-models:
+    post:
+      consumes:
+      - application/json
+      description: 按 user_provider_id 读取当前用户自己的渠道配置并请求上游 /models 接口；user_uuid 取自登录态，取不到别人的渠道
+      parameters:
+      - description: 渠道定位，provider_id 填自定义渠道 ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.FetchRemoteModelsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.RemoteModelList'
+              type: object
+        "400":
+          description: 参数错误或上游调用失败
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 渠道不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 拉取我的渠道模型目录
       tags:
       - model-模型与系统配置
   /user/models:

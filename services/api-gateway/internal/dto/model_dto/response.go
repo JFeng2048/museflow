@@ -153,6 +153,23 @@ type SettingList struct {
 	Items []SettingInfo `json:"items"`
 }
 
+// RemoteModelInfo 上游模型目录条目。
+//
+// 字段刻意与已登记模型对齐：勾选后 id 直接作为 api_model，
+// object 可辅助判断该模型是对话模型还是向量模型。
+type RemoteModelInfo struct {
+	ID        string `json:"id" example:"gpt-4o"`
+	Object    string `json:"object" example:"model"`
+	OwnedBy   string `json:"owned_by" example:"openai"`
+	CreatedAt string `json:"created_at" example:"2024-06-01T00:00:00Z"`
+}
+
+// RemoteModelList 上游模型目录结果。
+type RemoteModelList struct {
+	Items []RemoteModelInfo `json:"items"`
+	Total int32             `json:"total" example:"42"`
+}
+
 // AvailableModelList 用户端可用模型列表。
 type AvailableModelList struct {
 	Items []AvailableModel `json:"items"`

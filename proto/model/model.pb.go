@@ -3193,6 +3193,229 @@ func (x *DeleteSettingRequest) GetKey() string {
 	return ""
 }
 
+// FetchProviderModelsRequest 拉取某个渠道的模型目录。
+//
+// 凭证有三种定位方式，按优先级取第一个非空的：
+//   - provider_id：平台渠道（管理端），api_key 从库里解密后用于本次请求，
+//     请求与响应都不携带密钥明文；
+//   - user_provider_id + user_uuid：用户自定义渠道（用户端），同样读库解密，
+//     带归属校验，取不到别人的渠道；
+//   - base_url + api_key：渠道还没保存时的临时探测，两边都能用，
+//     适合「先填 base_url 与密钥、确认能连通再落库」的操作顺序。
+//
+// 三者为空时视为参数非法：没有凭证就不知道该去问哪家厂商。
+type FetchProviderModelsRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ProviderId     int64                  `protobuf:"varint,1,opt,name=provider_id,json=providerId,proto3" json:"provider_id,omitempty"`
+	UserProviderId int64                  `protobuf:"varint,2,opt,name=user_provider_id,json=userProviderId,proto3" json:"user_provider_id,omitempty"`
+	UserUuid       string                 `protobuf:"bytes,3,opt,name=user_uuid,json=userUuid,proto3" json:"user_uuid,omitempty"`
+	BaseUrl        string                 `protobuf:"bytes,4,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
+	ApiKey         string                 `protobuf:"bytes,5,opt,name=api_key,json=apiKey,proto3" json:"api_key,omitempty"`
+	// protocol 在临时探测时用于拼上游路径；按 ID 定位时以库里保存的值为准。
+	Protocol      string `protobuf:"bytes,6,opt,name=protocol,proto3" json:"protocol,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FetchProviderModelsRequest) Reset() {
+	*x = FetchProviderModelsRequest{}
+	mi := &file_proto_model_model_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FetchProviderModelsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FetchProviderModelsRequest) ProtoMessage() {}
+
+func (x *FetchProviderModelsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_model_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FetchProviderModelsRequest.ProtoReflect.Descriptor instead.
+func (*FetchProviderModelsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_model_model_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *FetchProviderModelsRequest) GetProviderId() int64 {
+	if x != nil {
+		return x.ProviderId
+	}
+	return 0
+}
+
+func (x *FetchProviderModelsRequest) GetUserProviderId() int64 {
+	if x != nil {
+		return x.UserProviderId
+	}
+	return 0
+}
+
+func (x *FetchProviderModelsRequest) GetUserUuid() string {
+	if x != nil {
+		return x.UserUuid
+	}
+	return ""
+}
+
+func (x *FetchProviderModelsRequest) GetBaseUrl() string {
+	if x != nil {
+		return x.BaseUrl
+	}
+	return ""
+}
+
+func (x *FetchProviderModelsRequest) GetApiKey() string {
+	if x != nil {
+		return x.ApiKey
+	}
+	return ""
+}
+
+func (x *FetchProviderModelsRequest) GetProtocol() string {
+	if x != nil {
+		return x.Protocol
+	}
+	return ""
+}
+
+// RemoteModelInfo 上游返回的单条模型目录项。
+//
+// 只带展示与登记所需的最小字段：id 就是后续创建模型时的 api_model。
+type RemoteModelInfo struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id 上游模型标识，如 gpt-4o、claude-sonnet-4-5。
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// object 对象类型，如 model / embedding。
+	Object string `protobuf:"bytes,2,opt,name=object,proto3" json:"object,omitempty"`
+	// owned_by 归属方，如 openai / google。
+	OwnedBy string `protobuf:"bytes,3,opt,name=owned_by,json=ownedBy,proto3" json:"owned_by,omitempty"`
+	// created_at 上游创建时间（RFC3339），上游未返回时为空串。
+	CreatedAt     string `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RemoteModelInfo) Reset() {
+	*x = RemoteModelInfo{}
+	mi := &file_proto_model_model_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RemoteModelInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RemoteModelInfo) ProtoMessage() {}
+
+func (x *RemoteModelInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_model_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RemoteModelInfo.ProtoReflect.Descriptor instead.
+func (*RemoteModelInfo) Descriptor() ([]byte, []int) {
+	return file_proto_model_model_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *RemoteModelInfo) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *RemoteModelInfo) GetObject() string {
+	if x != nil {
+		return x.Object
+	}
+	return ""
+}
+
+func (x *RemoteModelInfo) GetOwnedBy() string {
+	if x != nil {
+		return x.OwnedBy
+	}
+	return ""
+}
+
+func (x *RemoteModelInfo) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+type FetchProviderModelsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Items         []*RemoteModelInfo     `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	Total         int32                  `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FetchProviderModelsResponse) Reset() {
+	*x = FetchProviderModelsResponse{}
+	mi := &file_proto_model_model_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FetchProviderModelsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FetchProviderModelsResponse) ProtoMessage() {}
+
+func (x *FetchProviderModelsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_model_model_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FetchProviderModelsResponse.ProtoReflect.Descriptor instead.
+func (*FetchProviderModelsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_model_model_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *FetchProviderModelsResponse) GetItems() []*RemoteModelInfo {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *FetchProviderModelsResponse) GetTotal() int32 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 var File_proto_model_model_proto protoreflect.FileDescriptor
 
 const file_proto_model_model_proto_rawDesc = "" +
@@ -3524,7 +3747,24 @@ const file_proto_model_model_proto_rawDesc = "" +
 	"\vdescription\x18\b \x01(\tR\vdescription\"K\n" +
 	"\x14DeleteSettingRequest\x12!\n" +
 	"\fconfig_group\x18\x01 \x01(\tR\vconfigGroup\x12\x10\n" +
-	"\x03key\x18\x02 \x01(\tR\x03key2\xb8\r\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\"\xd4\x01\n" +
+	"\x1aFetchProviderModelsRequest\x12\x1f\n" +
+	"\vprovider_id\x18\x01 \x01(\x03R\n" +
+	"providerId\x12(\n" +
+	"\x10user_provider_id\x18\x02 \x01(\x03R\x0euserProviderId\x12\x1b\n" +
+	"\tuser_uuid\x18\x03 \x01(\tR\buserUuid\x12\x19\n" +
+	"\bbase_url\x18\x04 \x01(\tR\abaseUrl\x12\x17\n" +
+	"\aapi_key\x18\x05 \x01(\tR\x06apiKey\x12\x1a\n" +
+	"\bprotocol\x18\x06 \x01(\tR\bprotocol\"s\n" +
+	"\x0fRemoteModelInfo\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06object\x18\x02 \x01(\tR\x06object\x12\x19\n" +
+	"\bowned_by\x18\x03 \x01(\tR\aownedBy\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\tR\tcreatedAt\"a\n" +
+	"\x1bFetchProviderModelsResponse\x12,\n" +
+	"\x05items\x18\x01 \x03(\v2\x16.model.RemoteModelInfoR\x05items\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x05R\x05total2\x96\x0e\n" +
 	"\fModelService\x12J\n" +
 	"\rListProviders\x12\x1b.model.ListProvidersRequest\x1a\x1c.model.ListProvidersResponse\x12C\n" +
 	"\x0eCreateProvider\x12\x1c.model.CreateProviderRequest\x1a\x13.model.ProviderInfo\x12C\n" +
@@ -3550,7 +3790,8 @@ const file_proto_model_model_proto_rawDesc = "" +
 	"\n" +
 	"GetSetting\x12\x18.model.GetSettingRequest\x1a\x12.model.SettingInfo\x12@\n" +
 	"\rUpsertSetting\x12\x1b.model.UpsertSettingRequest\x1a\x12.model.SettingInfo\x12J\n" +
-	"\rDeleteSetting\x12\x1b.model.DeleteSettingRequest\x1a\x1c.model.DeleteSettingResponseB)Z'github.com/museflow/proto/model;modelpbb\x06proto3"
+	"\rDeleteSetting\x12\x1b.model.DeleteSettingRequest\x1a\x1c.model.DeleteSettingResponse\x12\\\n" +
+	"\x13FetchProviderModels\x12!.model.FetchProviderModelsRequest\x1a\".model.FetchProviderModelsResponseB)Z'github.com/museflow/proto/model;modelpbb\x06proto3"
 
 var (
 	file_proto_model_model_proto_rawDescOnce sync.Once
@@ -3564,7 +3805,7 @@ func file_proto_model_model_proto_rawDescGZIP() []byte {
 	return file_proto_model_model_proto_rawDescData
 }
 
-var file_proto_model_model_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
+var file_proto_model_model_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
 var file_proto_model_model_proto_goTypes = []any{
 	(*DeleteProviderResponse)(nil),      // 0: model.DeleteProviderResponse
 	(*DeleteModelResponse)(nil),         // 1: model.DeleteModelResponse
@@ -3607,26 +3848,29 @@ var file_proto_model_model_proto_goTypes = []any{
 	(*GetSettingRequest)(nil),           // 38: model.GetSettingRequest
 	(*UpsertSettingRequest)(nil),        // 39: model.UpsertSettingRequest
 	(*DeleteSettingRequest)(nil),        // 40: model.DeleteSettingRequest
-	nil,                                 // 41: model.ProviderInfo.ExtraEntry
-	nil,                                 // 42: model.CreateProviderRequest.ExtraEntry
-	nil,                                 // 43: model.UpdateProviderRequest.ExtraEntry
-	nil,                                 // 44: model.UserProviderInfo.ExtraEntry
-	nil,                                 // 45: model.CreateUserProviderRequest.ExtraEntry
-	nil,                                 // 46: model.UpdateUserProviderRequest.ExtraEntry
+	(*FetchProviderModelsRequest)(nil),  // 41: model.FetchProviderModelsRequest
+	(*RemoteModelInfo)(nil),             // 42: model.RemoteModelInfo
+	(*FetchProviderModelsResponse)(nil), // 43: model.FetchProviderModelsResponse
+	nil,                                 // 44: model.ProviderInfo.ExtraEntry
+	nil,                                 // 45: model.CreateProviderRequest.ExtraEntry
+	nil,                                 // 46: model.UpdateProviderRequest.ExtraEntry
+	nil,                                 // 47: model.UserProviderInfo.ExtraEntry
+	nil,                                 // 48: model.CreateUserProviderRequest.ExtraEntry
+	nil,                                 // 49: model.UpdateUserProviderRequest.ExtraEntry
 }
 var file_proto_model_model_proto_depIdxs = []int32{
-	41, // 0: model.ProviderInfo.extra:type_name -> model.ProviderInfo.ExtraEntry
+	44, // 0: model.ProviderInfo.extra:type_name -> model.ProviderInfo.ExtraEntry
 	6,  // 1: model.ListProvidersResponse.items:type_name -> model.ProviderInfo
-	42, // 2: model.CreateProviderRequest.extra:type_name -> model.CreateProviderRequest.ExtraEntry
-	43, // 3: model.UpdateProviderRequest.extra:type_name -> model.UpdateProviderRequest.ExtraEntry
+	45, // 2: model.CreateProviderRequest.extra:type_name -> model.CreateProviderRequest.ExtraEntry
+	46, // 3: model.UpdateProviderRequest.extra:type_name -> model.UpdateProviderRequest.ExtraEntry
 	5,  // 4: model.ModelInfo.capabilities:type_name -> model.ModelCapabilities
 	13, // 5: model.ListModelsResponse.items:type_name -> model.ModelInfo
 	5,  // 6: model.CreateModelRequest.capabilities:type_name -> model.ModelCapabilities
 	5,  // 7: model.UpdateModelRequest.capabilities:type_name -> model.ModelCapabilities
-	44, // 8: model.UserProviderInfo.extra:type_name -> model.UserProviderInfo.ExtraEntry
+	47, // 8: model.UserProviderInfo.extra:type_name -> model.UserProviderInfo.ExtraEntry
 	20, // 9: model.ListUserProvidersResponse.items:type_name -> model.UserProviderInfo
-	45, // 10: model.CreateUserProviderRequest.extra:type_name -> model.CreateUserProviderRequest.ExtraEntry
-	46, // 11: model.UpdateUserProviderRequest.extra:type_name -> model.UpdateUserProviderRequest.ExtraEntry
+	48, // 10: model.CreateUserProviderRequest.extra:type_name -> model.CreateUserProviderRequest.ExtraEntry
+	49, // 11: model.UpdateUserProviderRequest.extra:type_name -> model.UpdateUserProviderRequest.ExtraEntry
 	5,  // 12: model.UserModelInfo.capabilities:type_name -> model.ModelCapabilities
 	26, // 13: model.ListUserModelsResponse.items:type_name -> model.UserModelInfo
 	5,  // 14: model.CreateUserModelRequest.capabilities:type_name -> model.ModelCapabilities
@@ -3634,57 +3878,60 @@ var file_proto_model_model_proto_depIdxs = []int32{
 	5,  // 16: model.AvailableModel.capabilities:type_name -> model.ModelCapabilities
 	32, // 17: model.ListAvailableModelsResponse.items:type_name -> model.AvailableModel
 	35, // 18: model.ListSettingsResponse.items:type_name -> model.SettingInfo
-	7,  // 19: model.ModelService.ListProviders:input_type -> model.ListProvidersRequest
-	9,  // 20: model.ModelService.CreateProvider:input_type -> model.CreateProviderRequest
-	10, // 21: model.ModelService.UpdateProvider:input_type -> model.UpdateProviderRequest
-	12, // 22: model.ModelService.DeleteProvider:input_type -> model.DeleteProviderRequest
-	11, // 23: model.ModelService.SetProviderActive:input_type -> model.SetProviderActiveRequest
-	14, // 24: model.ModelService.ListModels:input_type -> model.ListModelsRequest
-	16, // 25: model.ModelService.CreateModel:input_type -> model.CreateModelRequest
-	17, // 26: model.ModelService.UpdateModel:input_type -> model.UpdateModelRequest
-	19, // 27: model.ModelService.DeleteModel:input_type -> model.DeleteModelRequest
-	18, // 28: model.ModelService.SetModelActive:input_type -> model.SetModelActiveRequest
-	21, // 29: model.ModelService.ListUserProviders:input_type -> model.ListUserProvidersRequest
-	23, // 30: model.ModelService.CreateUserProvider:input_type -> model.CreateUserProviderRequest
-	24, // 31: model.ModelService.UpdateUserProvider:input_type -> model.UpdateUserProviderRequest
-	25, // 32: model.ModelService.DeleteUserProvider:input_type -> model.DeleteUserProviderRequest
-	27, // 33: model.ModelService.ListUserModels:input_type -> model.ListUserModelsRequest
-	29, // 34: model.ModelService.CreateUserModel:input_type -> model.CreateUserModelRequest
-	30, // 35: model.ModelService.UpdateUserModel:input_type -> model.UpdateUserModelRequest
-	31, // 36: model.ModelService.DeleteUserModel:input_type -> model.DeleteUserModelRequest
-	33, // 37: model.ModelService.ListAvailableModels:input_type -> model.ListAvailableModelsRequest
-	36, // 38: model.ModelService.ListSettings:input_type -> model.ListSettingsRequest
-	38, // 39: model.ModelService.GetSetting:input_type -> model.GetSettingRequest
-	39, // 40: model.ModelService.UpsertSetting:input_type -> model.UpsertSettingRequest
-	40, // 41: model.ModelService.DeleteSetting:input_type -> model.DeleteSettingRequest
-	8,  // 42: model.ModelService.ListProviders:output_type -> model.ListProvidersResponse
-	6,  // 43: model.ModelService.CreateProvider:output_type -> model.ProviderInfo
-	6,  // 44: model.ModelService.UpdateProvider:output_type -> model.ProviderInfo
-	0,  // 45: model.ModelService.DeleteProvider:output_type -> model.DeleteProviderResponse
-	6,  // 46: model.ModelService.SetProviderActive:output_type -> model.ProviderInfo
-	15, // 47: model.ModelService.ListModels:output_type -> model.ListModelsResponse
-	13, // 48: model.ModelService.CreateModel:output_type -> model.ModelInfo
-	13, // 49: model.ModelService.UpdateModel:output_type -> model.ModelInfo
-	1,  // 50: model.ModelService.DeleteModel:output_type -> model.DeleteModelResponse
-	13, // 51: model.ModelService.SetModelActive:output_type -> model.ModelInfo
-	22, // 52: model.ModelService.ListUserProviders:output_type -> model.ListUserProvidersResponse
-	20, // 53: model.ModelService.CreateUserProvider:output_type -> model.UserProviderInfo
-	20, // 54: model.ModelService.UpdateUserProvider:output_type -> model.UserProviderInfo
-	2,  // 55: model.ModelService.DeleteUserProvider:output_type -> model.DeleteUserProviderResponse
-	28, // 56: model.ModelService.ListUserModels:output_type -> model.ListUserModelsResponse
-	26, // 57: model.ModelService.CreateUserModel:output_type -> model.UserModelInfo
-	26, // 58: model.ModelService.UpdateUserModel:output_type -> model.UserModelInfo
-	3,  // 59: model.ModelService.DeleteUserModel:output_type -> model.DeleteUserModelResponse
-	34, // 60: model.ModelService.ListAvailableModels:output_type -> model.ListAvailableModelsResponse
-	37, // 61: model.ModelService.ListSettings:output_type -> model.ListSettingsResponse
-	35, // 62: model.ModelService.GetSetting:output_type -> model.SettingInfo
-	35, // 63: model.ModelService.UpsertSetting:output_type -> model.SettingInfo
-	4,  // 64: model.ModelService.DeleteSetting:output_type -> model.DeleteSettingResponse
-	42, // [42:65] is the sub-list for method output_type
-	19, // [19:42] is the sub-list for method input_type
-	19, // [19:19] is the sub-list for extension type_name
-	19, // [19:19] is the sub-list for extension extendee
-	0,  // [0:19] is the sub-list for field type_name
+	42, // 19: model.FetchProviderModelsResponse.items:type_name -> model.RemoteModelInfo
+	7,  // 20: model.ModelService.ListProviders:input_type -> model.ListProvidersRequest
+	9,  // 21: model.ModelService.CreateProvider:input_type -> model.CreateProviderRequest
+	10, // 22: model.ModelService.UpdateProvider:input_type -> model.UpdateProviderRequest
+	12, // 23: model.ModelService.DeleteProvider:input_type -> model.DeleteProviderRequest
+	11, // 24: model.ModelService.SetProviderActive:input_type -> model.SetProviderActiveRequest
+	14, // 25: model.ModelService.ListModels:input_type -> model.ListModelsRequest
+	16, // 26: model.ModelService.CreateModel:input_type -> model.CreateModelRequest
+	17, // 27: model.ModelService.UpdateModel:input_type -> model.UpdateModelRequest
+	19, // 28: model.ModelService.DeleteModel:input_type -> model.DeleteModelRequest
+	18, // 29: model.ModelService.SetModelActive:input_type -> model.SetModelActiveRequest
+	21, // 30: model.ModelService.ListUserProviders:input_type -> model.ListUserProvidersRequest
+	23, // 31: model.ModelService.CreateUserProvider:input_type -> model.CreateUserProviderRequest
+	24, // 32: model.ModelService.UpdateUserProvider:input_type -> model.UpdateUserProviderRequest
+	25, // 33: model.ModelService.DeleteUserProvider:input_type -> model.DeleteUserProviderRequest
+	27, // 34: model.ModelService.ListUserModels:input_type -> model.ListUserModelsRequest
+	29, // 35: model.ModelService.CreateUserModel:input_type -> model.CreateUserModelRequest
+	30, // 36: model.ModelService.UpdateUserModel:input_type -> model.UpdateUserModelRequest
+	31, // 37: model.ModelService.DeleteUserModel:input_type -> model.DeleteUserModelRequest
+	33, // 38: model.ModelService.ListAvailableModels:input_type -> model.ListAvailableModelsRequest
+	36, // 39: model.ModelService.ListSettings:input_type -> model.ListSettingsRequest
+	38, // 40: model.ModelService.GetSetting:input_type -> model.GetSettingRequest
+	39, // 41: model.ModelService.UpsertSetting:input_type -> model.UpsertSettingRequest
+	40, // 42: model.ModelService.DeleteSetting:input_type -> model.DeleteSettingRequest
+	41, // 43: model.ModelService.FetchProviderModels:input_type -> model.FetchProviderModelsRequest
+	8,  // 44: model.ModelService.ListProviders:output_type -> model.ListProvidersResponse
+	6,  // 45: model.ModelService.CreateProvider:output_type -> model.ProviderInfo
+	6,  // 46: model.ModelService.UpdateProvider:output_type -> model.ProviderInfo
+	0,  // 47: model.ModelService.DeleteProvider:output_type -> model.DeleteProviderResponse
+	6,  // 48: model.ModelService.SetProviderActive:output_type -> model.ProviderInfo
+	15, // 49: model.ModelService.ListModels:output_type -> model.ListModelsResponse
+	13, // 50: model.ModelService.CreateModel:output_type -> model.ModelInfo
+	13, // 51: model.ModelService.UpdateModel:output_type -> model.ModelInfo
+	1,  // 52: model.ModelService.DeleteModel:output_type -> model.DeleteModelResponse
+	13, // 53: model.ModelService.SetModelActive:output_type -> model.ModelInfo
+	22, // 54: model.ModelService.ListUserProviders:output_type -> model.ListUserProvidersResponse
+	20, // 55: model.ModelService.CreateUserProvider:output_type -> model.UserProviderInfo
+	20, // 56: model.ModelService.UpdateUserProvider:output_type -> model.UserProviderInfo
+	2,  // 57: model.ModelService.DeleteUserProvider:output_type -> model.DeleteUserProviderResponse
+	28, // 58: model.ModelService.ListUserModels:output_type -> model.ListUserModelsResponse
+	26, // 59: model.ModelService.CreateUserModel:output_type -> model.UserModelInfo
+	26, // 60: model.ModelService.UpdateUserModel:output_type -> model.UserModelInfo
+	3,  // 61: model.ModelService.DeleteUserModel:output_type -> model.DeleteUserModelResponse
+	34, // 62: model.ModelService.ListAvailableModels:output_type -> model.ListAvailableModelsResponse
+	37, // 63: model.ModelService.ListSettings:output_type -> model.ListSettingsResponse
+	35, // 64: model.ModelService.GetSetting:output_type -> model.SettingInfo
+	35, // 65: model.ModelService.UpsertSetting:output_type -> model.SettingInfo
+	4,  // 66: model.ModelService.DeleteSetting:output_type -> model.DeleteSettingResponse
+	43, // 67: model.ModelService.FetchProviderModels:output_type -> model.FetchProviderModelsResponse
+	44, // [44:68] is the sub-list for method output_type
+	20, // [20:44] is the sub-list for method input_type
+	20, // [20:20] is the sub-list for extension type_name
+	20, // [20:20] is the sub-list for extension extendee
+	0,  // [0:20] is the sub-list for field type_name
 }
 
 func init() { file_proto_model_model_proto_init() }
@@ -3700,7 +3947,7 @@ func file_proto_model_model_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_model_model_proto_rawDesc), len(file_proto_model_model_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   47,
+			NumMessages:   50,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

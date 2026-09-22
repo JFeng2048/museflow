@@ -40,6 +40,11 @@ func mapError(err error) error {
 		// 引用，重试同一个请求没有意义。
 		return status.Error(codes.FailedPrecondition, err.Error())
 
+	case errors.Is(err, service.ErrCredentialUnreadable):
+		// FailedPrecondition：密文当前不可用，重试同一个请求没有意义，
+		// 调用方应先重新填写密钥——错误文案本身就是给用户的下一步提示。
+		return status.Error(codes.FailedPrecondition, err.Error())
+
 	case errors.Is(err, repository.ErrProviderNotFound),
 		errors.Is(err, repository.ErrModelNotFound),
 		errors.Is(err, repository.ErrUserProviderNotFound),

@@ -18,6 +18,13 @@ import (
 // 不必再维护一张错误码表。
 var ErrInvalidArgument = errors.New("请求参数不合法")
 
+// ErrCredentialUnreadable 渠道密钥无法解密（主密钥已轮换或密文被损坏）。
+//
+// 只在「拉取上游模型目录」这条路径上可能出现：其余接口从不回读密钥，
+// 密文坏了也无从察觉。这里显式报错而不是当「未配置密钥」处理——后者会把
+// 失败推给上游，最终只回一句 401，看起来像是密钥本身失效，排查方向就错了。
+var ErrCredentialUnreadable = errors.New("渠道密钥无法解密，请重新填写 api_key")
+
 // invalidArgumentf 构造带原因的 InvalidArgument 错误。
 func invalidArgumentf(format string, args ...any) error {
 	return fmt.Errorf("%w：%s", ErrInvalidArgument, fmt.Sprintf(format, args...))
