@@ -17,7 +17,7 @@ set -euo pipefail
 # 切换到仓库根目录，保证 --go_out=. 的相对路径稳定
 cd "$(dirname "$0")/.."
 
-PROTO_FILES=(proto/user/*.proto proto/crawl/*.proto)
+PROTO_FILES=(proto/user/*.proto proto/crawl/*.proto proto/model/*.proto)
 
 if command -v protoc >/dev/null 2>&1; then
   command -v protoc-gen-go >/dev/null 2>&1 || { echo "错误：未找到 protoc-gen-go，请执行 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest"; exit 1; }
@@ -35,4 +35,4 @@ else
   ( cd tools/protogen && GOWORK=off go run . -I ../.. "${PROTO_FILES[@]/#/}" )
 fi
 
-echo "gRPC 代码生成完成：proto/user/*.pb.go, proto/crawl/*.pb.go"
+echo "gRPC 代码生成完成：proto/user/*.pb.go, proto/crawl/*.pb.go, proto/model/*.pb.go"

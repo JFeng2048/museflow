@@ -1,0 +1,423 @@
+syntax = "proto3";
+
+package model;
+
+// Go 包路径：生成的代码位于 proto/model 目录下，包名为 modelpb
+option go_package = "github.com/museflow/proto/model;modelpb";
+
+// ModelService 系统配置域服务（config-service，gRPC 端口 5004）。
+//
+// 职责边界：只负责「模型目录 + 凭证 + 通用系统配置」的读写与加解密，
+// 不负责调用上游大模型。将来生成服务需要模型时，作为本服务的 gRPC 客户端
+// 取配置，HTTP 请求由它自己发。
+//
+// 密钥安全约定（契约层面强制）：
+//   - 请求里的 api_key 是只写字段，服务端加密落库后不回显；
+//   - 响应里只有 api_key_hint（末 4 位）与 api_key_updated_at，
+//     供后台脱敏展示与轮换确认，没有任何字段能还原出完整密钥。
+service ModelService {
+  // ---- 平台渠道（管理端维护，平台提供的 base_url + api_key）----
+  rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse);
+  rpc CreateProvider(CreateProviderRequest) returns (ProviderInfo);
+  rpc UpdateProvider(UpdateProviderRequest) returns (ProviderInfo);
+  rpc DeleteProvider(DeleteProviderRequest) returns (DeleteProviderResponse);
+  rpc SetProviderActive(SetProviderActiveRequest) returns (ProviderInfo);
+
+  // ---- 平台模型（挂在平台渠道下，用户端可见的主体）----
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+  rpc CreateModel(CreateModelRequest) returns (ModelInfo);
+  rpc UpdateModel(UpdateModelRequest) returns (ModelInfo);
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+  rpc SetModelActive(SetModelActiveRequest) returns (ModelInfo);
+
+  // ---- 用户自定义渠道（用户自带 base_url + api_key）----
+  rpc ListUserProviders(ListUserProvidersRequest) returns (ListUserProvidersResponse);
+  rpc CreateUserProvider(CreateUserProviderRequest) returns (UserProviderInfo);
+  rpc UpdateUserProvider(UpdateUserProviderRequest) returns (UserProviderInfo);
+  rpc DeleteUserProvider(DeleteUserProviderRequest) returns (DeleteUserProviderResponse);
+
+  // ---- 用户自选模型（挂在用户自定义渠道下，不计平台积分）----
+  rpc ListUserModels(ListUserModelsRequest) returns (ListUserModelsResponse);
+  rpc CreateUserModel(CreateUserModelRequest) returns (UserModelInfo);
+  rpc UpdateUserModel(UpdateUserModelRequest) returns (UserModelInfo);
+  rpc DeleteUserModel(DeleteUserModelRequest) returns (DeleteUserModelResponse);
+
+  // ---- 用户端可用模型：平台模型 + 用户自定义模型的合并视图 ----
+  rpc ListAvailableModels(ListAvailableModelsRequest) returns (ListAvailableModelsResponse);
+
+  // ---- 通用系统配置 ----
+  rpc ListSettings(ListSettingsRequest) returns (ListSettingsResponse);
+  rpc GetSetting(GetSettingRequest) returns (SettingInfo);
+  rpc UpsertSetting(UpsertSettingRequest) returns (SettingInfo);
+  rpc DeleteSetting(DeleteSettingRequest) returns (DeleteSettingResponse);
+}
+
+// ---- 通用结构 ----
+
+// DeleteProviderResponse 删除结果。
+message DeleteProviderResponse {
+  bool success = 1;
+}
+
+// DeleteModelResponse 删除结果。
+message DeleteModelResponse {
+  bool success = 1;
+}
+
+// DeleteUserProviderResponse 删除结果。
+message DeleteUserProviderResponse {
+  bool success = 1;
+}
+
+// DeleteUserModelResponse 删除结果。
+message DeleteUserModelResponse {
+  bool success = 1;
+}
+
+// DeleteSettingResponse 删除结果。
+message DeleteSettingResponse {
+  bool success = 1;
+}
+
+// ModelCapabilities 模型能力开关。
+// 对应 config_svc.model.capabilities / config_svc.user_model.capabilities 的 JSONB 键。
+message ModelCapabilities {
+  bool stream = 1;     // 是否支持流式输出
+  bool tool_call = 2;  // 是否支持工具/函数调用
+  bool json_mode = 3;  // 是否支持 JSON 模式输出
+  bool vision = 4;     // 是否支持图像输入
+}
+
+// ---- 平台渠道 ----
+
+// ProviderInfo 平台渠道。api_key 只写不读，响应中只有脱敏字段。
+message ProviderInfo {
+  int64 id = 1;
+  string code = 2;
+  string name = 3;
+  string protocol = 4;   // openai / anthropic / gemini / custom
+  string base_url = 5;
+  string api_key_hint = 6;   // API Key 末 4 位
+  string api_key_updated_at = 7;
+  string organization = 8;
+  map<string, string> extra = 9;
+  bool is_active = 10;
+  int32 sort_order = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message ListProvidersRequest {
+  string keyword = 1;     // 按 code / name 模糊匹配，可空
+  bool only_active = 2;   // true 时只返回启用中的渠道
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListProvidersResponse {
+  repeated ProviderInfo items = 1;
+  int64 total = 2;
+}
+
+message CreateProviderRequest {
+  string code = 1;
+  string name = 2;
+  string protocol = 3;
+  string base_url = 4;
+  string api_key = 5;      // 只写字段，加密落库后不回显
+  string organization = 6;
+  map<string, string> extra = 7;
+  int32 sort_order = 8;
+}
+
+message UpdateProviderRequest {
+  int64 id = 1;
+  string name = 2;
+  string protocol = 3;
+  string base_url = 4;
+  // api_key 留空表示不修改；非空表示轮换，会同时刷新 api_key_hint 与 api_key_updated_at。
+  string api_key = 5;
+  string organization = 6;
+  map<string, string> extra = 7;
+  int32 sort_order = 8;
+}
+
+message SetProviderActiveRequest {
+  int64 id = 1;
+  bool is_active = 2;
+}
+
+message DeleteProviderRequest {
+  int64 id = 1;
+}
+
+// ---- 平台模型 ----
+
+message ModelInfo {
+  int64 id = 1;
+  int64 provider_id = 2;
+  string code = 3;
+  string name = 4;
+  string model_type = 5;  // chat / embedding / rerank / vision / image / audio / video
+  string api_model = 6;
+  int32 context_window = 7;
+  int32 max_output_tokens = 8;
+  ModelCapabilities capabilities = 9;
+  int32 credit_cost = 10;
+  string description = 11;
+  bool is_active = 12;
+  int32 sort_order = 13;
+  string created_at = 14;
+  string updated_at = 15;
+}
+
+message ListModelsRequest {
+  int64 provider_id = 1;  // 0 表示不限渠道
+  string model_type = 2;  // 空表示不限类型
+  string keyword = 3;     // 按 code / name / api_model 模糊匹配，可空
+  bool only_active = 4;
+  int32 page = 5;
+  int32 page_size = 6;
+}
+
+message ListModelsResponse {
+  repeated ModelInfo items = 1;
+  int64 total = 2;
+}
+
+message CreateModelRequest {
+  int64 provider_id = 1;
+  string code = 2;
+  string name = 3;
+  string model_type = 4;
+  string api_model = 5;
+  int32 context_window = 6;
+  int32 max_output_tokens = 7;
+  ModelCapabilities capabilities = 8;
+  int32 credit_cost = 9;
+  string description = 10;
+  int32 sort_order = 11;
+}
+
+message UpdateModelRequest {
+  int64 id = 1;
+  string name = 2;
+  string model_type = 3;
+  string api_model = 4;
+  int32 context_window = 5;
+  int32 max_output_tokens = 6;
+  ModelCapabilities capabilities = 7;
+  int32 credit_cost = 8;
+  string description = 9;
+  int32 sort_order = 10;
+}
+
+message SetModelActiveRequest {
+  int64 id = 1;
+  bool is_active = 2;
+}
+
+message DeleteModelRequest {
+  int64 id = 1;
+}
+
+// ---- 用户自定义渠道 ----
+
+// UserProviderInfo 用户自定义渠道。api_key 同样只写不读。
+message UserProviderInfo {
+  int64 id = 1;
+  string user_uuid = 2;
+  string name = 3;
+  string protocol = 4;
+  string base_url = 5;
+  string api_key_hint = 6;
+  string api_key_updated_at = 7;
+  string organization = 8;
+  map<string, string> extra = 9;
+  bool is_active = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message ListUserProvidersRequest {
+  string user_uuid = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message ListUserProvidersResponse {
+  repeated UserProviderInfo items = 1;
+  int64 total = 2;
+}
+
+message CreateUserProviderRequest {
+  string user_uuid = 1;
+  string name = 2;
+  string protocol = 3;
+  string base_url = 4;
+  string api_key = 5;   // 只写字段
+  string organization = 6;
+  map<string, string> extra = 7;
+}
+
+message UpdateUserProviderRequest {
+  int64 id = 1;
+  string user_uuid = 2;   // 归属校验用：只能改自己的渠道
+  string name = 3;
+  string protocol = 4;
+  string base_url = 5;
+  string api_key = 6;     // 留空表示不修改
+  string organization = 7;
+  map<string, string> extra = 8;
+  // 可空：显式声明「是否停用」的语义。不填表示不改，否则 proto3 的默认值 false
+  // 会被当成「停用」，一次忘记带该字段的调用就会把所有用户渠道全部关掉。
+  optional bool is_active = 9;
+}
+
+message DeleteUserProviderRequest {
+  int64 id = 1;
+  string user_uuid = 2;
+}
+
+// ---- 用户自选模型 ----
+
+message UserModelInfo {
+  int64 id = 1;
+  string user_uuid = 2;
+  int64 user_provider_id = 3;
+  string name = 4;
+  string model_type = 5;
+  string api_model = 6;
+  int32 context_window = 7;
+  int32 max_output_tokens = 8;
+  ModelCapabilities capabilities = 9;
+  string description = 10;
+  bool is_active = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message ListUserModelsRequest {
+  string user_uuid = 1;
+  int64 user_provider_id = 2;  // 0 表示不限渠道
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message ListUserModelsResponse {
+  repeated UserModelInfo items = 1;
+  int64 total = 2;
+}
+
+message CreateUserModelRequest {
+  string user_uuid = 1;
+  int64 user_provider_id = 2;
+  string name = 3;
+  string model_type = 4;
+  string api_model = 5;
+  int32 context_window = 6;
+  int32 max_output_tokens = 7;
+  ModelCapabilities capabilities = 8;
+  string description = 9;
+}
+
+message UpdateUserModelRequest {
+  int64 id = 1;
+  string user_uuid = 2;   // 归属校验用：只能改自己的模型
+  string name = 3;
+  string model_type = 4;
+  string api_model = 5;
+  int32 context_window = 6;
+  int32 max_output_tokens = 7;
+  ModelCapabilities capabilities = 8;
+  string description = 9;
+  // 可空，理由同 UpdateUserProviderRequest.is_active。
+  optional bool is_active = 10;
+}
+
+message DeleteUserModelRequest {
+  int64 id = 1;
+  string user_uuid = 2;
+}
+
+// ---- 用户端可用模型 ----
+
+// AvailableModel 用户端「刷出来」的单条可用模型。
+// source 区分平台模型与用户自定义模型；不含任何密钥字段。
+message AvailableModel {
+  // source 取值：platform=平台模型，custom=用户自定义模型。
+  string source = 1;
+  // 模型标识：平台模型为 config_svc.model.id，自定义模型为 config_svc.user_model.id。
+  int64 model_id = 2;
+  // 渠道标识：平台渠道为 config_svc.model_provider.id，自定义渠道为 config_svc.user_model_provider.id。
+  int64 provider_id = 3;
+  string name = 4;
+  string model_type = 5;
+  string api_model = 6;
+  int32 context_window = 7;
+  int32 max_output_tokens = 8;
+  ModelCapabilities capabilities = 9;
+  // 单次调用消耗积分：平台模型按平台定价，自定义模型恒为 0（用户直接向上游付费）。
+  int32 credit_cost = 10;
+  string description = 11;
+}
+
+message ListAvailableModelsRequest {
+  string user_uuid = 1;
+  string model_type = 2;  // 空表示不限类型
+}
+
+message ListAvailableModelsResponse {
+  repeated AvailableModel items = 1;
+}
+
+// ---- 通用系统配置 ----
+
+message SettingInfo {
+  int64 id = 1;
+  string config_group = 2;
+  string key = 3;
+  // value 为非机密配置值（JSON 序列化后的字符串）；is_secret=true 时为空。
+  string value = 4;
+  // secret_value 为机密值明文，仅在写入响应中返回一次，读取响应中恒为空。
+  string secret_value = 5;
+  bool is_secret = 6;
+  string value_type = 7;   // string / number / bool / json
+  bool is_public = 8;
+  string description = 9;
+  string created_at = 10;
+  string updated_at = 11;
+}
+
+message ListSettingsRequest {
+  string config_group = 1;  // 空表示全部分组
+  bool only_public = 2;     // true 时只返回可下发前端的配置
+}
+
+message ListSettingsResponse {
+  repeated SettingInfo items = 1;
+}
+
+message GetSettingRequest {
+  string config_group = 1;
+  string key = 2;
+}
+
+// UpsertSettingRequest 按 (config_group, key) 存在则更新、不存在则创建。
+message UpsertSettingRequest {
+  string config_group = 1;
+  string key = 2;
+  // 非机密值直接放这里；is_secret=true 时放 secret_value，本字段留空。
+  string value = 3;
+  // 机密值明文，加密落库；仅本次响应回显一次。
+  string secret_value = 4;
+  bool is_secret = 5;
+  string value_type = 6;
+  bool is_public = 7;
+  string description = 8;
+}
+
+message DeleteSettingRequest {
+  string config_group = 1;
+  string key = 2;
+}
