@@ -12,6 +12,8 @@ apiGateway:
  config:
   GATEWAY_PORT: "5001"
   GATEWAY_USER_SERVICE_URL: user-service:5002
+  # 模型目录 / 渠道凭证 / 系统配置由 config-service 提供，网关的模型接口全部经它转发。
+  GATEWAY_MODEL_SERVICE_URL: config-service:5004
   # GATEWAY_ALLOW_ORIGINS 由 applications/overlays/secrets.yaml 的 domain 派生，
   # 见 templates/_helpers.tpl，不要在这里配置。
   GATEWAY_COOKIE_SECURE: "false"

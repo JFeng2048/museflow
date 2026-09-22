@@ -82,6 +82,8 @@ if [[ "$SCOPE" == "base" || "$SCOPE" == "all" ]]; then
 fi
 
 if [[ "$SCOPE" == "app" || "$SCOPE" == "all" ]]; then
+  helm upgrade --install config-service "$K8S_DIR/applications/services/config-service" \
+    --namespace museflow --values "$APP_VALUES" --values "$APP_SECRETS" "${KUBECONFIG_ARGS[@]}"
   helm upgrade --install api-gateway "$K8S_DIR/applications/services/api-gateway" \
     --namespace museflow --values "$APP_VALUES" --values "$APP_SECRETS" "${KUBECONFIG_ARGS[@]}"
   helm upgrade --install user-service "$K8S_DIR/applications/services/user-service" \

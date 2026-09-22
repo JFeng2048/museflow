@@ -73,6 +73,7 @@ if ($Scope -eq 'app' -or $Scope -eq 'all') {
     Assert-SecretFile $appSecrets
     Test-SecretPlaceholders $appSecrets
     Test-TurnstileSecret $appSecrets
+    Install-Chart 'config-service' (Join-Path $k8sDir 'applications/services/config-service') $appValues $appSecrets
     Install-Chart 'api-gateway' (Join-Path $k8sDir 'applications/services/api-gateway') $appValues $appSecrets
     Install-Chart 'user-service' (Join-Path $k8sDir 'applications/services/user-service') $appValues $appSecrets
     Install-Chart 'crawl4ai-service' (Join-Path $k8sDir 'applications/services/crawl4ai-service') $appValues $appSecrets

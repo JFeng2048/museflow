@@ -1,0 +1,6 @@
+apiVersion: v2
+name: config-service
+description: MuseFlow system config gRPC service (model providers / models / user settings)
+type: application
+version: 0.1.0
+appVersion: latest

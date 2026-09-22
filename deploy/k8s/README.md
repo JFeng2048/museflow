@@ -10,6 +10,7 @@ deploy/k8s/
 ├── applications/              # 业务应用 Helm Charts
 │   ├── services/
 │   │   ├── api-gateway/
+│   │   ├── config-service/
 │   │   ├── user-service/
 │   │   └── crawl4ai-service/
 │   ├── web/
@@ -66,6 +67,8 @@ deploy/k8s/
 | `userService.secret.USER_SMTP_*` | 未配置 `USER_SMTP_HOST` 时降级为「日志模式」：验证码只写日志、不真实发信 |
 | `userService.secret.USER_ADMIN_EMAIL` / `USER_ADMIN_PASSWORD` / `USER_ADMIN_NICKNAME` | 管理员账号的邮箱、初始密码与昵称（昵称默认「系统管理员」），集中配置在 secrets 里。服务启动时账号**不存在才创建**并授予 `super_admin`，已存在不覆盖密码；`USER_ADMIN_EMAIL` 留空则跳过播种，后台可能无账号可登录 |
 | `userService.secret.DB_*` / `REDIS_*` | 服务启动即失败（连不上数据库 / Redis） |
+| `configService.secret.MODEL_SECRET_KEY` | 模型凭证的 AES-256-GCM 主密钥，须为 32 字节；缺失或长度不对 → config-service 启动即失败。只有它持明文，`api-gateway` 只经 gRPC 转发。**换密钥等于作废全部历史密文**（渠道与用户的 `api_key`、机密系统配置全部无法解密） |
+| `configService.secret.DB_*` | 必须与 `userService.secret.DB_*` 一致：模型表与用户表同库；不一致时 config-service 连错库，表不存在而启动失败 |
 
 前端站点密钥（`web/.env.production` 的 `VITE_TURNSTILE_SITE_KEY`）在**构建时**写进产物，
 更换 Cloudflare 站点后需要重新构建并重新导入 `museflow/web` 镜像。
@@ -103,7 +106,7 @@ deploy\k8s\scripts\deploy.bat all --kubeconfig=C:\path\to\kubeconfig
 脚本会先校验对应范围的密钥文件是否存在：`base` 需要 `base/overlays/secrets.yaml`，
 `app` 需要 `applications/overlays/secrets.yaml`，`all` 需要两者。
 
-`app` 范围覆盖 5 个 release：`api-gateway`、`user-service`、`crawl4ai-service`、`web`、`ingress`。
+`app` 范围覆盖 6 个 release：`config-service`、`api-gateway`、`user-service`、`crawl4ai-service`、`web`、`ingress`。
 只改其中一个服务时，建议用下面的单 release 命令，避免顺带部署不需要的服务。
 
 ### 手动 Helm（按需单个 release）
@@ -120,6 +123,7 @@ helm upgrade --install redis    deploy/k8s/base/charts/redis    -n museflow -f d
 helm upgrade --install searxng  deploy/k8s/base/charts/searxng  -n museflow -f deploy/k8s/base/overlays/values.yaml -f deploy/k8s/base/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
 
 # 业务应用
+helm upgrade --install config-service     deploy/k8s/applications/services/config-service     -n museflow -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
 helm upgrade --install api-gateway       deploy/k8s/applications/services/api-gateway       -n museflow -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
 helm upgrade --install user-service      deploy/k8s/applications/services/user-service      -n museflow -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
 helm upgrade --install crawl4ai-service  deploy/k8s/applications/services/crawl4ai-service  -n museflow -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
@@ -242,6 +246,7 @@ helm lint deploy/k8s/base/charts/redis           -f deploy/k8s/base/overlays/val
 helm lint deploy/k8s/base/charts/searxng         -f deploy/k8s/base/overlays/values.yaml         -f deploy/k8s/base/overlays/secrets.yaml         --kubeconfig=/path/to/kubeconfig
 helm lint deploy/k8s/applications/services/api-gateway      -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
 helm lint deploy/k8s/applications/services/user-service     -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
+helm lint deploy/k8s/applications/services/config-service   -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
 helm lint deploy/k8s/applications/services/crawl4ai-service -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
 helm lint deploy/k8s/applications/web/frontend              -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
 helm lint deploy/k8s/edge/ingress                           -f deploy/k8s/applications/overlays/values.yaml -f deploy/k8s/applications/overlays/secrets.yaml --kubeconfig=/path/to/kubeconfig
@@ -292,7 +297,7 @@ StatefulSet 的 PVC 默认保留。删除 `data-postgres-0`、`data-ollama-0` �
 ## 注意事项
 
 - **边界**：`base/charts/` 只放基础服务 Chart，`applications/` 只放业务应用 Chart；`edge/ingress` 是集群内资源（Helm 管理，随 `app` 范围部署），`edge/nginx` 是服务器上的 Nginx 配置（手工部署，不参与 Helm）。
-- **对外可达范围**：只有 `web` 与 `api-gateway` 经 Traefik Ingress 暴露；`user-service` 仅集群内可达，`frontend` 不做任何反向代理（`/api` 由 Ingress 交给网关）。
+- **对外可达范围**：只有 `web` 与 `api-gateway` 经 Traefik Ingress 暴露；`user-service`、`config-service` 仅集群内可达，`frontend` 不做任何反向代理（`/api` 由 Ingress 交给网关）。`config-service`（gRPC :5004）只由 `api-gateway` 调用，模型渠道与用户的 `api_key` 明文不跨出该服务。
 - **域名与 Cookie**：`GATEWAY_COOKIE_SECURE=true` 依赖边缘入口的 HTTPS；临时直连 NodePort（HTTP）调试时浏览器不会回传 Cookie，需要临时改回 `false`。
 - **数据库/Redis 暴露方式**：Chart 默认都是 ClusterIP（`postgres:5432`、`redis:6379`）；`base/overlays/values.yaml` 把 PostgreSQL 改成了 NodePort（Service 端口 `15432` → 节点端口 `30432`），方便本地调试。Service 类型与端口在 `base/overlays/values.yaml` 或各 Chart 的 `values.yaml` 中调整，生产环境建议保持集群内可达；集群内始终用 `postgres:15432`、`redis:6379` 访问。
   - 临时改用 LoadBalancer 暴露 15432：`helm upgrade --install postgres ... --set postgres.service.type=LoadBalancer --set postgres.service.port=15432 --set postgres.service.nodePort=`

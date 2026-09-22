@@ -1,0 +1,13 @@
+config-service 已成功部署到 namespace {{ .Values.namespace }}。
+
+Service:
+  config-service:5004
+
+查看状态：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> get pods,svc,deploy -n {{ .Values.namespace }}
+
+查看日志：
+  kubectl --kubeconfig=<你的 kubeconfig 路径> logs -n {{ .Values.namespace }} deployment/config-service --tail=100
+
+config-service 集群内地址（供 api-gateway 的 GATEWAY_MODEL_SERVICE_URL 使用）：
+  config-service:5004

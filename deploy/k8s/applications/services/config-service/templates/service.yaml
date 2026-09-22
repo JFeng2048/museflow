@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: config-service
+  namespace: {{ .Values.namespace }}
+spec:
+  selector: { app: config-service }
+  ports:
+    - name: grpc
+      port: 5004
+      targetPort: 5004
+  type: ClusterIP

@@ -9,6 +9,8 @@ apiGateway:
   config:
     GATEWAY_PORT: "5001"
     GATEWAY_USER_SERVICE_URL: user-service:5002
+    # 模型目录 / 渠道凭证 / 系统配置由 config-service 提供（gRPC，集群内 Service 名）。
+    GATEWAY_MODEL_SERVICE_URL: config-service:5004
     # GATEWAY_ALLOW_ORIGINS 由 domain 派生（<scheme>://<host>），不要在这里配置；
     # 需要额外来源时用同级 extraAllowOrigins。
     # 边缘 Nginx 终止 HTTPS，浏览器侧始终是 https，Cookie 必须带 Secure。
@@ -47,6 +49,15 @@ userService:
     MFA_SKEW: "1"
     MFA_RECOVERY_CODE_COUNT: "8"
     MFA_RECOVERY_CODE_LENGTH: "10"
+    # 日志只输出到 stdout，由 k8s 收集，不落盘
+    LOG_LEVEL: info
+    LOG_FORMAT: json
+    LOG_CONSOLE: "true"
+
+configService:
+  replicaCount: 1
+  config:
+    CONFIG_PORT: "5004"
     # 日志只输出到 stdout，由 k8s 收集，不落盘
     LOG_LEVEL: info
     LOG_FORMAT: json
