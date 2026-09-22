@@ -444,6 +444,619 @@ definitions:
         example: 8f2c1e5a-3b7d-4a1e-9c0f-2d6b8a4e1f30
         type: string
     type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.AvailableModel:
+    properties:
+      api_model:
+        example: gpt-4o
+        type: string
+      capabilities:
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.Capabilities'
+      context_window:
+        example: 128000
+        type: integer
+      credit_cost:
+        example: 5
+        type: integer
+      description:
+        type: string
+      max_output_tokens:
+        example: 4096
+        type: integer
+      model_id:
+        example: 1
+        type: integer
+      model_type:
+        example: chat
+        type: string
+      name:
+        example: GPT-4o
+        type: string
+      provider_id:
+        example: 1
+        type: integer
+      source:
+        example: platform
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.AvailableModelList:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.AvailableModel'
+        type: array
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.Capabilities:
+    properties:
+      json_mode:
+        example: true
+        type: boolean
+      stream:
+        example: true
+        type: boolean
+      tool_call:
+        example: false
+        type: boolean
+      vision:
+        example: false
+        type: boolean
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.CapabilitiesRequest:
+    properties:
+      json_mode:
+        example: true
+        type: boolean
+      stream:
+        example: true
+        type: boolean
+      tool_call:
+        example: false
+        type: boolean
+      vision:
+        example: false
+        type: boolean
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.CreateModelRequest:
+    properties:
+      api_model:
+        example: gpt-4o
+        maxLength: 100
+        type: string
+      capabilities:
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CapabilitiesRequest'
+      code:
+        example: gpt-4o
+        maxLength: 50
+        type: string
+      context_window:
+        example: 128000
+        type: integer
+      credit_cost:
+        example: 5
+        type: integer
+      description:
+        example: 长文续写与润色
+        maxLength: 2000
+        type: string
+      max_output_tokens:
+        example: 4096
+        type: integer
+      model_type:
+        example: chat
+        maxLength: 50
+        type: string
+      name:
+        example: GPT-4o
+        maxLength: 100
+        type: string
+      provider_id:
+        example: 1
+        minimum: 1
+        type: integer
+      sort_order:
+        example: 0
+        type: integer
+    required:
+    - api_model
+    - code
+    - model_type
+    - name
+    - provider_id
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.CreateProviderRequest:
+    properties:
+      api_key:
+        example: sk-proj-xxx
+        maxLength: 4096
+        type: string
+      base_url:
+        example: https://api.openai.com/v1
+        maxLength: 500
+        type: string
+      code:
+        example: openai
+        maxLength: 50
+        type: string
+      extra:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        example: OpenAI 官方
+        maxLength: 100
+        type: string
+      organization:
+        example: org-xxx
+        maxLength: 255
+        type: string
+      protocol:
+        example: openai
+        maxLength: 50
+        type: string
+      sort_order:
+        example: 0
+        type: integer
+    required:
+    - base_url
+    - code
+    - name
+    - protocol
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult:
+    properties:
+      success:
+        example: true
+        type: boolean
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo:
+    properties:
+      api_model:
+        example: gpt-4o
+        type: string
+      capabilities:
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.Capabilities'
+      code:
+        example: gpt-4o
+        type: string
+      context_window:
+        example: 128000
+        type: integer
+      created_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      credit_cost:
+        example: 5
+        type: integer
+      description:
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      max_output_tokens:
+        example: 4096
+        type: integer
+      model_type:
+        example: chat
+        type: string
+      name:
+        example: GPT-4o
+        type: string
+      provider_id:
+        example: 1
+        type: integer
+      sort_order:
+        example: 0
+        type: integer
+      updated_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.ModelList:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 2
+        type: integer
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo:
+    properties:
+      api_key_hint:
+        example: c7Xk
+        type: string
+      api_key_updated_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      base_url:
+        example: https://api.openai.com/v1
+        type: string
+      code:
+        example: openai
+        type: string
+      created_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      extra:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: OpenAI 官方
+        type: string
+      organization:
+        example: org-xxx
+        type: string
+      protocol:
+        example: openai
+        type: string
+      sort_order:
+        example: 0
+        type: integer
+      updated_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.ProviderList:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.SetActiveRequest:
+    properties:
+      is_active:
+        example: true
+        type: boolean
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.SettingInfo:
+    properties:
+      config_group:
+        example: generation
+        type: string
+      created_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      description:
+        example: 生成任务默认积分单价
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_public:
+        example: true
+        type: boolean
+      is_secret:
+        example: false
+        type: boolean
+      key:
+        example: credit_price
+        type: string
+      secret_value:
+        example: sk-proj-xxx
+        type: string
+      updated_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      value:
+        example: "100"
+        type: string
+      value_type:
+        example: number
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.SettingList:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingInfo'
+        type: array
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UpdateModelRequest:
+    properties:
+      api_model:
+        example: gpt-4o
+        maxLength: 100
+        type: string
+      capabilities:
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CapabilitiesRequest'
+      context_window:
+        example: 128000
+        type: integer
+      credit_cost:
+        example: 5
+        type: integer
+      description:
+        example: 长文续写与润色
+        maxLength: 2000
+        type: string
+      max_output_tokens:
+        example: 4096
+        type: integer
+      model_type:
+        example: chat
+        maxLength: 50
+        type: string
+      name:
+        example: GPT-4o
+        maxLength: 100
+        type: string
+      sort_order:
+        example: 0
+        type: integer
+    required:
+    - api_model
+    - model_type
+    - name
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UpdateProviderRequest:
+    properties:
+      api_key:
+        example: sk-proj-xxx
+        maxLength: 4096
+        type: string
+      base_url:
+        example: https://api.openai.com/v1
+        maxLength: 500
+        type: string
+      extra:
+        additionalProperties:
+          type: string
+        type: object
+      name:
+        example: OpenAI 官方
+        maxLength: 100
+        type: string
+      organization:
+        example: org-xxx
+        maxLength: 255
+        type: string
+      protocol:
+        example: openai
+        maxLength: 50
+        type: string
+      sort_order:
+        example: 0
+        type: integer
+    required:
+    - base_url
+    - name
+    - protocol
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UpsertSettingRequest:
+    properties:
+      description:
+        example: 生成任务默认积分单价
+        maxLength: 2000
+        type: string
+      is_public:
+        example: true
+        type: boolean
+      is_secret:
+        example: false
+        type: boolean
+      secret_value:
+        example: sk-proj-xxx
+        maxLength: 4096
+        type: string
+      value:
+        example: "100"
+        maxLength: 2000
+        type: string
+      value_type:
+        example: number
+        maxLength: 50
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UserModelInfo:
+    properties:
+      api_model:
+        example: gpt-4o
+        type: string
+      capabilities:
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.Capabilities'
+      context_window:
+        example: 128000
+        type: integer
+      created_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      description:
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      max_output_tokens:
+        example: 4096
+        type: integer
+      model_type:
+        example: chat
+        type: string
+      name:
+        example: GPT-4o
+        type: string
+      updated_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      user_provider_id:
+        example: 1
+        type: integer
+      user_uuid:
+        example: 3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UserModelList:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelInfo'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UserModelRequest:
+    properties:
+      api_model:
+        example: gpt-4o
+        maxLength: 100
+        type: string
+      capabilities:
+        $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CapabilitiesRequest'
+      context_window:
+        example: 128000
+        type: integer
+      description:
+        maxLength: 2000
+        type: string
+      is_active:
+        description: IsActive 可空，理由同 UserProviderRequest.IsActive。
+        type: boolean
+      max_output_tokens:
+        example: 4096
+        type: integer
+      model_type:
+        example: chat
+        maxLength: 50
+        type: string
+      name:
+        example: GPT-4o
+        maxLength: 100
+        type: string
+      provider_id:
+        example: 1
+        minimum: 1
+        type: integer
+    required:
+    - api_model
+    - model_type
+    - name
+    - provider_id
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderInfo:
+    properties:
+      api_key_hint:
+        example: c7Xk
+        type: string
+      api_key_updated_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      base_url:
+        example: https://api.openai.com/v1
+        type: string
+      created_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      extra:
+        additionalProperties:
+          type: string
+        type: object
+      id:
+        example: 1
+        type: integer
+      is_active:
+        example: true
+        type: boolean
+      name:
+        example: 我的 OpenAI
+        type: string
+      organization:
+        type: string
+      protocol:
+        example: openai
+        type: string
+      updated_at:
+        example: "2026-09-22T08:00:00Z"
+        type: string
+      user_uuid:
+        example: 3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b
+        type: string
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderList:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderInfo'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 1
+        type: integer
+    type: object
+  github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderRequest:
+    properties:
+      api_key:
+        example: sk-proj-xxx
+        maxLength: 4096
+        type: string
+      base_url:
+        example: https://api.openai.com/v1
+        maxLength: 500
+        type: string
+      extra:
+        additionalProperties:
+          type: string
+        type: object
+      is_active:
+        description: |-
+          IsActive 可空：只在显式传入时改动启用状态。
+          缺失时 proto3 的默认值 false 会被误读成「停用」，因此这里用指针区分。
+        type: boolean
+      name:
+        example: 我的 OpenAI
+        maxLength: 100
+        type: string
+      organization:
+        maxLength: 255
+        type: string
+      protocol:
+        example: openai
+        maxLength: 50
+        type: string
+    required:
+    - base_url
+    - name
+    - protocol
+    type: object
   github_com_museflow_api-gateway_internal_dto_user_dto.ChangePasswordRequest:
     properties:
       new_password:
@@ -639,6 +1252,466 @@ paths:
       summary: 审计日志列表
       tags:
       - admin-管理后台
+  /admin/model-providers:
+    get:
+      description: 分页查询平台模型渠道，支持关键字（编码 / 名称）与状态筛选
+      parameters:
+      - description: 页码，默认 1
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数，默认 20，最大 100
+        in: query
+        name: page_size
+        type: integer
+      - description: 按编码或名称模糊搜索
+        in: query
+        name: keyword
+        type: string
+      - description: 是否只返回启用中的渠道
+        in: query
+        name: only_active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderList'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 平台渠道列表
+      tags:
+      - model-模型与系统配置
+    post:
+      consumes:
+      - application/json
+      description: 新增平台模型渠道，api_key 加密落库后只回显末 4 位
+      parameters:
+      - description: 渠道信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CreateProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "409":
+          description: 渠道编码已存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 新增平台渠道
+      tags:
+      - model-模型与系统配置
+  /admin/model-providers/{id}:
+    delete:
+      description: 删除平台渠道；渠道下仍有模型时返回 400（需先清理模型）
+      parameters:
+      - description: 渠道 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 渠道不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除平台渠道
+      tags:
+      - model-模型与系统配置
+    put:
+      consumes:
+      - application/json
+      description: 编辑平台渠道；api_key 留空表示不轮换密钥，渠道编码不可修改
+      parameters:
+      - description: 渠道 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 渠道信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UpdateProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 渠道不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 编辑平台渠道
+      tags:
+      - model-模型与系统配置
+  /admin/model-providers/{id}/active:
+    put:
+      consumes:
+      - application/json
+      description: 停用后该渠道下的模型对用户端全部不可见
+      parameters:
+      - description: 渠道 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 目标状态
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SetActiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 操作成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 渠道不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 启用 / 停用平台渠道
+      tags:
+      - model-模型与系统配置
+  /admin/models:
+    get:
+      description: 分页查询平台模型，支持按渠道、类型、关键字筛选
+      parameters:
+      - description: 页码，默认 1
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数，默认 20，最大 100
+        in: query
+        name: page_size
+        type: integer
+      - description: 按渠道过滤，0 表示不限
+        in: query
+        name: provider_id
+        type: integer
+      - description: 按类型过滤：chat/embedding/rerank/vision/image/audio/video
+        in: query
+        name: model_type
+        type: string
+      - description: 按编码、名称或调用标识模糊搜索
+        in: query
+        name: keyword
+        type: string
+      - description: 是否只返回上架中的模型
+        in: query
+        name: only_active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelList'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 平台模型列表
+      tags:
+      - model-模型与系统配置
+    post:
+      consumes:
+      - application/json
+      description: 在指定平台渠道下新增模型
+      parameters:
+      - description: 模型信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CreateModelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 创建成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "409":
+          description: 模型编码已存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 新增平台模型
+      tags:
+      - model-模型与系统配置
+  /admin/models/{id}:
+    delete:
+      description: 删除平台模型，用户端立即可见性随之消失
+      parameters:
+      - description: 模型 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 模型不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除平台模型
+      tags:
+      - model-模型与系统配置
+    put:
+      consumes:
+      - application/json
+      description: 编辑平台模型；模型编码与所属渠道均不可修改
+      parameters:
+      - description: 模型 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 模型信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UpdateModelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 模型不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 编辑平台模型
+      tags:
+      - model-模型与系统配置
+  /admin/models/{id}/active:
+    put:
+      consumes:
+      - application/json
+      description: 只影响该模型在用户端的可见性，同渠道其他模型不受影响
+      parameters:
+      - description: 模型 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 目标状态
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SetActiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 操作成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 模型不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 上架 / 下架平台模型
+      tags:
+      - model-模型与系统配置
   /admin/permissions:
     get:
       parameters:
@@ -827,6 +1900,178 @@ paths:
       summary: 为角色分配权限
       tags:
       - admin-管理后台
+  /admin/settings:
+    get:
+      description: 按分组列出系统配置；机密配置只返回是否已配置，绝不返回明文
+      parameters:
+      - description: 按分组过滤，空表示全部分组
+        in: query
+        name: config_group
+        type: string
+      - description: 是否只返回可下发前端的配置
+        in: query
+        name: only_public
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingList'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 系统配置列表
+      tags:
+      - model-模型与系统配置
+  /admin/settings/{config_group}/{key}:
+    delete:
+      description: 按分组与键名删除配置
+      parameters:
+      - description: 配置分组
+        in: path
+        name: config_group
+        required: true
+        type: string
+      - description: 配置键名
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 配置不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除系统配置
+      tags:
+      - model-模型与系统配置
+    get:
+      description: 按分组与键名读取单条配置；机密配置的 value 为空，只带类型与描述
+      parameters:
+      - description: 配置分组
+        in: path
+        name: config_group
+        required: true
+        type: string
+      - description: 配置键名
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingInfo'
+              type: object
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 配置不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 系统配置详情
+      tags:
+      - model-模型与系统配置
+    put:
+      consumes:
+      - application/json
+      description: 按 (config_group, key) 存在则更新、不存在则创建；机密值只在本次响应回显一次
+      parameters:
+      - description: 配置分组
+        in: path
+        name: config_group
+        required: true
+        type: string
+      - description: 配置键名
+        in: path
+        name: key
+        required: true
+        type: string
+      - description: 配置内容
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UpsertSettingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 保存成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未认证
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "403":
+          description: 无权限
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 新增 / 更新系统配置
+      tags:
+      - model-模型与系统配置
   /admin/users:
     get:
       description: 分页查询用户，支持关键字（邮箱 / 昵称）与状态筛选、排序
@@ -1480,6 +2725,343 @@ paths:
       summary: 修改邮箱
       tags:
       - user-用户
+  /user/model-providers:
+    get:
+      description: 列出当前用户添加的大模型渠道（自带 base_url 与 api_key），api_key 只回显末 4 位
+      parameters:
+      - description: 页码，默认 1
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数，默认 20，最大 100
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderList'
+              type: object
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 我的自定义渠道列表
+      tags:
+      - model-模型与系统配置
+    post:
+      consumes:
+      - application/json
+      description: 添加用户自有的大模型渠道；api_key 加密落库后只回显末 4 位
+      parameters:
+      - description: 渠道信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 添加自定义渠道
+      tags:
+      - model-模型与系统配置
+  /user/model-providers/{id}:
+    delete:
+      description: 删除我的自定义渠道；渠道下仍有模型时返回 400（需先清理模型）
+      parameters:
+      - description: 渠道 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult'
+              type: object
+        "400":
+          description: 渠道下仍有模型
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 渠道不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除自定义渠道
+      tags:
+      - model-模型与系统配置
+    put:
+      consumes:
+      - application/json
+      description: 编辑我的自定义渠道；api_key 留空表示不轮换密钥
+      parameters:
+      - description: 渠道 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 渠道信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 渠道不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 编辑自定义渠道
+      tags:
+      - model-模型与系统配置
+  /user/models:
+    get:
+      description: 列出当前用户在自定义渠道下登记的模型
+      parameters:
+      - description: 页码，默认 1
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数，默认 20，最大 100
+        in: query
+        name: page_size
+        type: integer
+      - description: 按自定义渠道过滤，0 表示不限
+        in: query
+        name: user_provider_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelList'
+              type: object
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 我的自定义模型列表
+      tags:
+      - model-模型与系统配置
+    post:
+      consumes:
+      - application/json
+      description: 在我的某个自定义渠道下登记一个模型；不计平台积分
+      parameters:
+      - description: 模型信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 添加成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 渠道不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 添加自定义模型
+      tags:
+      - model-模型与系统配置
+  /user/models/{id}:
+    delete:
+      description: 删除我的自定义模型
+      parameters:
+      - description: 模型 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 删除成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult'
+              type: object
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 模型不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 删除自定义模型
+      tags:
+      - model-模型与系统配置
+    put:
+      consumes:
+      - application/json
+      description: 编辑我的自定义模型；所属渠道不可修改
+      parameters:
+      - description: 模型 ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 模型信息
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 更新成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelInfo'
+              type: object
+        "400":
+          description: 参数错误
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+        "404":
+          description: 模型不存在
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 编辑自定义模型
+      tags:
+      - model-模型与系统配置
+  /user/models/available:
+    get:
+      description: 合并「平台已上架模型」与「我的自定义模型」，供前端模型选择器使用；不含 base_url 与任何密钥
+      parameters:
+      - description: 按类型过滤：chat/embedding/rerank/vision/image/audio/video
+        in: query
+        name: model_type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.AvailableModelList'
+              type: object
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 可用模型清单
+      tags:
+      - model-模型与系统配置
   /user/oauth:
     get:
       produces:
@@ -1700,6 +3282,30 @@ paths:
       summary: 强制下线指定会话
       tags:
       - user-用户
+  /user/settings:
+    get:
+      description: 列出标记为公开的系统配置（如积分单价、功能开关），机密配置不会出现在结果中
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查询成功
+          schema:
+            allOf:
+            - $ref: '#/definitions/errcode.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingList'
+              type: object
+        "401":
+          description: 未登录
+          schema:
+            $ref: '#/definitions/errcode.Response'
+      security:
+      - BearerAuth: []
+      summary: 公开系统配置
+      tags:
+      - model-模型与系统配置
 schemes:
 - http
 - https

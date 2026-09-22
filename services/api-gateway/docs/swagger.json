@@ -100,6 +100,766 @@
                 }
             }
         },
+        "/admin/model-providers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询平台模型渠道，支持关键字（编码 / 名称）与状态筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "平台渠道列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，默认 20，最大 100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "按编码或名称模糊搜索",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "是否只返回启用中的渠道",
+                        "name": "only_active",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "新增平台模型渠道，api_key 加密落库后只回显末 4 位",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "新增平台渠道",
+                "parameters": [
+                    {
+                        "description": "渠道信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CreateProviderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "渠道编码已存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/model-providers/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "编辑平台渠道；api_key 留空表示不轮换密钥，渠道编码不可修改",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "编辑平台渠道",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "渠道 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "渠道信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UpdateProviderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "渠道不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除平台渠道；渠道下仍有模型时返回 400（需先清理模型）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "删除平台渠道",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "渠道 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "渠道不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/model-providers/{id}/active": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "停用后该渠道下的模型对用户端全部不可见",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "启用 / 停用平台渠道",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "渠道 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "目标状态",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SetActiveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "操作成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "渠道不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/models": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "分页查询平台模型，支持按渠道、类型、关键字筛选",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "平台模型列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，默认 20，最大 100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "按渠道过滤，0 表示不限",
+                        "name": "provider_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "按类型过滤：chat/embedding/rerank/vision/image/audio/video",
+                        "name": "model_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "按编码、名称或调用标识模糊搜索",
+                        "name": "keyword",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "是否只返回上架中的模型",
+                        "name": "only_active",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "在指定平台渠道下新增模型",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "新增平台模型",
+                "parameters": [
+                    {
+                        "description": "模型信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CreateModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "创建成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "模型编码已存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/models/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "编辑平台模型；模型编码与所属渠道均不可修改",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "编辑平台模型",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模型 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "模型信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UpdateModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "模型不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除平台模型，用户端立即可见性随之消失",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "删除平台模型",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模型 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "模型不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/models/{id}/active": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "只影响该模型在用户端的可见性，同渠道其他模型不受影响",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "上架 / 下架平台模型",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模型 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "目标状态",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SetActiveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "操作成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "模型不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/permissions": {
             "get": {
                 "security": [
@@ -405,6 +1165,290 @@
                     },
                     "404": {
                         "description": "权限编码不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按分组列出系统配置；机密配置只返回是否已配置，绝不返回明文",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "系统配置列表",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "按分组过滤，空表示全部分组",
+                        "name": "config_group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "是否只返回可下发前端的配置",
+                        "name": "only_public",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/settings/{config_group}/{key}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按分组与键名读取单条配置；机密配置的 value 为空，只带类型与描述",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "系统配置详情",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置分组",
+                        "name": "config_group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "配置键名",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "配置不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按 (config_group, key) 存在则更新、不存在则创建；机密值只在本次响应回显一次",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "新增 / 更新系统配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置分组",
+                        "name": "config_group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "配置键名",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "配置内容",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UpsertSettingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "保存成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按分组与键名删除配置",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "删除系统配置",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "配置分组",
+                        "name": "config_group",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "配置键名",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "无权限",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "配置不存在",
                         "schema": {
                             "$ref": "#/definitions/errcode.Response"
                         }
@@ -1472,6 +2516,575 @@
                 }
             }
         },
+        "/user/model-providers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "列出当前用户添加的大模型渠道（自带 base_url 与 api_key），api_key 只回显末 4 位",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "我的自定义渠道列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，默认 20，最大 100",
+                        "name": "page_size",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "添加用户自有的大模型渠道；api_key 加密落库后只回显末 4 位",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "添加自定义渠道",
+                "parameters": [
+                    {
+                        "description": "渠道信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/model-providers/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "编辑我的自定义渠道；api_key 留空表示不轮换密钥",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "编辑自定义渠道",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "渠道 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "渠道信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "渠道不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除我的自定义渠道；渠道下仍有模型时返回 400（需先清理模型）",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "删除自定义渠道",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "渠道 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "渠道下仍有模型",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "渠道不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/models": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "列出当前用户在自定义渠道下登记的模型",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "我的自定义模型列表",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，默认 20，最大 100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "按自定义渠道过滤，0 表示不限",
+                        "name": "user_provider_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "在我的某个自定义渠道下登记一个模型；不计平台积分",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "添加自定义模型",
+                "parameters": [
+                    {
+                        "description": "模型信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "添加成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "渠道不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/models/available": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "合并「平台已上架模型」与「我的自定义模型」，供前端模型选择器使用；不含 base_url 与任何密钥",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "可用模型清单",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "按类型过滤：chat/embedding/rerank/vision/image/audio/video",
+                        "name": "model_type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.AvailableModelList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/models/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "编辑我的自定义模型；所属渠道不可修改",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "编辑自定义模型",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模型 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "模型信息",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "更新成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "参数错误",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "模型不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "删除我的自定义模型",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "删除自定义模型",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "模型 ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "删除成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "模型不存在",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/user/oauth": {
             "get": {
                 "security": [
@@ -1839,6 +3452,49 @@
                     },
                     "401": {
                         "description": "未认证",
+                        "schema": {
+                            "$ref": "#/definitions/errcode.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "列出标记为公开的系统配置（如积分单价、功能开关），机密配置不会出现在结果中",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "model-模型与系统配置"
+                ],
+                "summary": "公开系统配置",
+                "responses": {
+                    "200": {
+                        "description": "查询成功",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/errcode.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "未登录",
                         "schema": {
                             "$ref": "#/definitions/errcode.Response"
                         }
@@ -2462,6 +4118,840 @@
                     "description": "TaskID 异步任务 ID，用于订阅发送进度（GET /common/tasks/{task_id}/stream）。",
                     "type": "string",
                     "example": "8f2c1e5a-3b7d-4a1e-9c0f-2d6b8a4e1f30"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.AvailableModel": {
+            "type": "object",
+            "properties": {
+                "api_model": {
+                    "type": "string",
+                    "example": "gpt-4o"
+                },
+                "capabilities": {
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.Capabilities"
+                },
+                "context_window": {
+                    "type": "integer",
+                    "example": 128000
+                },
+                "credit_cost": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "description": {
+                    "type": "string"
+                },
+                "max_output_tokens": {
+                    "type": "integer",
+                    "example": 4096
+                },
+                "model_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "model_type": {
+                    "type": "string",
+                    "example": "chat"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "GPT-4o"
+                },
+                "provider_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "source": {
+                    "type": "string",
+                    "example": "platform"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.AvailableModelList": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.AvailableModel"
+                    }
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.Capabilities": {
+            "type": "object",
+            "properties": {
+                "json_mode": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "stream": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "tool_call": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "vision": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.CapabilitiesRequest": {
+            "type": "object",
+            "properties": {
+                "json_mode": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "stream": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "tool_call": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "vision": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.CreateModelRequest": {
+            "type": "object",
+            "required": [
+                "api_model",
+                "code",
+                "model_type",
+                "name",
+                "provider_id"
+            ],
+            "properties": {
+                "api_model": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "gpt-4o"
+                },
+                "capabilities": {
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CapabilitiesRequest"
+                },
+                "code": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "gpt-4o"
+                },
+                "context_window": {
+                    "type": "integer",
+                    "example": 128000
+                },
+                "credit_cost": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "example": "长文续写与润色"
+                },
+                "max_output_tokens": {
+                    "type": "integer",
+                    "example": 4096
+                },
+                "model_type": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "chat"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "GPT-4o"
+                },
+                "provider_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.CreateProviderRequest": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "code",
+                "name",
+                "protocol"
+            ],
+            "properties": {
+                "api_key": {
+                    "type": "string",
+                    "maxLength": 4096,
+                    "example": "sk-proj-xxx"
+                },
+                "base_url": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "https://api.openai.com/v1"
+                },
+                "code": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "openai"
+                },
+                "extra": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "OpenAI 官方"
+                },
+                "organization": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "org-xxx"
+                },
+                "protocol": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "openai"
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.DeleteResult": {
+            "type": "object",
+            "properties": {
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo": {
+            "type": "object",
+            "properties": {
+                "api_model": {
+                    "type": "string",
+                    "example": "gpt-4o"
+                },
+                "capabilities": {
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.Capabilities"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "gpt-4o"
+                },
+                "context_window": {
+                    "type": "integer",
+                    "example": 128000
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "credit_cost": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "max_output_tokens": {
+                    "type": "integer",
+                    "example": 4096
+                },
+                "model_type": {
+                    "type": "string",
+                    "example": "chat"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "GPT-4o"
+                },
+                "provider_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.ModelList": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ModelInfo"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo": {
+            "type": "object",
+            "properties": {
+                "api_key_hint": {
+                    "type": "string",
+                    "example": "c7Xk"
+                },
+                "api_key_updated_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api.openai.com/v1"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "openai"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "extra": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "OpenAI 官方"
+                },
+                "organization": {
+                    "type": "string",
+                    "example": "org-xxx"
+                },
+                "protocol": {
+                    "type": "string",
+                    "example": "openai"
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.ProviderList": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.ProviderInfo"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.SetActiveRequest": {
+            "type": "object",
+            "properties": {
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.SettingInfo": {
+            "type": "object",
+            "properties": {
+                "config_group": {
+                    "type": "string",
+                    "example": "generation"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "生成任务默认积分单价"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_public": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "is_secret": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "key": {
+                    "type": "string",
+                    "example": "credit_price"
+                },
+                "secret_value": {
+                    "type": "string",
+                    "example": "sk-proj-xxx"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "value": {
+                    "type": "string",
+                    "example": "100"
+                },
+                "value_type": {
+                    "type": "string",
+                    "example": "number"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.SettingList": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.SettingInfo"
+                    }
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UpdateModelRequest": {
+            "type": "object",
+            "required": [
+                "api_model",
+                "model_type",
+                "name"
+            ],
+            "properties": {
+                "api_model": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "gpt-4o"
+                },
+                "capabilities": {
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CapabilitiesRequest"
+                },
+                "context_window": {
+                    "type": "integer",
+                    "example": 128000
+                },
+                "credit_cost": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "example": "长文续写与润色"
+                },
+                "max_output_tokens": {
+                    "type": "integer",
+                    "example": 4096
+                },
+                "model_type": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "chat"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "GPT-4o"
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UpdateProviderRequest": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "name",
+                "protocol"
+            ],
+            "properties": {
+                "api_key": {
+                    "type": "string",
+                    "maxLength": 4096,
+                    "example": "sk-proj-xxx"
+                },
+                "base_url": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "https://api.openai.com/v1"
+                },
+                "extra": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "OpenAI 官方"
+                },
+                "organization": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "org-xxx"
+                },
+                "protocol": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "openai"
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UpsertSettingRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "example": "生成任务默认积分单价"
+                },
+                "is_public": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "is_secret": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "secret_value": {
+                    "type": "string",
+                    "maxLength": 4096,
+                    "example": "sk-proj-xxx"
+                },
+                "value": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "example": "100"
+                },
+                "value_type": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "number"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UserModelInfo": {
+            "type": "object",
+            "properties": {
+                "api_model": {
+                    "type": "string",
+                    "example": "gpt-4o"
+                },
+                "capabilities": {
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.Capabilities"
+                },
+                "context_window": {
+                    "type": "integer",
+                    "example": 128000
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "max_output_tokens": {
+                    "type": "integer",
+                    "example": 4096
+                },
+                "model_type": {
+                    "type": "string",
+                    "example": "chat"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "GPT-4o"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "user_provider_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "user_uuid": {
+                    "type": "string",
+                    "example": "3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UserModelList": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserModelInfo"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UserModelRequest": {
+            "type": "object",
+            "required": [
+                "api_model",
+                "model_type",
+                "name",
+                "provider_id"
+            ],
+            "properties": {
+                "api_model": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "gpt-4o"
+                },
+                "capabilities": {
+                    "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.CapabilitiesRequest"
+                },
+                "context_window": {
+                    "type": "integer",
+                    "example": 128000
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 2000
+                },
+                "is_active": {
+                    "description": "IsActive 可空，理由同 UserProviderRequest.IsActive。",
+                    "type": "boolean"
+                },
+                "max_output_tokens": {
+                    "type": "integer",
+                    "example": 4096
+                },
+                "model_type": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "chat"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "GPT-4o"
+                },
+                "provider_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderInfo": {
+            "type": "object",
+            "properties": {
+                "api_key_hint": {
+                    "type": "string",
+                    "example": "c7Xk"
+                },
+                "api_key_updated_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api.openai.com/v1"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "extra": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "example": "我的 OpenAI"
+                },
+                "organization": {
+                    "type": "string"
+                },
+                "protocol": {
+                    "type": "string",
+                    "example": "openai"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-09-22T08:00:00Z"
+                },
+                "user_uuid": {
+                    "type": "string",
+                    "example": "3f7c1e2a-5b6d-4e8f-9a0b-1c2d3e4f5a6b"
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderList": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderInfo"
+                    }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "page_size": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "github_com_museflow_api-gateway_internal_dto_model_dto.UserProviderRequest": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "name",
+                "protocol"
+            ],
+            "properties": {
+                "api_key": {
+                    "type": "string",
+                    "maxLength": 4096,
+                    "example": "sk-proj-xxx"
+                },
+                "base_url": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "https://api.openai.com/v1"
+                },
+                "extra": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "is_active": {
+                    "description": "IsActive 可空：只在显式传入时改动启用状态。\n缺失时 proto3 的默认值 false 会被误读成「停用」，因此这里用指针区分。",
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "我的 OpenAI"
+                },
+                "organization": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "protocol": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "openai"
                 }
             }
         },
