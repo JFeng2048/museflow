@@ -70,7 +70,10 @@ func (s *Service) CreateModel(ctx context.Context, input ModelInput) (*model.Mod
 		return nil, err
 	}
 
-	code, err := validateText("code", input.Code, maxAPIModelLen, true)
+	// code 用 maxCodeLen 而不是 maxAPIModelLen：model.code 是 varchar(50)，
+	// 用错上限会让 51~100 字符的编码通过校验、到 Postgres 才报 22001，
+	// 上层只能看到一个 500，而用户想改的只是一个字段。
+	code, err := validateText("code", input.Code, maxCodeLen, true)
 	if err != nil {
 		return nil, err
 	}
