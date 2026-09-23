@@ -28,18 +28,6 @@ export default {
   },
   credits: '我的积分',
   usage: '使用统计',
-  publish: {
-    title: '发布平台',
-    channels: '小说平台',
-    connected: '已连接',
-    disconnected: '未连接',
-    penName: '笔名',
-    account: '登录账号',
-    accountPlaceholder: '用于登录平台后台的手机号 / 邮箱',
-    penNamePlaceholder: '在平台发表时使用的作者名',
-    edit: '配置 {n}',
-    tip: '启用后，作品可在对应平台一键同步发布。',
-  },
   account: {
     title: '账号绑定',
     github: 'GitHub',

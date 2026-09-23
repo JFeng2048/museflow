@@ -28,18 +28,6 @@ export default {
   },
   credits: 'Credits',
   usage: 'Usage',
-  publish: {
-    title: 'Publishing',
-    channels: 'Novel platforms',
-    connected: 'Connected',
-    disconnected: 'Not connected',
-    penName: 'Pen name',
-    account: 'Login account',
-    accountPlaceholder: 'Phone / email used to log into the platform',
-    penNamePlaceholder: 'Author name shown on the platform',
-    edit: 'Configure {n}',
-    tip: 'Once enabled, your work can be synced to the platform with one click.',
-  },
   account: {
     title: 'Account binding',
     github: 'GitHub',

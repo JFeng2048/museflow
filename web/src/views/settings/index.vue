@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, reactive, onMounted } from 'vue'
+import { computed, ref, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import {
@@ -9,7 +9,6 @@ import {
   NTabs,
   NTabPane,
   NButton,
-  NSwitch,
   NInput,
   NModal,
   NForm,
@@ -29,8 +28,6 @@ import { useUserStore } from '@/stores/system/user'
 import { useNovelStore } from '@/stores/novel'
 import { useCreditStore } from '@/stores/credit'
 import { bindProvider, unbindProvider } from '@/api/system/auth'
-import { channels as demoChannels } from '@/mock/publish'
-import type { PublishChannel } from '@/types/publish'
 import ModelSettings from '@/views/settings/ModelSettings.vue'
 import DemoNotice from '@/components/common/DemoNotice.vue'
 import { useI18n } from 'vue-i18n'
@@ -129,37 +126,6 @@ function confirmPay() {
 function doTask(taskId: string) {
   creditStore.completeTask(taskId)
   message.success(t('credits.taskDone'))
-}
-
-// ——— 小说平台配置 ———
-const channels = ref<PublishChannel[]>([])
-const showChannel = ref(false)
-const editingChannel = ref<PublishChannel | null>(null)
-const channelForm = reactive<Partial<PublishChannel>>({
-  account: '',
-  penName: '',
-})
-onMounted(async () => {
-  channels.value = demoChannels.map((c) => ({ ...c }))
-})
-function openChannel(c: PublishChannel) {
-  editingChannel.value = c
-  Object.assign(channelForm, { account: c.account || '', penName: c.penName || '' })
-  showChannel.value = true
-}
-function saveChannel() {
-  const c = editingChannel.value
-  if (!c) return
-  const idx = channels.value.findIndex((x) => x.id === c.id)
-  if (idx >= 0) {
-    channels.value[idx] = { ...c, account: channelForm.account, penName: channelForm.penName }
-  }
-  message.success(t('settings.saved'))
-  showChannel.value = false
-}
-function toggleChannel(c: PublishChannel, enabled: boolean) {
-  c.enabled = enabled
-  c.status = enabled ? 'connected' : 'disconnected'
 }
 
 // ——— 第三方账号绑定（GitHub / 微信）———
@@ -339,33 +305,6 @@ function unbind(provider: 'github' | 'wechat') {
         </n-grid>
       </n-tab-pane>
 
-      <!-- 小说平台配置 -->
-      <n-tab-pane name="publish" :tab="t('settings.publish.title')">
-        <DemoNotice />
-        <n-card :bordered="false" class="settings-card">
-          <div class="settings-block-head">
-            <h3>{{ t('settings.publish.channels') }}</h3>
-          </div>
-          <n-empty v-if="!channels.length" :description="t('common.empty')" />
-          <div class="settings-list">
-            <div v-for="c in channels" :key="c.id" class="settings-row">
-              <div class="settings-row-main">
-                <span class="settings-row-title">{{ c.name }}</span>
-                <n-tag size="small" :bordered="false" :type="c.status === 'connected' ? 'success' : 'default'">
-                  {{ c.status === 'connected' ? t('settings.publish.connected') : t('settings.publish.disconnected') }}
-                </n-tag>
-                <span class="settings-row-sub">{{ c.desc }}</span>
-                <span v-if="c.penName" class="settings-row-sub">{{ t('settings.publish.penName') }}：{{ c.penName }}</span>
-              </div>
-              <n-space>
-                <n-switch :value="c.enabled" @update:value="(v: boolean) => toggleChannel(c, v)" />
-                <n-button size="small" quaternary @click="openChannel(c)">{{ t('common.edit') }}</n-button>
-              </n-space>
-            </div>
-          </div>
-        </n-card>
-      </n-tab-pane>
-
       <!-- 账号绑定 -->
       <n-tab-pane name="account" :tab="t('settings.account.title')">
         <n-grid :cols="2" :x-gap="16" responsive="screen" item-responsive>
@@ -504,22 +443,6 @@ function unbind(provider: 'github' | 'wechat') {
           <n-button type="primary" :loading="paying" @click="confirmPay">
             {{ paying ? t('credits.payPending') : t('credits.payConfirm') }}
           </n-button>
-        </n-space>
-      </template>
-    </n-modal>
-    <n-modal v-model:show="showChannel" preset="card" :title="editingChannel ? t('settings.publish.edit', { n: editingChannel.name }) : ''" style="width: 520px; max-width: 92vw" :bordered="false">
-      <n-form :model="channelForm" label-placement="top">
-        <n-form-item :label="t('settings.publish.account')">
-          <n-input v-model:value="channelForm.account" :placeholder="t('settings.publish.accountPlaceholder')" />
-        </n-form-item>
-        <n-form-item :label="t('settings.publish.penName')">
-          <n-input v-model:value="channelForm.penName" :placeholder="t('settings.publish.penNamePlaceholder')" />
-        </n-form-item>
-      </n-form>
-      <template #footer>
-        <n-space justify="end">
-          <n-button quaternary @click="showChannel = false">{{ t('common.cancel') }}</n-button>
-          <n-button type="primary" @click="saveChannel">{{ t('common.save') }}</n-button>
         </n-space>
       </template>
     </n-modal>
