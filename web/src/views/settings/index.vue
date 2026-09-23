@@ -28,9 +28,9 @@ import ChangePassword from '@/views/settings/ChangePassword.vue'
 import { useUserStore } from '@/stores/system/user'
 import { useNovelStore } from '@/stores/novel'
 import { useCreditStore } from '@/stores/credit'
-import { fetchChannels } from '@/api/publish'
 import { bindProvider, unbindProvider } from '@/api/system/auth'
-import type { PublishChannel } from '@/api/publish'
+import { channels as demoChannels } from '@/mock/publish'
+import type { PublishChannel } from '@/types/publish'
 import ModelSettings from '@/views/settings/ModelSettings.vue'
 import { useI18n } from 'vue-i18n'
 
@@ -139,7 +139,7 @@ const channelForm = reactive<Partial<PublishChannel>>({
   penName: '',
 })
 onMounted(async () => {
-  channels.value = await fetchChannels()
+  channels.value = demoChannels.map((c) => ({ ...c }))
 })
 function openChannel(c: PublishChannel) {
   editingChannel.value = c

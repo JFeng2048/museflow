@@ -14,7 +14,7 @@ import {
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { SearchOutline, DownloadOutline } from '@vicons/ionicons5'
-import { fetchMaterials, importMaterial } from '@/api/material'
+import { materialStore } from '@/mock/materials'
 import type { Material, MaterialType } from '@/types'
 import { MATERIAL_TYPE_OPTIONS, MATERIAL_TYPE_LABEL_KEYS, MATERIAL_TYPE_COLORS } from './constants'
 
@@ -42,15 +42,14 @@ const filtered = computed(() => {
   })
 })
 
-onMounted(async () => {
-  materials.value = await fetchMaterials()
+onMounted(() => {
+  materials.value = materialStore
 })
 
 async function onImport(m: Material) {
-  const updated = await importMaterial(m.id)
-  const target = materials.value.find((x) => x.id === m.id)
-  if (target) target.imported = true
-  if (updated) message.success(t('material.importedToast', { title: m.title }))
+  if (m.imported) return
+  m.imported = true
+  message.success(t('material.importedToast', { title: m.title }))
 }
 </script>
 

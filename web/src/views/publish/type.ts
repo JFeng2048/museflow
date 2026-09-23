@@ -1,1 +1,1 @@
-export type { PublishChannel } from '@/api/publish'
+export type { PublishChannel } from '@/types/publish'

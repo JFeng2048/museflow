@@ -66,3 +66,9 @@ export const materials: Material[] = [
     createdAt: daysAgo(2),
   },
 ]
+
+/**
+ * 素材库的演示工作副本：模块级可变，供「导入」等本地动作修改，
+ * 刷新页面后回到初始数据（暂无后端，不做持久化）。
+ */
+export const materialStore: Material[] = materials.map((m) => ({ ...m }))

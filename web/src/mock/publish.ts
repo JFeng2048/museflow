@@ -1,7 +1,12 @@
-import request from '@/utils/request'
-import type { PublishChannel } from './type'
+import type { PublishChannel } from '@/types/publish'
 
-const mockChannels: PublishChannel[] = [
+/**
+ * 发布渠道演示数据。
+ *
+ * 后端尚无 publish-service，这些平台连接都是本地假数据；
+ * 页面必须显式标注「演示数据」，不要让用户误以为已经接好了发布通道。
+ */
+export const channels: PublishChannel[] = [
   {
     id: 'tomato',
     name: '番茄小说',
@@ -37,9 +42,3 @@ const mockChannels: PublishChannel[] = [
     desc: '女性向头部平台，适合言情 / 耽美。',
   },
 ]
-
-export function fetchChannels(): Promise<PublishChannel[]> {
-  return request.get<PublishChannel[]>('/publish/channels').catch(() => mockChannels)
-}
-
-export type { PublishChannel }

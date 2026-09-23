@@ -12,11 +12,11 @@ import {
 } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { SendOutline, CheckmarkDoneOutline, TimeOutline, PersonOutline } from '@vicons/ionicons5'
-import { fetchChannels } from '@/api/publish'
 import { useNovelStore } from '@/stores/novel'
 import { storeToRefs } from 'pinia'
 import { formatWords } from '@/utils/format'
-import type { PublishChannel } from '@/api/publish'
+import { channels as demoChannels } from '@/mock/publish'
+import type { PublishChannel } from '@/types/publish'
 
 const { t } = useI18n()
 const message = useMessage()
@@ -49,7 +49,7 @@ const history = ref([
 ])
 
 onMounted(async () => {
-  channels.value = await fetchChannels()
+  channels.value = demoChannels.map((c) => ({ ...c }))
   if (!allNovels.value.length) await novelStore.loadNovels()
   const ws = novels.value
   if (ws.length) selectedNovelId.value = ws[0].id
