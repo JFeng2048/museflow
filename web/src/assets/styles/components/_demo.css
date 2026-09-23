@@ -1,0 +1,41 @@
+/* ===================================================================
+   演示数据提示条（DemoNotice）
+   只服务一个目的：把「这页数据没有后端来源」说清楚。
+   样式刻意安静——细虚线、小字、一枚琥珀色图标，不抢页面主体的重量。
+   =================================================================== */
+
+.demo-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 12px;
+  border: 1px dashed var(--c-line);
+  border-radius: var(--radius-s);
+  background: var(--c-paper);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--c-ink-muted);
+}
+.demo-note-ico {
+  flex: none;
+  color: var(--c-amber-deep);
+}
+.demo-note-label {
+  flex: none;
+  font-weight: 600;
+  color: var(--c-ink-soft);
+}
+.demo-note-text {
+  min-width: 0;
+}
+
+/* 窄屏：标签与说明换行，文字不会被挤出容器 */
+@media (max-width: 640px) {
+  .demo-note {
+    flex-wrap: wrap;
+  }
+  .demo-note-ico {
+    display: none;
+  }
+}

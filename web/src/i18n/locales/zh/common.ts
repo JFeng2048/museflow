@@ -31,6 +31,11 @@ export default {
     saved: '已自动保存',
     online: '连接正常',
   },
+  demo: {
+    badge: '演示数据',
+    note: '本页内容来自本地示例，尚未接入后端服务，保存后不会同步到你的账号。',
+    drawerNote: '抽屉里的热梗与素材是本地示例，尚未接入内容服务。',
+  },
   // 业务代码用 t('common.cancel') 形式调用，单独再包一层。
   common: {
     save: '保存',

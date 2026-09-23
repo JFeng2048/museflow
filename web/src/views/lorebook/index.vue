@@ -19,6 +19,7 @@ import { storeToRefs } from 'pinia'
 import { useNovelStore } from '@/stores/novel'
 
 import UserAvatar from '@/components/common/UserAvatar.vue'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import { characters, worlds, foreshadows } from '@/mock'
 import type { Character, WorldSetting, Foreshadow, ForeshadowStatus } from '@/types'
 import { ROLE_META, FORESHADOW_META } from './constants'
@@ -66,6 +67,8 @@ onMounted(() => {
       </div>
       <n-select v-model:value="novelFilter" :options="novelOptions" class="w-[200px]" />
     </header>
+
+    <DemoNotice />
 
     <n-tabs type="line" animated>
       <n-tab-pane name="character" :tab="t('lore.tabCharacter')">

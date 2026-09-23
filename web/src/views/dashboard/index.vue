@@ -6,6 +6,7 @@ import { NIcon } from 'naive-ui'
 import { BookOutline, BulbOutline, FlashOutline } from '@vicons/ionicons5'
 import { useNovelStore } from '@/stores/novel'
 import { useUserStore } from '@/stores/system/user'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -51,6 +52,8 @@ const quickActions = [
         </button>
       </div>
     </header>
+
+    <DemoNotice />
 
     <div class="grid grid-cols-4 gap-4 my-6">
       <div class="dash-kpi">

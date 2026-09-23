@@ -6,11 +6,14 @@ import { FlameOutline, BulbOutline, RefreshOutline, CloseOutline, PulseOutline }
 
 import { materials } from '@/mock/materials'
 import { trendingTopics } from '@/mock/trending'
+import DemoNotice from '@/components/common/DemoNotice.vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits<{ 'update:show': [boolean] }>()
 
 const message = useMessage()
+const { t } = useI18n()
 
 const tab = ref<'hot' | 'mine' | 'gen'>('hot')
 
@@ -53,6 +56,7 @@ function writeIn(text: string) {
       </div>
 
       <div class="insp-body mf-scroll">
+        <DemoNotice :note="t('demo.drawerNote')" />
         <template v-if="tab === 'hot'">
           <p class="insp-sec flex items-center gap-1.5">
             <n-icon :component="FlameOutline" class="text-[14px] text-rose-500" /> 热搜榜 · 只取能写进故事的那一点

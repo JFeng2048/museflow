@@ -30,6 +30,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useTaskStore } from '@/stores/task'
 import { useNovelStore } from '@/stores/novel'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 
 import TaskStatusTag from './components/TaskStatusTag.vue'
 import { TASK_TYPE_OPTIONS, TASK_STATUS_FILTERS, TASK_STATUS_META } from './constants'
@@ -143,6 +144,8 @@ onMounted(() => {
         {{ t('task.newTask') }}
       </n-button>
     </header>
+
+    <DemoNotice />
 
     <!-- 概览统计 -->
     <div class="task-stats">

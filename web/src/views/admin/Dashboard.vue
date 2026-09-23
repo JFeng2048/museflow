@@ -11,6 +11,7 @@ import {
 } from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
 import { adminMetrics, adminServices } from '@/mock/admin'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import { formatWords } from '@/utils/format'
 
 const { t } = useI18n()
@@ -41,6 +42,8 @@ const serviceTag: Record<string, { type: 'success' | 'warning' | 'error'; key: s
         <p class="subtitle">{{ t('admin.dash.subtitle') }}</p>
       </div>
     </header>
+
+    <DemoNotice />
 
     <n-grid :cols="3" :x-gap="18" :y-gap="18" responsive="screen" item-responsive>
       <n-gi v-for="c in cards" :key="c.key" span="3 s:1">

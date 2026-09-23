@@ -15,6 +15,7 @@ import {
 import { useI18n } from 'vue-i18n'
 import { SearchOutline, DownloadOutline } from '@vicons/ionicons5'
 import { materialStore } from '@/mock/materials'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import type { Material, MaterialType } from '@/types'
 import { MATERIAL_TYPE_OPTIONS, MATERIAL_TYPE_LABEL_KEYS, MATERIAL_TYPE_COLORS } from './constants'
 
@@ -61,6 +62,8 @@ async function onImport(m: Material) {
         <p class="text-ink-muted mt-1 mb-0">{{ t('material.subtitle') }}</p>
       </div>
     </header>
+
+    <DemoNotice />
 
     <div class="flex items-center gap-3">
       <n-input

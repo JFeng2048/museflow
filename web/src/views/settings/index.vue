@@ -32,6 +32,7 @@ import { bindProvider, unbindProvider } from '@/api/system/auth'
 import { channels as demoChannels } from '@/mock/publish'
 import type { PublishChannel } from '@/types/publish'
 import ModelSettings from '@/views/settings/ModelSettings.vue'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -236,6 +237,7 @@ function unbind(provider: 'github' | 'wechat') {
 
       <!-- 我的积分 -->
       <n-tab-pane name="credits" :tab="t('settings.credits')">
+        <DemoNotice />
         <n-grid :cols="2" :x-gap="16" responsive="screen" item-responsive>
           <n-gi span="2 m:1">
             <n-card :bordered="false" class="settings-card settings-stat credit-stat activity">
@@ -339,6 +341,7 @@ function unbind(provider: 'github' | 'wechat') {
 
       <!-- 小说平台配置 -->
       <n-tab-pane name="publish" :tab="t('settings.publish.title')">
+        <DemoNotice />
         <n-card :bordered="false" class="settings-card">
           <div class="settings-block-head">
             <h3>{{ t('settings.publish.channels') }}</h3>

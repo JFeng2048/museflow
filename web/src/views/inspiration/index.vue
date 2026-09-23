@@ -6,6 +6,7 @@ import { NIcon } from 'naive-ui'
 import { FlameOutline, BulbOutline, RefreshOutline } from '@vicons/ionicons5'
 import { materials } from '@/mock/materials'
 import { trendingTopics } from '@/mock/trending'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import { INSPIRATION_GENERATORS } from './constants'
 
 const { t } = useI18n()
@@ -42,6 +43,8 @@ function writeIn(text: string) {
         <button :class="{ on: tab === 'gen' }" @click="tab = 'gen'">{{ t('inspiration.tabGen') }}</button>
       </div>
     </header>
+
+    <DemoNotice />
 
     <div v-if="tab === 'hot'" class="insp-grid">
       <article v-for="(m, i) in hot" :key="m.id" class="insp-card">

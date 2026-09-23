@@ -30,6 +30,11 @@ export default {
     saved: 'Auto-saved',
     online: 'Connected',
   },
+  demo: {
+    badge: 'Demo data',
+    note: 'This page shows local sample data with no backend service behind it, so nothing you do here reaches your account.',
+    drawerNote: 'The trending topics and materials in this drawer are local samples, not live data.',
+  },
   common: {
     save: 'Save',
     cancel: 'Cancel',

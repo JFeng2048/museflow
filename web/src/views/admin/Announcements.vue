@@ -7,6 +7,7 @@ import {
 } from 'naive-ui'
 import { AddOutline, MegaphoneOutline } from '@vicons/ionicons5'
 import { adminAnnouncements } from '@/mock/admin'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import type { AdminAnnouncement } from '@/types/admin'
 import { formatDateTime } from '@/utils/format'
 
@@ -75,6 +76,8 @@ function submitCreate() {
         {{ t('admin.announcements.create') }}
       </n-button>
     </header>
+
+    <DemoNotice />
 
     <n-card :bordered="false" class="list-card">
       <n-empty v-if="!sorted.length" :description="t('admin.announcements.empty')" />

@@ -14,6 +14,7 @@ import {
   BulbOutline,
 } from '@vicons/ionicons5'
 import { useNovelStore } from '@/stores/novel'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 
 import NovelStatusTag from './components/NovelStatusTag.vue'
 
@@ -83,6 +84,8 @@ function publish() {
         <button class="editor-primary" @click="publish">{{ t('novel.publish') }}</button>
       </div>
     </header>
+
+    <DemoNotice />
 
     <div class="editor-work">
       <!-- 目录 -->

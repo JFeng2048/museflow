@@ -5,6 +5,7 @@ import { NButton, NEmpty, useMessage, NTabs, NTabPane } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useNovelStore } from '@/stores/novel'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import NovelCard from './components/NovelCard.vue'
 import NovelCreate from './NovelCreate.vue'
 import { NOVEL_STATUS_TABS } from './constants'
@@ -46,6 +47,8 @@ function onCreated() {
       </div>
       <NButton type="primary" @click="showCreate = true">{{ t('novel.newWorkAlt') }}</NButton>
     </header>
+
+    <DemoNotice />
 
     <n-tabs v-model:value="tab" type="line" class="status-tabs">
       <n-tab-pane v-for="item in NOVEL_STATUS_TABS" :key="item.value" :name="item.value" :tab="t(item.labelKey)" />

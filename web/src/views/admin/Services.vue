@@ -6,6 +6,7 @@ import {
 } from 'naive-ui'
 import { ReloadOutline, ServerOutline } from '@vicons/ionicons5'
 import { adminServices } from '@/mock/admin'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import type { AdminService } from '@/types/admin'
 import { formatDateTime } from '@/utils/format'
 
@@ -45,6 +46,8 @@ function refresh() {
         </n-button>
       </n-space>
     </header>
+
+    <DemoNotice />
 
     <n-grid :cols="2" :x-gap="18" :y-gap="18" responsive="screen" item-responsive>
       <n-gi v-for="s in services" :key="s.id" span="2 s:1">

@@ -6,6 +6,7 @@ import { TrendingUpOutline } from '@vicons/ionicons5'
 import { useNovelStore } from '@/stores/novel'
 import { useUserStore } from '@/stores/system/user'
 import { STAT_KPIS, STATUS_DIST, WEEK_LABEL_KEYS } from './type'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 
 const { t } = useI18n()
 const novelStore = useNovelStore()
@@ -67,6 +68,8 @@ const week = computed(() => {
         <p class="stats-sub">{{ t('stats.subtitle') }}</p>
       </div>
     </header>
+
+    <DemoNotice />
 
     <n-grid cols="2 640:3 960:5" :x-gap="14" :y-gap="14" responsive="screen">
       <n-gi v-for="it in kpi" :key="it.key">

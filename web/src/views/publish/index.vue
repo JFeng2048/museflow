@@ -16,6 +16,7 @@ import { useNovelStore } from '@/stores/novel'
 import { storeToRefs } from 'pinia'
 import { formatWords } from '@/utils/format'
 import { channels as demoChannels } from '@/mock/publish'
+import DemoNotice from '@/components/common/DemoNotice.vue'
 import type { PublishChannel } from '@/types/publish'
 
 const { t } = useI18n()
@@ -103,6 +104,8 @@ function publish() {
         {{ enabledChannels.length }} / {{ channels.length }} {{ t('publish.platform') }}
       </span>
     </header>
+
+    <DemoNotice />
 
     <div class="publish-grid">
       <!-- 左侧：作品来源 -->
