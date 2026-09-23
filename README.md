@@ -29,6 +29,7 @@
 | 📦 **Project Management** | Novel CRUD & status transitions | Full lifecycle from draft to serialization to completion |
 | 📚 **Lorebook** | Character/Worldbuilding/Plot management | Ensures consistency in AI-generated content |
 | ✍️ **AI Generation** | Outline/Continuation/Rewriting/Expansion | RAG-enhanced generation with knowledge context |
+| 🧩 **Model & System Config** | Platform providers / models / system settings | Admin maintains vendor `base_url` + `api_key` (AES-encrypted); users may bring their own channels |
 | 🕷️ **Data Crawling** | Automatic novel/material scraping | Builds personal knowledge base with Crawl4AI |
 | 📤 **Auto Publishing** | Scheduled publishing / Multi-platform | Supports Tomato Novel etc. (pluggable strategy) |
 | 📊 **Analytics** | Writing stats / Character appearance analysis | Data-driven creative insights |
@@ -41,11 +42,11 @@
 
 ---
 
-## 🔗 Prototype Preview
+## 🔗 Live Preview
 
-The frontend prototype preview entry of MuseFlow. The API Gateway and backend
-microservices (user-service, crawl4ai-service, etc.) are not yet wired in and will
-be exposed as they become available:
+MuseFlow runs online on Kubernetes behind Traefik Ingress. Frontend, API Gateway and
+the backend microservices (user-service, config-service, crawl4ai-service) are all
+wired together and reachable here:
 
 > https://museflow.jfeng.asia
 
@@ -54,23 +55,32 @@ be exposed as they become available:
 The repository is a **Monorepo** — all code lives in a single Git repository. Microservices communicate via **gRPC**, and the **API Gateway** exposes unified HTTP endpoints to the outside world.
 
 ```
-                ┌──────────────────────────┐
-   Browser/Client │        API Gateway        │  (Gin, :5001)
-   ─────HTTP────▶  /api/v1/* + Swagger       │
-                │  JWT auth / CORS / Cookie  │
-                └───────────┬──────────────┘
-                            │ gRPC
-                ┌───────────▼──────────────┐
-                │       User Service        │  (gRPC, :5002)
-                │  Register / Login / Dual   │
-                │  Token Auth / User access  │
-                │  (GORM)                    │
-                └──────┬───────────┬────────┘
-                       │           │
-                  ┌────▼───┐  ┌────▼────┐
-                  │Postgres│  │ Redis   │
-                  │user_svc│  │ allow/deny list │
-                  └────────┘  └─────────┘
+ Browser / Client ── HTTP ────────▶
+                     ┌────────────▼─────────────┐
+                     │       API Gateway        │  (Gin, :5001)
+                     │  /api/v1/* + Swagger     │
+                     │ JWT auth / CORS / Cookie │
+                     └────────────┬─────────────┘
+                                  │ gRPC
+    ┌─────────────────────────────┴─────────────────────────────┐
+                 │                                │
+    ┌────────────▼─────────────┐     ┌────────────▼─────────────┐
+    │        User Service      │     │      Config Service      │
+    │ Register / Login / 2FA   │     │ Providers / Models       │
+    │  Dual Token Auth (GORM)  │     │ Settings (AES-GCM)       │
+    └────┬────────────┬────────┘     └───────┬──────────────────┘
+     ┌───▼────┐
+                 ┌────▼─────┐
+     │Postgres│
+     │user_svc│
+     └────────┘
+                 │  Redis   │
+                 │allow/deny│
+                 └──────────┘
+                                        ┌────▼─────┐
+                                        │ Postgres │
+                                        │config_svc│
+                                        └──────────┘
 ```
 
 ### Backend modules implemented
@@ -85,7 +95,10 @@ The repository is a **Monorepo** — all code lives in a single Git repository. 
 | `proto/user` | Shared gRPC contract (user.proto + generated code) | protobuf | — |
 | `proto/crawl` | Shared gRPC contract for crawl/extract (crawl.proto + generated code) | protobuf | — |
 | `services/crawl4ai-service` | Data-crawling service (Python, HTTP + gRPC dual interface) | Crawl4AI / FastAPI / gRPC | 5003 |
+| `services/config-service` | Model & system config service (gRPC Server) | gRPC / GORM / PostgreSQL / AES-256-GCM | 5004 |
+| `proto/model` | Shared gRPC contract for model catalog & settings (model.proto + generated code) | protobuf | — |
 | `services/user-service/database/user_svc.sql` | User DB schema (sequences, triggers, schema namespace) | PostgreSQL DDL | — |
+| `services/config-service/database/config_svc.sql` | Config DB schema (provider / model / setting) | PostgreSQL DDL | — |
 
 ### Dual-Token Authentication (overview)
 
@@ -110,6 +123,7 @@ The repository is a **Monorepo** — all code lives in a single Git repository. 
 ```
 MuseFlow/
 ├── proto/                       # Shared gRPC API contracts (incl. generated code)
+│   ├── model/                   # model.proto + generated code (model catalog / providers / settings)
 │   └── user/                    # user.proto + generated code (user.pb.go / user_grpc.pb.go)
 ├── pkg/                         # Cross-service shared Go libraries (independent go.mod)
 │   ├── envloader/               # Service-local .env loading (system > service .env > defaults)
@@ -145,6 +159,19 @@ MuseFlow/
 │   │       ├── handler/          # HTTP handlers (dto ↔ proto)
 │   │       ├── client/           # user-service gRPC client
 │   │       └── dto/              # HTTP-layer DTOs (request/response, for Swagger)
+│   ├── config-service/          # Model & system config service (Go, gRPC :5004)
+│   │   ├── cmd/server/main.go    # gRPC entrypoint: wire config/repo/service/handler
+│   │   ├── .env.example          # Service config template (committed; .env gitignored)
+│   │   ├── database/config_svc.sql  # Config DB DDL (config_svc schema)
+│   │   └── internal/
+│   │       ├── config/           # Config loading (CONFIG_ / DB_ / MODEL_SECRET_KEY / LOG_)
+│   │       ├── handler/          # gRPC handlers (proto ↔ service layer)
+│   │       ├── pkg/              # Internal shared pkgs (secret / upstream)
+│   │       │   ├── secret/       #   AES-256-GCM credential encryption
+│   │       │   └── upstream/     #   Vendor /models catalog probing
+│   │       ├── model/            # GORM entities (config_svc.*)
+│   │       ├── repository/       # Data access (GORM)
+│   │       └── service/          # Business logic (provider / model / setting / user model)
 │   └── crawl4ai-service/        # Data-crawling service (Python, HTTP + gRPC :5003)
 │       ├── src/                  # Business modules (crawler / extractor / api / grpc_server)
 │       ├── pyproject.toml        # uv-managed deps (base + [http] / [grpc] groups)
@@ -184,9 +211,13 @@ make init        # generate go.work and install protoc-gen-go / swag tooling
 ```bash
 # Import the user DB schema (schema, sequences, triggers)
 psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f services/user-service/database/user_svc.sql
+
+# Import the model & system config schema (schema, sequences, triggers)
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f services/config-service/database/config_svc.sql
 ```
 
-> The server does **not** run AutoMigrate; the schema is managed solely by `services/user-service/database/user_svc.sql`.
+> The server does **not** run AutoMigrate; each service's schema is managed by the DDL shipped in
+> its own `database/` directory.
 
 ### 3. Configure environment variables (layered)
 
@@ -210,9 +241,10 @@ System env vars  >  service .env  >  code defaults
 
 | Prefix | Service | Key variables |
 | :--- | :--- | :--- |
-| `GATEWAY_` | api-gateway | `GATEWAY_PORT`, `GATEWAY_USER_SERVICE_URL`, `GATEWAY_ALLOW_ORIGINS`, `GATEWAY_COOKIE_*` |
+| `GATEWAY_` | api-gateway | `GATEWAY_PORT`, `GATEWAY_USER_SERVICE_URL`, `GATEWAY_MODEL_SERVICE_URL`, `GATEWAY_ALLOW_ORIGINS`, `GATEWAY_COOKIE_*` |
 | `USER_` | user-service | `USER_PORT`, `USER_ACCESS_TTL_SECONDS`, etc. |
-| (none) | shared | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (shared DB connection); `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB` (shared Redis); `JWT_SECRET` (shared JWT signing key for gateway + user-service) |
+| `CONFIG_` | config-service | `CONFIG_PORT` (pairs with `GATEWAY_MODEL_SERVICE_URL`) |
+| (none) | shared | `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` (shared DB connection); `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB` (shared Redis); `JWT_SECRET` (shared JWT signing key for gateway + user-service); `MODEL_SECRET_KEY` (AES-256-GCM master key for model credentials, 32 bytes) |
 | `LOG_` | all services | `LOG_LEVEL`, `LOG_FORMAT`, `LOG_CONSOLE` (logs go to stdout, collected by the container runtime / k8s) |
 
 `services/*/.env` are gitignored (they may contain real secrets). Each service ships its own `.env.example` template — copy it to that service's `.env` locally:
@@ -221,7 +253,12 @@ System env vars  >  service .env  >  code defaults
 cp services/user-service/.env.example services/user-service/.env
 cp services/api-gateway/.env.example services/api-gateway/.env
 cp services/crawl4ai-service/.env.example services/crawl4ai-service/.env
+cp services/config-service/.env.example services/config-service/.env
 ```
+
+`MODEL_SECRET_KEY` must be supplied through environment variables or the deployment
+secret file (see [`deploy/k8s/`](deploy/k8s/)); never commit the real key. Rotating it
+invalidates every stored `api_key` ciphertext.
 
 To override a single key, set a system env var (highest priority), e.g.:
 ```bash
@@ -239,6 +276,9 @@ make run-user
 
 # Terminal B: API gateway
 make run-gateway
+
+# Terminal C: model & system config service
+cd services/config-service && go run ./cmd/server
 ```
 
 After startup, the console prints the access and Swagger URLs:
@@ -246,6 +286,7 @@ After startup, the console prints the access and Swagger URLs:
 - API Gateway: http://localhost:5001
 - Swagger docs: http://localhost:5001/swagger/index.html
 - User service (gRPC): localhost:5002
+- Config service (gRPC): localhost:5004
 
 ### 5. Common commands
 
@@ -278,6 +319,9 @@ make docker      # build Docker images (context = repo root)
 > `dev.bat` lives at the repo root; each service gets its own window, and closing a window stops that service.
 > The `scripts\*.bat` granular entry points remain available.
 >
+> `config-service` is not yet part of `dev.bat`; start it on its own with
+> `cd services/config-service && air` (or `go run ./cmd/server`).
+>
 > Install Air first: `go install github.com/air-verse/air@latest` (scripts auto-add `%USERPROFILE%\go\bin` to PATH). Chinese console output in old CMD code pages may render garbled, but functionality is unaffected.
 > **Note**: `*.bat` files in this repo must keep CRLF line endings — LF makes cmd.exe truncate lines and garble output.
 
@@ -290,6 +334,7 @@ Per-module docs (with detailed routes and fields) live under [`docs/en/api/`](do
 - **[user-service](docs/en/api/user-service.md)** — core user & auth service (gRPC `:5002`): accounts, dual tokens, email codes, 2FA, RBAC, audit, OAuth.
 - **[api-gateway](docs/en/api/api-gateway.md)** — unified HTTP entry (`:5001`): full route table, auth/error mapping, CORS & Cookie policy.
 - **[crawl4ai-service](docs/en/api/crawl4ai-service.md)** — data crawling (`:5003`): `Health` / `Crawl` / `Extract` (HTTP + gRPC).
+- **[config-service](docs/en/api/config-service.md)** — model & system configuration (gRPC `:5004`): platform/user providers, model catalog, available-models merge, system settings, upstream probing.
 
 Each service also ships Swagger (gateway at `/swagger/index.html`, crawl4ai-service at `/docs`).
 
@@ -301,11 +346,14 @@ and service architecture.
 
 ## 📦 Containerization
 
-`services/api-gateway/Dockerfile` and `services/user-service/Dockerfile` are multi-stage builds using `golang:1.23-alpine` to compile and `alpine:3.20` to run, launched as a non-root user.
+`services/api-gateway/Dockerfile`, `services/user-service/Dockerfile` and
+`services/config-service/Dockerfile` are multi-stage builds using `golang:1.26-alpine` to compile
+and `alpine:3.20` to run, launched as a non-root user.
 
 ```bash
 docker build -f services/user-service/Dockerfile -t museflow/user-service .
 docker build -f services/api-gateway/Dockerfile  -t museflow/api-gateway  .
+docker build -f services/config-service/Dockerfile -t museflow/config-service .
 ```
 
 The build context must be the **repo root** (services depend on the sibling `proto` module).
