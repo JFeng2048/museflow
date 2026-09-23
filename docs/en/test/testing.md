@@ -20,11 +20,21 @@
 
 `internal/service/mfa` covers TOTP key generation, code verification (incl. clock skew), recovery-code generation and single-use checks.
 
+## config-service Coverage
+
+| Test file | Coverage |
+|----------|----------|
+| `internal/pkg/upstream/models_test.go` | `/models` endpoint probing, auth-header injection, catalog parsing, `maxModels` truncation |
+| `internal/service/model_test.go` | platform model `code` column-width check; regression for 51-100 char codes that used to slip past parameter validation and only failed in PostgreSQL with `22001` |
+
+Upstream probing uses an `httptest` server instead of calling a real vendor; the `CreateModel` case stubs only up to the repository, asserting that a model failing validation must never reach the database.
+
 ## Run Tests
 
 ```bash
 # All
 cd services/user-service && go test ./...
+cd services/config-service && go test ./...
 
 # Single package
 go test ./internal/service/auth/ -v
