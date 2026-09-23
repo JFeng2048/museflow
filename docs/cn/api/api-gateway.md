@@ -9,6 +9,7 @@
 - **统一错误**：把 gRPC status 映射为 HTTP 状态码 + 中英双语 `Response{code,message,data}`。
 - **横切能力**：CORS、访问日志、请求 ID 注入日志上下文，便于跨服务追踪。
 - **路由分组**：认证相关集中在 `/api/v1/auth/*`，用户资料在 `/api/v1/user/*`，公开通用能力（发送验证码、刷新令牌）归入 `/api/v1/common/*`；其中登录、注册、密码重置、邮箱验证码、刷新令牌等免认证，其余需 `Authorization: Bearer`。
+  模型与系统配置分两类：`/api/v1/admin/model-*`、`/api/v1/admin/models`、`/api/v1/admin/settings/*` 需登录并具备 `system:admin` 权限，`/api/v1/user/model*`、`/api/v1/user/models/available`、`/api/v1/user/settings` 只需登录。
 
 ## 接口（HTTP 路由）
 
@@ -36,6 +37,58 @@
 | GET  | `/swagger/index.html` | No | Swagger 文档 UI |
 
 > 网关本身不持有用户数据，所有业务校验与令牌签发均在 user-service 完成；`Auth` 列标注 `Yes` 的接口需在请求头携带 `Authorization: Bearer <access_token>`。
+
+## 模型与系统配置（config-service 转发）
+
+本组路由由网关以 gRPC 转发到 config-service（`:5004`），对外前缀仍为 `/api/v1`。请求体与响应的完整字段见网关 Swagger（`/swagger/index.html`）的 `model-模型与系统配置` 标签；密钥口径、表结构与错误码见 [config-service 接口说明](config-service.md)。
+
+管理端与用户端的鉴权强度不同：管理端持有平台 `api_key`，需在登录之外再具备 `system:admin` 权限；用户端只操作自己的渠道与模型，登录即可。
+
+### 平台渠道（管理端）
+
+| Method | Path | Auth | 作用 |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/v1/admin/model-providers` | Yes + `system:admin` | 渠道列表，`keyword` / `only_active` / `page` / `page_size` |
+| POST | `/api/v1/admin/model-providers` | Yes + `system:admin` | 新增渠道；`api_key` 加密落库后只回显末 4 位 |
+| PUT | `/api/v1/admin/model-providers/:id` | Yes + `system:admin` | 编辑渠道；`code` 不可改，`api_key` 留空表示不轮换 |
+| PUT | `/api/v1/admin/model-providers/:id/active` | Yes + `system:admin` | 启用 / 停用 |
+| DELETE | `/api/v1/admin/model-providers/:id` | Yes + `system:admin` | 删除渠道；旗下还有模型时返回失败 |
+| POST | `/api/v1/admin/model-providers/remote-models` | Yes + `system:admin` | 拉取渠道的上游模型目录；请求体三选一：`provider_id`（服务端取已存密钥）或 `base_url` + `api_key` |
+
+### 平台模型（管理端）
+
+| Method | Path | Auth | 作用 |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/v1/admin/models` | Yes + `system:admin` | 模型列表，`provider_id` / `model_type` / `keyword` / `only_active` / 分页 |
+| POST | `/api/v1/admin/models` | Yes + `system:admin` | 新增模型，需指定 `provider_id` |
+| PUT | `/api/v1/admin/models/:id` | Yes + `system:admin` | 编辑模型；`code` 与所属渠道均不可改 |
+| PUT | `/api/v1/admin/models/:id/active` | Yes + `system:admin` | 上架 / 下架 |
+| DELETE | `/api/v1/admin/models/:id` | Yes + `system:admin` | 删除模型 |
+
+### 系统配置（管理端）
+
+| Method | Path | Auth | 作用 |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/v1/admin/settings` | Yes + `system:admin` | 配置列表，`config_group` / `only_public` |
+| GET | `/api/v1/admin/settings/:config_group/:key` | Yes + `system:admin` | 单条配置 |
+| PUT | `/api/v1/admin/settings/:config_group/:key` | Yes + `system:admin` | 写入配置；`value` 与 `secret_value` 二选一，机密项只写不读 |
+| DELETE | `/api/v1/admin/settings/:config_group/:key` | Yes + `system:admin` | 删除配置 |
+
+### 我的渠道与模型（用户端）
+
+| Method | Path | Auth | 作用 |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/v1/user/model-providers` | Yes | 我的自定义渠道列表 |
+| POST | `/api/v1/user/model-providers` | Yes | 新增自定义渠道（自备 `base_url` + `api_key`） |
+| PUT | `/api/v1/user/model-providers/:id` | Yes | 编辑自定义渠道；`api_key` 留空表示不轮换 |
+| DELETE | `/api/v1/user/model-providers/:id` | Yes | 删除自定义渠道 |
+| POST | `/api/v1/user/model-providers/remote-models` | Yes | 拉取我的渠道模型目录（只读自己的渠道） |
+| GET | `/api/v1/user/models` | Yes | 我的自定义模型列表 |
+| POST | `/api/v1/user/models` | Yes | 新增自定义模型，只能挂在自己的渠道下 |
+| PUT | `/api/v1/user/models/:id` | Yes | 编辑自定义模型 |
+| DELETE | `/api/v1/user/models/:id` | Yes | 删除自定义模型 |
+| GET | `/api/v1/user/models/available` | Yes | 可用模型合并视图（平台 + 自定义），`model_type` 可空 |
+| GET | `/api/v1/user/settings` | Yes | 公开系统配置，只回 `is_public=true` 的项 |
 
 ## 人机验证（Cloudflare Turnstile）
 

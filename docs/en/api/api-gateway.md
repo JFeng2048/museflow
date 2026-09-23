@@ -9,6 +9,7 @@ The unified HTTP entry-point gateway (Gin, `:5001`). Exposes RESTful JSON extern
 - **Unified errors**: map gRPC status to HTTP status + bilingual `Response{code,message,data}`.
 - **Cross-cutting**: CORS, access logging, request-id injection into log context for traceability.
 - **Route grouping**: auth under `/api/v1/auth/*`, user profile under `/api/v1/user/*`, public common capabilities (send code, refresh token) under `/api/v1/common/*`; login/register/password-reset/email-code/refresh are public, the rest require `Authorization: Bearer`.
+   Models and system settings come in two flavours: `/api/v1/admin/model-*`, `/api/v1/admin/models` and `/api/v1/admin/settings/*` need login plus the `system:admin` permission, while `/api/v1/user/model*`, `/api/v1/user/models/available` and `/api/v1/user/settings` need login only.
 
 ## Interface (HTTP routes)
 
@@ -36,6 +37,58 @@ Prefix `/api/v1`. Full fields and examples in the gateway Swagger (`/swagger/ind
 | GET  | `/swagger/index.html` | No | Swagger UI |
 
 > The gateway holds no user data itself; all business checks and token issuance happen in user-service. Interfaces marked `Yes` in the `Auth` column require `Authorization: Bearer <access_token>` in the request header.
+
+## Models & system settings (proxied to config-service)
+
+This group is proxied to config-service (gRPC `:5004`) by the gateway, still under the `/api/v1` prefix. Full request/response fields are in the gateway Swagger (`/swagger/index.html`), tag `model-模型与系统配置`; key handling, tables and error codes are in [config-service API](config-service.md).
+
+The two sides differ in auth strength: the admin group holds the platform `api_key`, so it needs `system:admin` on top of login; the user group only touches the caller's own providers and models, so login is enough.
+
+### Platform providers (admin)
+
+| Method | Path | Auth | Purpose |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/v1/admin/model-providers` | Yes + `system:admin` | Provider list, `keyword` / `only_active` / `page` / `page_size` |
+| POST | `/api/v1/admin/model-providers` | Yes + `system:admin` | Create provider; the `api_key` is encrypted at rest and only its last 4 characters are echoed |
+| PUT | `/api/v1/admin/model-providers/:id` | Yes + `system:admin` | Edit provider; `code` is immutable, an empty `api_key` keeps the existing key |
+| PUT | `/api/v1/admin/model-providers/:id/active` | Yes + `system:admin` | Enable / disable |
+| DELETE | `/api/v1/admin/model-providers/:id` | Yes + `system:admin` | Delete provider; fails while models still hang under it |
+| POST | `/api/v1/admin/model-providers/remote-models` | Yes + `system:admin` | Probe the provider's upstream catalog; body is one of `provider_id` (key stays server-side) or `base_url` + `api_key` |
+
+### Platform models (admin)
+
+| Method | Path | Auth | Purpose |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/v1/admin/models` | Yes + `system:admin` | Model list, `provider_id` / `model_type` / `keyword` / `only_active` / pagination |
+| POST | `/api/v1/admin/models` | Yes + `system:admin` | Create model; `provider_id` is required |
+| PUT | `/api/v1/admin/models/:id` | Yes + `system:admin` | Edit model; `code` and the owning provider are immutable |
+| PUT | `/api/v1/admin/models/:id/active` | Yes + `system:admin` | Publish / unpublish |
+| DELETE | `/api/v1/admin/models/:id` | Yes + `system:admin` | Delete model |
+
+### System settings (admin)
+
+| Method | Path | Auth | Purpose |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/v1/admin/settings` | Yes + `system:admin` | Setting list, `config_group` / `only_public` |
+| GET | `/api/v1/admin/settings/:config_group/:key` | Yes + `system:admin` | Single setting |
+| PUT | `/api/v1/admin/settings/:config_group/:key` | Yes + `system:admin` | Write setting; either `value` or `secret_value`, secret values are write-only |
+| DELETE | `/api/v1/admin/settings/:config_group/:key` | Yes + `system:admin` | Delete setting |
+
+### My providers & models (user)
+
+| Method | Path | Auth | Purpose |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/v1/user/model-providers` | Yes | My custom provider list |
+| POST | `/api/v1/user/model-providers` | Yes | Create a custom provider (own `base_url` + `api_key`) |
+| PUT | `/api/v1/user/model-providers/:id` | Yes | Edit custom provider; an empty `api_key` keeps the existing key |
+| DELETE | `/api/v1/user/model-providers/:id` | Yes | Delete custom provider |
+| POST | `/api/v1/user/model-providers/remote-models` | Yes | Probe my provider catalog |
+| GET | `/api/v1/user/models` | Yes | My model list |
+| POST | `/api/v1/user/models` | Yes | Create a custom model, only under my own providers |
+| PUT | `/api/v1/user/models/:id` | Yes | Edit custom model |
+| DELETE | `/api/v1/user/models/:id` | Yes | Delete custom model |
+| GET | `/api/v1/user/models/available` | Yes | Available models merged view (platform + custom), `model_type` optional |
+| GET | `/api/v1/user/settings` | Yes | Public system settings, only `is_public=true` entries |
 
 ## Captcha (Cloudflare Turnstile)
 
