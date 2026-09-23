@@ -177,6 +177,15 @@ func captchaVerifier(cfg turnstile.Config) auth.CaptchaVerifier {
 // initDB 初始化 GORM 连接池。
 // 不执行 AutoMigrate：schema 由 database/user_svc.sql 维护。
 func initDB(dsn string) (*gorm.DB, error) {
+	// 把进程时区钉成 UTC，与数据库会话时区（Etc/UTC）对齐。
+	//
+	// 列类型是不带时区的 timestamp，驱动读回时一律按 UTC 解释墙钟、再序列化成
+	// 带 Z 的 RFC3339。若 Go 侧用本地时间写（如 locked_until 由 time.Now()
+	// 计算），存进去的是本地墙钟却被当成 UTC 发出去：auth 拿它和 time.Now()
+	// 比较时，15 分钟的登录锁定会被判成还有 8 小时，锁定时间整体翻倍。
+	// 钉成 UTC 后，写入、读取、比较三侧都是同一个时间基准。
+	time.Local = time.UTC
+
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
 	})
