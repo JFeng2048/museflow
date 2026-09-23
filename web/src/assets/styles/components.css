@@ -1314,6 +1314,20 @@
   .usermenu-uname {
     display: none;
   }
+  /* 窄屏数据表：放不下就整表横向滚动，别把单元格挤成逐字竖排 */
+  .n-data-table-wrapper,
+  .n-data-table-base-table {
+    overflow-x: auto;
+  }
+  .n-data-table-base-table {
+    /* 1200 是按最宽的「系统配置」表反推的：固定列合计约 630px，
+       给 value/description 两张弹性列各留约 280px，JSON 值才不会被贴边切断 */
+    min-width: 1200px;
+  }
+  .n-data-table th,
+  .n-data-table td {
+    white-space: nowrap;
+  }
 }
 
 /* 账号绑定卡片 */
