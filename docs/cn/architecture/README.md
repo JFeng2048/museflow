@@ -8,7 +8,7 @@
 |------|-----------|------|
 | `docs/cn/architecture/`（本目录） | 系统由什么组成、怎么部署、怎么通信 | 部署架构、服务架构设计 |
 | `docs/cn/develop/` | 某个功能具体怎么实现 | 双令牌认证、2FA、Turnstile、权限校验 |
-| `docs/cn/api/` | 对外接口契约 | api-gateway、user-service、crawl4ai-service |
+| `docs/cn/api/` | 对外接口契约 | api-gateway、config-service、user-service、crawl4ai-service |
 
 ## 文档索引
 

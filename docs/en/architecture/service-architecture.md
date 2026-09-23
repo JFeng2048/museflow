@@ -68,6 +68,6 @@ Deployment shape, entry layering and network reachability: see [Deployment Archi
 
 | Kind | Documents |
 |------|-----------|
-| Public interfaces | [`../api/api-gateway.md`](../api/api-gateway.md), [`../api/user-service.md`](../api/user-service.md), [`../api/crawl4ai-service.md`](../api/crawl4ai-service.md) |
+| Public interfaces | [`../api/api-gateway.md`](../api/api-gateway.md), [`../api/config-service.md`](../api/config-service.md), [`../api/user-service.md`](../api/user-service.md), [`../api/crawl4ai-service.md`](../api/crawl4ai-service.md) |
 | Implementation details | [`../develop/`](../develop/) (development guide, module designs) |
 | Deployment and entry | [Deployment Architecture](deployment.md) |

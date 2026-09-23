@@ -8,7 +8,7 @@ Division of labour with the other doc folders:
 |--------|---------------------|----------|
 | `docs/cn/architecture/` (and this folder) | What the system consists of, how it is deployed, how parts communicate | Deployment architecture, service architecture |
 | `docs/en/develop/` | How a specific feature is implemented | Dual-token auth, 2FA, Turnstile, RBAC |
-| `docs/en/api/` | Public interface contracts | api-gateway, user-service, crawl4ai-service |
+| `docs/en/api/` | Public interface contracts | api-gateway, config-service, user-service, crawl4ai-service |
 
 ## Index
 

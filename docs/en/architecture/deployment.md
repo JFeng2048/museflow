@@ -1,23 +1,23 @@
 # Deployment Architecture
 
-**In one sentence**: browsers enter the cluster over HTTPS through the edge Nginx, Traefik routes `/` to the static frontend and `/api` to api-gateway, and everything else (user-service, PostgreSQL, Redis) stays reachable only inside the cluster.
+**In one sentence**: browsers enter the cluster over HTTPS through the edge Nginx, Traefik routes `/` to the static frontend and `/api` to api-gateway, and everything else (user-service, config-service, PostgreSQL, Redis) stays reachable only inside the cluster.
 
 ## Kubernetes component cheat sheet
 
 | Concept | Role | Instance in this project |
 |---------|------|--------------------------|
 | Namespace | Isolation boundary | `museflow` (apps), `traefik` (Ingress Controller) |
-| Deployment | Stateless workload, keeps replicas, rolling updates | `web`, `api-gateway`, `user-service`, `user-service-worker` |
+| Deployment | Stateless workload, keeps replicas, rolling updates | `web`, `api-gateway`, `user-service`, `user-service-worker`, `config-service` |
 | StatefulSet | Stateful workload, stable Pod names and per-Pod PVCs | `postgres`, `redis`, `ollama` |
 | Pod | Smallest runnable unit, owned by a Deployment/StatefulSet | `web-xxxx`, `api-gateway-xxxx` |
-| Service | Stable in-cluster virtual IP + DNS name, load balances a set of Pods | `web:80`, `api-gateway:5001`, `user-service:5002` |
-| Service: ClusterIP | In-cluster only (default) | `web`, `api-gateway`, `user-service` |
+| Service | Stable in-cluster virtual IP + DNS name, load balances a set of Pods | `web:80`, `api-gateway:5001`, `user-service:5002`, `config-service:5004` |
+| Service: ClusterIP | In-cluster only (default) | `web`, `api-gateway`, `user-service`, `config-service` |
 | Service: NodePort | Opens one port in `30000-32767` on every node | Traefik: `31380` / `31443` |
 | Service: LoadBalancer | Cloud provider or `klipper-lb` allocates an external IP | `postgres`, `redis` (local debugging) |
 | Ingress | Declares "host + path → Service" rules (**rules only; it forwards nothing by itself**) | `museflow` (`deploy/k8s/edge/ingress`) |
 | IngressClass | Which controller executes the rules | `traefik` (shipped and default in K3s) |
 | Ingress Controller | The actual reverse proxy implementing the rules | Traefik in the `traefik` namespace |
-| ConfigMap | Non-sensitive config, injected as env vars or files | `api-gateway-config`, `user-service-config`, `web-config` |
+| ConfigMap | Non-sensitive config, injected as env vars or files | `api-gateway-config`, `user-service-config`, `config-service-config`, `web-config` |
 | Secret | Sensitive config | `*-secret`, values come from the uncommitted `overlays/secrets.yaml` |
 | PVC | Persistent volume claim | `data-postgres-0`, `data-redis-0`, `data-ollama-0` |
 | Helm Release | Versioned record of one chart deployment; upgrade/rollback | `postgres`, `redis`, `api-gateway`, `web`, `ingress`… |
@@ -43,9 +43,13 @@ Traefik NodePort 192.168.142.121:31380 (single in-cluster routing entry)
   └── /api   ──▶ Service api-gateway:5001  (/api/v1/** passed through as-is)
                      │ gRPC
                      ▼
-                Service user-service:5002
+                     ├──▶ Service user-service:5002   (auth, permissions, users)
+                     │           │
+                     │     PostgreSQL / Redis
                      │
-              PostgreSQL / Redis (in-cluster only)
+                     └──▶ Service config-service:5004 (model providers, system settings)
+                                  │
+                          PostgreSQL (same database, different schema)
 ```
 
 Responsibility boundaries:
@@ -56,6 +60,7 @@ Responsibility boundaries:
 | Traefik | Single in-cluster entry, routes Host + Path to Services | Certificate termination (edge does it) |
 | `web` (frontend) | Serve SPA static assets and SPA fallback | Any `proxy_pass` |
 | `api-gateway` | All `/api/v1/**` endpoints, CORS, cookies, JWT verification | Static asset serving |
+| `config-service` | Model provider/catalog reads and writes, `api_key` encryption/decryption, system setting key-value | User authentication (gateway + user-service own it), direct Redis access |
 
 ## Request path, hop by hop
 
@@ -66,7 +71,9 @@ For `https://<domain>/api/v1/auth/login`:
 3. **Traefik → Ingress rule** — matches `Host: <domain>` + `Path: /api` and selects the `api-gateway` route.
 4. **Traefik → Service `api-gateway:5001`** — the ClusterIP Service load balances to one api-gateway Pod.
 5. **api-gateway → `user-service:5002`** — gRPC over the Service name, resolved by in-cluster DNS.
-6. **user-service → `postgres:15432` / `redis:6379`** — again by Service name; addresses come from `DB_*` / `REDIS_ADDR` in `overlays/secrets.yaml`.
+6. **api-gateway → `config-service:5004`** — model and system-setting routes (`/api/v1/admin/model-*`, `/api/v1/user/model*`) are likewise proxied over gRPC; the address comes from `GATEWAY_MODEL_SERVICE_URL` (default `config-service:5004`).
+7. **config-service → `postgres:15432`** — model providers and system settings live in the `config_svc` schema: same database as `user_svc`, different schema, sharing the same `DB_*` connection settings as user-service.
+8. **user-service → `postgres:15432` / `redis:6379`** — again by Service name; addresses come from `DB_*` / `REDIS_ADDR` in `overlays/secrets.yaml`.
 
 Static assets take the short path: `/` matches `web:80` and the container's Nginx serves the built frontend directly.
 
@@ -87,12 +94,13 @@ Traefik matches the longest prefix first, so `/api` is never shadowed by `/`. Ru
 | `web` | `http://web:80` | Edge Nginx + Ingress (`/`) |
 | `api-gateway` | `http://api-gateway:5001` | Edge Nginx + Ingress (`/api`, `/health`) |
 | `user-service` | `user-service:5002` (gRPC) | not exposed |
+| `config-service` | `config-service:5004` (gRPC) | not exposed |
 | `postgres` | `postgres:15432` | not exposed by default; `postgres.service` in `base/overlays/values.yaml` can temporarily become NodePort / LoadBalancer for local debugging |
 | `redis` | `redis:6379` | same as above |
 | Traefik | — | `192.168.142.121:31380` (HTTP) / `31443` (HTTPS) |
 | Ollama / SearXNG | `ollama:*`, `searxng:*` | not exposed |
 
-> Production should keep `user-service`, PostgreSQL and Redis in-cluster only; open database ports temporarily for local debugging at most.
+> Production should keep `user-service`, `config-service`, PostgreSQL and Redis in-cluster only; open database ports temporarily for local debugging at most.
 
 ## Domain and certificates
 
