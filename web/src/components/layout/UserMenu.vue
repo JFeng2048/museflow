@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { NIcon, useDialog } from 'naive-ui'
-import { LogOutOutline } from '@vicons/ionicons5'
+import { EnterOutline, ExitOutline, LogOutOutline } from '@vicons/ionicons5'
 import { useUserStore } from '@/stores/system/user'
 import { useI18n } from 'vue-i18n'
 
@@ -45,6 +45,29 @@ function askLogout() {
     onPositiveClick: confirmLogout,
   })
 }
+
+/**
+ * 视图切换入口。
+ *
+ * 顶部栏的切换按钮在窄屏会退化成图标，入口收进头像菜单后，
+ * 手机上也能看清「进入管理后台 / 返回工作台」。
+ */
+const inAdmin = computed(() => userStore.currentView === 'admin')
+const showSwitch = computed(() => inAdmin.value || userStore.canEnterAdmin)
+const switchLabel = computed(() =>
+  t(inAdmin.value ? 'userMenu.backToWorkbench' : 'userMenu.enterAdmin')
+)
+
+function switchView() {
+  open.value = false
+  if (inAdmin.value) {
+    userStore.enterUser()
+    router.push({ name: 'novels' })
+    return
+  }
+  userStore.enterAdmin()
+  router.push('/admin')
+}
 </script>
 
 <template>
@@ -60,6 +83,9 @@ function askLogout() {
           <p class="text-[12px] text-ink-muted mt-0.5">{{ userStore.user?.email }}</p>
         </div>
         <div class="h-px bg-line my-1" />
+        <button v-if="showSwitch" class="usermenu-item" @click="switchView">
+          <n-icon :component="inAdmin ? ExitOutline : EnterOutline" /> {{ switchLabel }}
+        </button>
         <button class="usermenu-item usermenu-danger" @click="askLogout">
           <n-icon :component="LogOutOutline" /> {{ t('userMenu.logout') }}
         </button>

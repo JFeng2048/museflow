@@ -1038,6 +1038,19 @@
   font-weight: 600;
 }
 
+.app-logo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 28%;
+  background: var(--c-amber-deep);
+  color: var(--c-paper);
+  font-family: var(--font-serif);
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+
 /* DefaultLayout */
 .layout-shell {
   display: flex;
@@ -1259,6 +1272,42 @@
   }
   .layout-content {
     padding: 16px;
+  }
+  /* 一行放不下「品牌 + 导航 + 右侧操作」：导航整行下沉，
+     右侧控件保持原始尺寸，否则积分余额和头像会被压扁甚至溢出屏幕 */
+  .layout-topbar {
+    flex-wrap: wrap;
+    height: auto;
+    row-gap: 2px;
+    padding: 8px 12px;
+  }
+  .layout-nav {
+    order: 3;
+    flex-basis: 100%;
+    flex-shrink: 0;
+    padding-bottom: 2px;
+  }
+  .layout-right {
+    flex: none;
+    margin-left: auto;
+    gap: 8px;
+  }
+  .switch-btn {
+    padding: 7px;
+  }
+  .switch-btn span {
+    display: none;
+  }
+  /* 主题与语言只留图标：按钮自带 title，下拉选项不变 */
+  .theme-trigger span,
+  .lang-trigger span {
+    display: none;
+  }
+  .credit-chip,
+  .theme-trigger,
+  .lang-trigger,
+  .usermenu-root {
+    flex: none;
   }
 }
 @media (max-width: 960px) {

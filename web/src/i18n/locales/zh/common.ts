@@ -17,6 +17,8 @@ export default {
     profile: '个人资料',
     model: '模型配置',
     credits: '我的积分',
+    enterAdmin: '进入管理后台',
+    backToWorkbench: '返回工作台',
     logout: '退出登录',
     logoutConfirm: '确定要退出当前账号吗？',
   },

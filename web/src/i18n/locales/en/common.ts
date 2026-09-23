@@ -16,6 +16,8 @@ export default {
     profile: 'Profile',
     model: 'Model Settings',
     credits: 'My Credits',
+    enterAdmin: 'Enter admin console',
+    backToWorkbench: 'Back to workspace',
     logout: 'Log Out',
     logoutConfirm: 'Are you sure you want to log out?',
   },
