@@ -117,6 +117,16 @@ func main() {
 // initDB 初始化 GORM 连接池。
 // 不执行 AutoMigrate：schema 由 database/config_svc.sql 维护。
 func initDB(dsn string) (*gorm.DB, error) {
+	// 把进程时区钉成 UTC，与数据库会话时区（Etc/UTC）对齐。
+	//
+	// 列类型是不带时区的 timestamp，读回来只会得到一个「没有时区语义的墙钟」：
+	// 驱动一律按 UTC 解释它，再序列化成带 Z 的 RFC3339。若 GORM 的
+	// autoCreateTime / autoUpdateTime 用本地时间写，存进去的就是本地墙钟，
+	// 于是被当成 UTC 发出去，前端再按本地时区渲染——同一个时刻会整体偏移
+	// 一个时区，且 created_at（Go 写）与 updated_at（BEFORE UPDATE 触发器写）
+	// 口径不一致，出现「创建晚于更新」。钉成 UTC 后两侧都是真实 UTC。
+	time.Local = time.UTC
+
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
 	})
