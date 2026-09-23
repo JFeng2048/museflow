@@ -102,10 +102,10 @@ const columns: DataTableColumns<SystemSetting> = [
     },
   },
   {
-    title: t('model.valueType'),
+    title: t('model.valueTypeLabel'),
     key: 'valueType',
     width: 96,
-    render: (row) => h(NTag, { size: 'small', bordered: false }, { default: () => row.valueType }),
+    render: (row) => h(NTag, { size: 'small', bordered: false }, { default: () => t(`model.valueType.${row.valueType}`) ?? row.valueType }),
   },
   {
     title: t('model.isPublic'),

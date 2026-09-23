@@ -141,6 +141,7 @@ export default {
     bool: '布尔',
     json: 'JSON',
   },
+  valueTypeLabel: '值类型',
   isSecret: '机密项',
   secretOn: '加密存储',
   secretOff: '明文存储',

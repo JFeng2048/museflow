@@ -141,6 +141,7 @@ export default {
     bool: 'Boolean',
     json: 'JSON',
   },
+  valueTypeLabel: 'Value type',
   isSecret: 'Secret',
   secretOn: 'Encrypted',
   secretOff: 'Plain',

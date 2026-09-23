@@ -158,7 +158,7 @@ function submit() {
         <template v-if="isEdit()" #feedback>{{ t('model.secretKeepHint') }}</template>
       </n-form-item>
       <template v-else>
-        <n-form-item :label="t('model.valueType')">
+        <n-form-item :label="t('model.valueTypeLabel')">
           <n-select v-model:value="form.valueType" :options="valueTypeOptions" />
         </n-form-item>
         <n-form-item :label="t('model.value')">
