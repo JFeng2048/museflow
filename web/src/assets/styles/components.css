@@ -1119,22 +1119,6 @@
   min-width: 0;
 }
 
-/* 演示（Mock）模式标识：右上角淡色小标，仅演示环境显示 */
-.mock-flag {
-  padding: 3px 10px;
-  border: 1px dashed var(--c-line);
-  border-radius: 999px;
-  font-size: 11.5px;
-  letter-spacing: 0.3px;
-  color: var(--c-ink-muted);
-  opacity: 0.55;
-  user-select: none;
-  cursor: default;
-  transition: opacity 0.2s ease;
-}
-.mock-flag:hover {
-  opacity: 0.85;
-}
 .credit-chip {
   display: flex;
   align-items: center;

@@ -214,7 +214,7 @@ async function onSubmit() {
       </label>
 
       <!-- 人机验证：平时隐藏，点击「发送验证码」时才弹出校验（组件内部 visible 控制） -->
-      <TurnstileWidget ref="tsRef" action="register" :allow-fallback="ui.mockMode" />
+      <TurnstileWidget ref="tsRef" action="register" :allow-fallback="ui.captchaFallback" />
 
       <button class="auth-primary" :disabled="loading" type="submit">
         {{ loading ? t('auth.registering') : step === 'form' ? t('auth.sendCode') : t('auth.registerBtn') }}

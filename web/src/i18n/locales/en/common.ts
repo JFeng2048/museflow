@@ -23,7 +23,6 @@ export default {
     name: 'MuseFlow',
     slogan: 'Your private study — write slowly, write well.',
     save: 'Saved',
-    mockTip: 'Demo data mode: APIs return local fallback data, no real backend connected.',
   },
   status: {
     writing: 'Writing',

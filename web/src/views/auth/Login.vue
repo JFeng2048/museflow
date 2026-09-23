@@ -187,7 +187,7 @@ async function onSendCode(): Promise<boolean> {
           </button>
         </div>
         <!-- 人机验证：点击「发送验证码」时才弹出校验 -->
-        <TurnstileWidget ref="tsRef" action="login" :allow-fallback="ui.mockMode" />
+        <TurnstileWidget ref="tsRef" action="login" :allow-fallback="ui.captchaFallback" />
       </label>
 
       <button class="auth-primary" :disabled="loading" type="submit">

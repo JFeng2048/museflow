@@ -45,12 +45,12 @@ export const useUiStore = defineStore('ui', () => {
     document.documentElement.setAttribute('lang', currentLang.value)
   }
 
-  /* --------------------- 演示（Mock）模式 ---------------------
-   * 由环境变量 VITE_ENABLE_MOCK 控制（见 .env.development / .env.production）：
-   * - true：所有接口走本地兜底数据，并展示「演示数据」标识与登录页演示账号；
-   * - false：接入真实后端，隐藏一切演示痕迹。
-   * 兜底：未显式配置时按「无真实后端」处理，避免空值导致误判为生产。 */
-  const mockMode = String(import.meta.env.VITE_ENABLE_MOCK).toLowerCase() !== 'false'
+  /* --------------------- 人机验证降级开关 ---------------------
+   * 由环境变量 VITE_ALLOW_CAPTCHA_FALLBACK 控制（见 .env.development / .env.production）。
+   * 仅用于本地调试：Turnstile 脚本加载失败或未配置站点密钥时，是否允许跳过人机验证。
+   * 默认关闭，生产环境必须保持关闭，否则等于放弃登录/注册的人机校验。
+   * 它与页面上的「演示数据」标注无关——后者只说明该页数据来自本地 @/mock。 */
+  const captchaFallback = String(import.meta.env.VITE_ALLOW_CAPTCHA_FALLBACK).toLowerCase() === 'true'
 
   return {
     themeId,
@@ -62,6 +62,6 @@ export const useUiStore = defineStore('ui', () => {
     setLang,
     toggleLang,
     initLang,
-    mockMode,
+    captchaFallback,
   }
 })
