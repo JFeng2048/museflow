@@ -19,9 +19,16 @@ Monorepo with a Go Workspace (`go.work`) at the repo root. Each service and each
   - `internal/model` — GORM entity `User` (password nullable for SSO users).
 - `services/api-gateway/` — HTTP gateway (`:5001`, Gin):
   - `internal/config` (`GATEWAY_` + shared), `router`, `middleware` (CORS/auth/access-log/request-id), `handler` (dto ↔ proto), `client` (user-service gRPC client), `dto` (HTTP request/response structs for Swagger).
-- `services/user-service/database/user_svc.sql` — PostgreSQL DDL; creates schema `user_svc` and table `user_svc.users` (schema is fixed, not driven by config).
+- `services/config-service/` — gRPC config service (`:5004`):
+  - `internal/config` — loads `CONFIG_` (service) plus `DB_*`/`LOG_` (shared); `MODEL_SECRET_KEY` is required and must be 32 bytes, otherwise startup fails.
+  - `internal/handler` / `internal/service` / `internal/repository` — gRPC handlers for model providers, models and system settings; `internal/pkg/upstream` performs the upstream `/models` catalog probe against a provider `base_url`.
+  - `internal/pkg/crypto` — AES-256-GCM for `api_key` and secret settings; only this service holds the plaintext key, `api-gateway` just forwards gRPC.
+  - Read paths never return plaintext secrets: they expose `api_key_hint` only. Secret settings are echoed exactly once, in the write response.
 - `web/` — Vue 3 + TS + Vite frontend.
 - `docs/cn/develop/双令牌认证系统设计文档.md` — dual-token auth design reference.
+- `services/user-service/database/user_svc.sql` — PostgreSQL DDL; creates schema `user_svc` and table `user_svc.users` (schema is fixed, not driven by config).
+- `services/config-service/database/config_svc.sql` — DDL for schema `config_svc` (`model_provider`, `model`, `system_setting`) plus `user_svc.user_model_provider` / `user_model` for user-defined providers; `api_key` columns are AES-GCM ciphertext.
+- `proto/model/` — shared gRPC contract (`model.proto` + generated code) used by `config-service` and the gateway's model client.
 - Each microservice owns its `.env` (gitignored) and `.env.example` (committed); there is no repository-root `.env` configuration layer.
 
 ## Build, Test, and Development Commands
@@ -80,3 +87,5 @@ PRs should link the related issue, describe the change and motivation, and inclu
 ## Security & Configuration Tips
 
 Never commit secrets. Each service owns a gitignored `.env` and a committed `.env.example`; supply production configuration through environment variables or Kubernetes secrets. Shared secrets use unprefixed keys: `JWT_SECRET` (gateway + user-service sign/verify), `REDIS_*` (token whitelist/blacklist), `DB_*` (PostgreSQL). Per-service config uses prefixes `USER_`, `GATEWAY_`, `LOG_`. Build artifacts (`dist/`, `bin/`, `*.test`, `coverage.*`) are excluded from version control. `go.work` is gitignored by default — keep `go.work.use` listing all modules.
+
+`MODEL_SECRET_KEY` is also shared (gateway + config-service). config-service uses it as the AES-256-GCM master key for stored credentials and secret settings, so rotating it invalidates every existing ciphertext. Read paths never return it or any `api_key`: providers expose `api_key_hint`, and a secret setting value is echoed only in its own write response.
