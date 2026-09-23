@@ -18,13 +18,14 @@
 | 会话管理 | ✅ 已对接 | `/user/sessions` |
 | 第三方账号（查看 / 解绑） | ✅ 已对接 | `/user/oauth`（绑定未开放） |
 | 管理后台（用户/角色/权限/审计日志） | ✅ 已对接 | `/admin/*` |
+| 模型配置（后台渠道/模型/系统配置 + 用户自定义） | ✅ 已对接 | `/admin/model-providers`、`/admin/models`、`/admin/settings`、`/user/models` 等 |
 | 作品（novel） | ⚠️ mock | 无后端服务 |
 | 生成任务（generation） | ⚠️ mock | 无后端服务 |
 | 素材（material） | ⚠️ mock | 接口已封装但后端无路由，请求必然失败后回落 |
 | 发布渠道（publish） | ⚠️ mock | 同上 |
-| 灵感 / 设定集 / 统计 / 积分 / 模型 | ⚠️ mock | 无后端服务 |
+| 灵感 / 设定集 / 统计 / 积分 | ⚠️ mock | 无后端服务 |
 
-**已实现的服务**只有 `user-service`（Go）、`crawl4ai-service`（Python）和 `api-gateway`。
+**已实现的服务**包括 `user-service`（Go）、`config-service`（Go）、`crawl4ai-service`（Python）和 `api-gateway`。
 **没有** novel-service、generation-service，因此作品、生成、素材、发布等模块的 mock 属于"后端先做"，不是前端漏接。
 
 ---
@@ -150,7 +151,6 @@
 | 页面 | 数据来源 |
 |---|---|
 | `views/admin/Dashboard.vue` | `@/mock/admin`（`adminMetrics`、`adminServices`） |
-| `views/admin/Models.vue` | `@/mock/admin`（`adminModels`） |
 | `views/admin/Announcements.vue` | `@/mock/admin`（`adminAnnouncements`） |
 | `views/admin/Services.vue` | `@/mock/admin`（`adminServices`） |
 | `views/lorebook/index.vue` | `@/mock`（`characters`、`worlds`、`foreshadows`） |
@@ -163,7 +163,6 @@
 | `stores/novel.ts` | `@/mock`（`novels`） |
 | `stores/generation.ts` | `@/mock`（`tasks`） |
 | `stores/credit.ts` | `@/mock/credits` |
-| `stores/model.ts` | `@/mock/models` |
 
 因此 `views/novel`、`views/dashboard`、`views/task`、`views/statistics` 走的都是 store → mock。
 

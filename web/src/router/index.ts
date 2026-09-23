@@ -38,6 +38,7 @@ const routes: RouteRecordRaw[] = [
       { path: 'users', name: 'admin-users', component: () => import('@/views/admin/Users.vue'), meta: { permission: 'user:admin' } },
       { path: 'roles', name: 'admin-roles', component: () => import('@/views/admin/Roles.vue'), meta: { permission: 'system:admin' } },
       { path: 'models', name: 'admin-models', component: () => import('@/views/admin/Models.vue'), meta: { permission: 'system:admin' } },
+      { path: 'settings', name: 'admin-settings', component: () => import('@/views/admin/Settings.vue'), meta: { permission: 'system:admin' } },
       { path: 'announcements', name: 'admin-announcements', component: () => import('@/views/admin/Announcements.vue'), meta: { permission: 'user:admin' } },
       { path: 'logs', name: 'admin-logs', component: () => import('@/views/admin/Logs.vue'), meta: { permission: 'system:admin' } },
       { path: 'services', name: 'admin-services', component: () => import('@/views/admin/Services.vue'), meta: { permission: 'system:admin' } },

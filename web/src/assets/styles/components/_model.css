@@ -1,0 +1,218 @@
+/* ===================================================================
+   模型配置模块（管理端 / 用户端共用）
+   设计语言沿用全局令牌：暖白纸面 + 琥珀金 + 衬线标题，安静的工具栏与表格，
+   只把「密钥」做成签名元素——api_key 只写不读，已配置是一枚填满的槽，
+   未配置是虚线空槽，让「有没有配钥匙」一眼可辨。
+   =================================================================== */
+
+/* ---------- 密钥槽位（签名元素） ---------- */
+.key-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-s);
+  background: var(--c-paper);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--c-ink-soft);
+}
+.key-slot-ico {
+  color: var(--c-amber-deep);
+  flex: none;
+}
+.key-slot-val {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.key-slot-none {
+  color: var(--c-ink-muted);
+}
+.key-slot-time {
+  flex: none;
+  margin-left: 2px;
+  padding-left: 8px;
+  border-left: 1px solid var(--c-line-soft);
+  font-size: 11px;
+  color: var(--c-ink-muted);
+  white-space: nowrap;
+}
+/* 未配置：虚线空槽，像一枚没插钥匙的锁孔 */
+.key-slot.is-empty {
+  border-style: dashed;
+  background: transparent;
+}
+.key-slot.is-empty .key-slot-ico,
+.key-slot.is-empty .key-slot-val {
+  color: var(--c-ink-muted);
+}
+/* 表格单元格里的紧凑形态：只保留掩码，让位给其他列 */
+.key-slot.is-compact {
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+/* ---------- 能力刻度行 ---------- */
+.cap-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cap-cell {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--c-line);
+  border-radius: 6px;
+  background: var(--c-paper);
+  color: var(--c-ink-muted);
+  flex: none;
+}
+/* 开启的能力填充琥珀色，未开启留空线框 */
+.cap-cell.on {
+  border-color: transparent;
+  background: var(--c-amber-soft);
+  color: var(--c-amber-deep);
+}
+
+/* ---------- 用户端设置页 ---------- */
+/* 三个配置块是整幅分隔带，不是悬浮卡片；卡片只留给列表行 */
+.settings-block + .settings-block {
+  padding-top: 18px;
+  border-top: 1px solid var(--c-line-soft);
+}
+.block-hint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--c-ink-muted);
+}
+.row-titles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.row-trail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
+}
+.row-cost {
+  font-size: 12px;
+  color: var(--c-ink-muted);
+  white-space: nowrap;
+}
+/* 平台公开配置的值：右对齐 + 允许换行，长 JSON 不会把行撑破 */
+.public-value {
+  max-width: 52%;
+  padding: 2px 8px;
+  border: 1px solid var(--c-line-soft);
+  border-radius: 6px;
+  background: var(--c-paper);
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--c-ink-soft);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 管理端工具条与表格单元格 ---------- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px 0;
+}
+.cell-main {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-ink);
+}
+.cell-sub {
+  font-size: 11px;
+  color: var(--c-ink-muted);
+}
+/* 超长 URL / 配置值在单元格内截断，完整内容走 naive 的 ellipsis tooltip */
+.cell-url,
+.cell-value {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cell-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.table-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+/* 机密项徽标：与密钥槽位同一套琥珀语义，只说明「已加密」，绝不透露值 */
+.secret-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--c-line);
+  border-radius: 999px;
+  background: var(--c-amber-soft);
+  color: var(--c-amber-deep);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ---------- 表单弹窗 ---------- */
+.form-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.cap-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  padding: 4px 0;
+}
+
+@media (max-width: 640px) {
+  .form-pair {
+    grid-template-columns: 1fr;
+  }
+  .settings-block-head {
+    flex-wrap: wrap;
+  }
+  .row-trail {
+    flex-wrap: wrap;
+  }
+  .public-value {
+    max-width: 100%;
+    text-align: left;
+  }
+}

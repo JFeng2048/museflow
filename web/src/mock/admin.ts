@@ -1,6 +1,5 @@
 import type {
   AdminMetrics,
-  AdminModel,
   AdminAnnouncement,
   AdminService,
 } from '@/types/admin'
@@ -18,17 +17,8 @@ function minsAgo(n: number): string {
 /**
  * 注意：用户管理（/admin/users）与审计日志（/admin/audit-logs）已对接真实接口，
  * 这里不再提供 adminUsers / adminLogs mock 数据。
- * 以下 mock 仅服务于后端尚未实现的页面（概览指标 / 模型 / 公告 / 服务监控）。
+ * 以下 mock 仅服务于后端尚未实现的页面（概览指标 / 公告 / 服务监控）。
  */
-
-export const adminModels: AdminModel[] = [
-  { id: 'm-chat', name: 'GPT-4o', provider: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-****3a9f', category: '对话', contextWindow: 128000, enabled: true },
-  { id: 'm-write', name: 'GLM-4-Plus', provider: '智谱', baseUrl: 'https://open.bigmodel.cn/api/paas/v4', apiKey: 'pk-****7c21', category: '续写', contextWindow: 128000, enabled: true },
-  { id: 'm-reason', name: 'Claude-3.5-Sonnet', provider: 'Anthropic', baseUrl: 'https://api.anthropic.com', apiKey: 'sk-ant-****b8e0', category: '推理', contextWindow: 200000, enabled: true },
-  { id: 'm-embed', name: 'text-embedding-3-large', provider: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-****3a9f', category: '嵌入', contextWindow: 8191, enabled: true },
-  { id: 'm-img', name: 'DALL·E-3', provider: 'OpenAI', baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-****3a9f', category: '图像', contextWindow: 0, enabled: true },
-  { id: 'm-write-2', name: 'Qwen-Max', provider: '阿里云', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', apiKey: 'sk-****d4aa', category: '续写', contextWindow: 32000, enabled: false },
-]
 
 export const adminAnnouncements: AdminAnnouncement[] = [
   {

@@ -13,6 +13,7 @@ import {
   MegaphoneOutline,
   ListOutline,
   PulseOutline,
+  OptionsOutline,
 } from '@vicons/ionicons5'
 
 /** 菜单所属区块：用户工作台(user) 或 管理后台(admin)。 */
@@ -54,6 +55,7 @@ export const NAV_ITEMS: NavItem[] = [
   { name: 'admin-users', labelKey: 'admin.nav.users', icon: PeopleOutline, section: 'admin', permission: 'user:admin' },
   { name: 'admin-roles', labelKey: 'admin.nav.roles', icon: ShieldOutline, section: 'admin', permission: 'system:admin' },
   { name: 'admin-models', labelKey: 'admin.nav.models', icon: ConstructOutline, section: 'admin', permission: 'system:admin' },
+  { name: 'admin-settings', labelKey: 'admin.nav.settings', icon: OptionsOutline, section: 'admin', permission: 'system:admin' },
   { name: 'admin-announcements', labelKey: 'admin.nav.announcements', icon: MegaphoneOutline, section: 'admin', permission: 'user:admin' },
   { name: 'admin-logs', labelKey: 'admin.nav.logs', icon: ListOutline, section: 'admin', permission: 'system:admin' },
   { name: 'admin-services', labelKey: 'admin.nav.services', icon: PulseOutline, section: 'admin', permission: 'system:admin' },

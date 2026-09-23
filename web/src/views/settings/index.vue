@@ -10,7 +10,6 @@ import {
   NTabPane,
   NButton,
   NSwitch,
-  NSelect,
   NInput,
   NModal,
   NForm,
@@ -28,13 +27,11 @@ import SecuritySettings from '@/views/settings/SecuritySettings.vue'
 import ChangePassword from '@/views/settings/ChangePassword.vue'
 import { useUserStore } from '@/stores/system/user'
 import { useNovelStore } from '@/stores/novel'
-import { useModelStore } from '@/stores/model'
 import { useCreditStore } from '@/stores/credit'
 import { fetchChannels } from '@/api/publish'
 import { bindProvider, unbindProvider } from '@/api/system/auth'
 import type { PublishChannel } from '@/api/publish'
-import { PROTOCOLS } from '@/types/model'
-import type { ModelProvider, AIModel } from '@/types/model'
+import ModelSettings from '@/views/settings/ModelSettings.vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -44,7 +41,6 @@ const message = useMessage()
 
 const userStore = useUserStore()
 const novelStore = useNovelStore()
-const modelStore = useModelStore()
 const creditStore = useCreditStore()
 const { user } = storeToRefs(userStore)
 const { records, tasks, activityBalance, permanentBalance, nextExpiry } = storeToRefs(creditStore)
@@ -105,81 +101,6 @@ function confirmAvatar() {
   userStore.update({ avatar: profile.avatar, avatarColor: profile.avatarColor })
   message.success(t('settings.saved'))
   showAvatarPicker.value = false
-}
-
-// ——— 模型配置 ———
-const providerOptions = computed(() =>
-  modelStore.providers.map((p) => ({ label: p.name, value: p.id })),
-)
-const protocolOptions = PROTOCOLS.map((p) => ({ label: p.label, value: p.value }))
-
-// 供应商弹窗
-const showProvider = ref(false)
-const editingProvider = ref<string | null>(null)
-const providerForm = reactive<Partial<ModelProvider>>({
-  name: '',
-  protocol: 'openai',
-  baseUrl: '',
-  apiKey: '',
-  organization: '',
-})
-function openAddProvider() {
-  editingProvider.value = null
-  Object.assign(providerForm, { name: '', protocol: 'openai', baseUrl: '', apiKey: '', organization: '' })
-  showProvider.value = true
-}
-function openEditProvider(p: ModelProvider) {
-  editingProvider.value = p.id
-  Object.assign(providerForm, { name: p.name, protocol: p.protocol, baseUrl: p.baseUrl, apiKey: p.apiKey, organization: p.organization || '' })
-  showProvider.value = true
-}
-function saveProvider() {
-  if (!providerForm.name?.trim()) {
-    message.warning(t('settings.model.nameRequired'))
-    return
-  }
-  if (editingProvider.value) {
-    modelStore.updateProvider(editingProvider.value, { ...providerForm })
-  } else {
-    modelStore.addProvider({ name: providerForm.name!, protocol: providerForm.protocol!, baseUrl: providerForm.baseUrl!, apiKey: providerForm.apiKey!, organization: providerForm.organization })
-  }
-  message.success(t('settings.saved'))
-  showProvider.value = false
-}
-
-// 模型弹窗
-const showModel = ref(false)
-const editingModel = ref<string | null>(null)
-const modelForm = reactive<Partial<AIModel>>({
-  providerId: '',
-  name: '',
-  apiModel: '',
-  contextK: 32,
-  enabled: true,
-  description: '',
-})
-function openAddModel() {
-  editingModel.value = null
-  Object.assign(modelForm, { providerId: modelStore.providers[0]?.id || '', name: '', apiModel: '', contextK: 32, enabled: true, description: '' })
-  showModel.value = true
-}
-function openEditModel(m: AIModel) {
-  editingModel.value = m.id
-  Object.assign(modelForm, { providerId: m.providerId, name: m.name, apiModel: m.apiModel, contextK: m.contextK, enabled: m.enabled, description: m.description || '' })
-  showModel.value = true
-}
-function saveModel() {
-  if (!modelForm.name?.trim() || !modelForm.apiModel?.trim()) {
-    message.warning(t('settings.model.modelFieldsRequired'))
-    return
-  }
-  if (editingModel.value) {
-    modelStore.updateModel(editingModel.value, { ...modelForm })
-  } else {
-    modelStore.addModel({ providerId: modelForm.providerId!, name: modelForm.name!, apiModel: modelForm.apiModel!, contextK: modelForm.contextK || 32, description: modelForm.description })
-  }
-  message.success(t('settings.saved'))
-  showModel.value = false
 }
 
 // ——— 积分 ———
@@ -310,61 +231,7 @@ function unbind(provider: 'github' | 'wechat') {
 
       <!-- 模型配置 -->
       <n-tab-pane name="model" :tab="t('settings.model.title')">
-        <div class="settings-panel">
-          <section class="settings-block">
-            <div class="settings-block-head">
-              <h3>{{ t('settings.model.providers') }}</h3>
-              <n-button size="small" @click="openAddProvider">+ {{ t('settings.model.addProvider') }}</n-button>
-            </div>
-            <n-empty v-if="!modelStore.providers.length" :description="t('settings.model.empty')" />
-            <div class="settings-list">
-              <div v-for="p in modelStore.providers" :key="p.id" class="settings-row">
-                <div class="settings-row-main">
-                  <span class="settings-row-title">{{ p.name }}</span>
-                  <n-tag size="small" :bordered="false">{{ PROTOCOLS.find((x) => x.value === p.protocol)?.label }}</n-tag>
-                  <span class="settings-row-sub">{{ p.baseUrl }}</span>
-                  <n-tag v-if="p.system" size="small" type="warning" :bordered="false">{{ t('settings.model.system') }}</n-tag>
-                </div>
-                <n-space>
-                  <n-button v-if="!p.system" size="small" quaternary @click="openEditProvider(p)">{{ t('common.edit') }}</n-button>
-                  <n-popconfirm v-if="!p.system" @positive-click="modelStore.removeProvider(p.id)">
-                    <template #trigger>
-                      <n-button size="small" quaternary type="error">{{ t('common.delete') }}</n-button>
-                    </template>
-                    {{ t('common.confirmDelete') }}
-                  </n-popconfirm>
-                </n-space>
-              </div>
-            </div>
-          </section>
-
-          <section class="settings-block">
-            <div class="settings-block-head">
-              <h3>{{ t('settings.model.models') }}</h3>
-              <n-button size="small" @click="openAddModel">+ {{ t('settings.model.addModel') }}</n-button>
-            </div>
-            <div class="settings-list">
-              <div v-for="m in modelStore.models" :key="m.id" class="settings-row">
-                <div class="settings-row-main">
-                  <span class="settings-row-title">{{ m.name }}</span>
-                  <n-tag size="small" :bordered="false">{{ m.apiModel }}</n-tag>
-                  <span v-if="m.system" class="settings-row-sub">{{ t('settings.model.cost', { n: m.creditCost }) }}</span>
-                  <span v-else class="settings-row-sub free">{{ t('settings.model.free') }}</span>
-                </div>
-                <n-space>
-                  <n-switch :value="m.enabled" @update:value="(v: boolean) => modelStore.toggleModel(m.id, v)" />
-                  <n-button v-if="!m.system" size="small" quaternary @click="openEditModel(m)">{{ t('common.edit') }}</n-button>
-                  <n-popconfirm v-if="!m.system" @positive-click="modelStore.removeModel(m.id)">
-                    <template #trigger>
-                      <n-button size="small" quaternary type="error">{{ t('common.delete') }}</n-button>
-                    </template>
-                    {{ t('common.confirmDelete') }}
-                  </n-popconfirm>
-                </n-space>
-              </div>
-            </div>
-          </section>
-        </div>
+        <ModelSettings />
       </n-tab-pane>
 
       <!-- 我的积分 -->
@@ -544,64 +411,6 @@ function unbind(provider: 'github' | 'wechat') {
         <ChangePassword />
       </n-tab-pane>
     </n-tabs>
-
-    <!-- 供应商弹窗 -->
-    <n-modal v-model:show="showProvider" preset="card" :title="editingProvider ? t('settings.model.editProvider') : t('settings.model.addProvider')" style="width: 520px; max-width: 92vw" :bordered="false">
-      <n-form :model="providerForm" label-placement="top">
-        <n-form-item :label="t('settings.model.name')">
-          <n-input v-model:value="providerForm.name" :placeholder="t('settings.model.namePlaceholder')" />
-        </n-form-item>
-        <n-form-item :label="t('settings.model.protocol')">
-          <n-select v-model:value="providerForm.protocol" :options="protocolOptions" />
-        </n-form-item>
-        <n-form-item :label="t('settings.model.baseUrl')">
-          <n-input v-model:value="providerForm.baseUrl" :placeholder="PROTOCOLS.find((x) => x.value === providerForm.protocol)?.baseUrlHint" />
-        </n-form-item>
-        <n-form-item :label="t('settings.model.apiKey')">
-          <n-input v-model:value="providerForm.apiKey" type="password" show-password-on="click" />
-        </n-form-item>
-        <n-form-item :label="t('settings.model.organization')">
-          <n-input v-model:value="providerForm.organization" />
-        </n-form-item>
-      </n-form>
-      <template #footer>
-        <n-space justify="end">
-          <n-button quaternary @click="showProvider = false">{{ t('common.cancel') }}</n-button>
-          <n-button type="primary" @click="saveProvider">{{ t('common.save') }}</n-button>
-        </n-space>
-      </template>
-    </n-modal>
-
-    <!-- 模型弹窗 -->
-    <n-modal v-model:show="showModel" preset="card" :title="editingModel ? t('settings.model.editModel') : t('settings.model.addModel')" style="width: 520px; max-width: 92vw" :bordered="false">
-      <n-form :model="modelForm" label-placement="top">
-        <n-form-item :label="t('settings.model.provider')">
-          <n-select v-model:value="modelForm.providerId" :options="providerOptions" />
-        </n-form-item>
-        <n-form-item :label="t('settings.model.modelName')">
-          <n-input v-model:value="modelForm.name" :placeholder="t('settings.model.modelNamePlaceholder')" />
-        </n-form-item>
-        <n-form-item :label="t('settings.model.apiModel')">
-          <n-input v-model:value="modelForm.apiModel" :placeholder="t('settings.model.apiModelPlaceholder')" />
-        </n-form-item>
-        <n-form-item :label="t('settings.model.contextK')">
-          <n-input
-            :value="String(modelForm.contextK ?? '')"
-            @update:value="(v: string) => (modelForm.contextK = Number(v) || 32)"
-            placeholder="32"
-          />
-        </n-form-item>
-        <n-form-item :label="t('settings.model.description')">
-          <n-input v-model:value="modelForm.description" type="textarea" :autosize="{ minRows: 2 }" />
-        </n-form-item>
-      </n-form>
-      <template #footer>
-        <n-space justify="end">
-          <n-button quaternary @click="showModel = false">{{ t('common.cancel') }}</n-button>
-          <n-button type="primary" @click="saveModel">{{ t('common.save') }}</n-button>
-        </n-space>
-      </template>
-    </n-modal>
 
     <!-- 头像选择弹窗 -->
     <n-modal v-model:show="showAvatarPicker" preset="card" :title="t('settings.profileChangeAvatar')" style="width: 520px; max-width: 92vw" :bordered="false">

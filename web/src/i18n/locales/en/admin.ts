@@ -7,6 +7,7 @@ export default {
     users: 'Users',
     roles: 'Roles',
     models: 'Models',
+    settings: 'System Config',
     announcements: 'Announcements',
     logs: 'Logs',
     services: 'Services',
@@ -118,6 +119,10 @@ export default {
     categoryPh: 'Select capability',
     contextPh: 'Enter context window',
     add: 'Add Model',
+  },
+  settings: {
+    title: 'System Config',
+    subtitle: 'Manage platform-level config such as models and runtime parameters; secrets are encrypted and take effect immediately',
   },
   announcements: {
     title: 'Announcements',

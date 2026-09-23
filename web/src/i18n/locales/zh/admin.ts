@@ -7,6 +7,7 @@ export default {
     users: '用户管理',
     roles: '角色权限',
     models: '模型配置',
+    settings: '系统配置',
     announcements: '公告发布',
     logs: '系统日志',
     services: '服务监控',
@@ -118,6 +119,10 @@ export default {
     categoryPh: '请选择用途',
     contextPh: '请输入上下文上限',
     add: '添加模型',
+  },
+  settings: {
+    title: '系统配置',
+    subtitle: '管理模型与运行参数等平台级配置，机密项加密存储，保存后即时生效',
   },
   announcements: {
     title: '公告发布',

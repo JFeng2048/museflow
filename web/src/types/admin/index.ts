@@ -93,25 +93,6 @@ export interface AdminMetrics {
   servicesTotal: number
 }
 
-/** 系统支持的模型（供应商）配置项，可编辑。 */
-export interface AdminModel {
-  id: string
-  /** 模型展示名，如 GPT-4o。 */
-  name: string
-  /** 供应商，如 OpenAI / 智谱 / 自建。 */
-  provider: string
-  /** API Base URL，如 https://api.openai.com/v1。 */
-  baseUrl: string
-  /** API Key（脱敏展示，可编辑）。 */
-  apiKey: string
-  /** 用途分类。 */
-  category: '对话' | '续写' | '推理' | '嵌入' | '图像'
-  /** 单次调用上下文上限（token）。 */
-  contextWindow: number
-  /** 是否启用。 */
-  enabled: boolean
-}
-
 /** 公告信息。 */
 export interface AdminAnnouncement {
   id: string
