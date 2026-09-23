@@ -123,9 +123,12 @@ const columns: DataTableColumns<RemoteModel> = [
   },
 ]
 
-/** 平台模型编码：唯一且创建后不可改，因此从「渠道 code + 上游标识」派生稳定值。 */
+/**
+ * 平台模型编码：唯一且创建后不可改，因此从「渠道 code + 上游标识」派生稳定值。
+ * 50 是服务端 model.code 的列宽（varchar(50)），超长会在通过参数校验后才被数据库拒绝。
+ */
 function toModelCode(id: string): string {
-  const code = [slug(currentProvider()?.code ?? ''), slug(id)].filter(Boolean).join('-').slice(0, 90)
+  const code = [slug(currentProvider()?.code ?? ''), slug(id)].filter(Boolean).join('-').slice(0, 50)
   return code || 'model'
 }
 
