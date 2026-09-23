@@ -29,6 +29,7 @@
 | 📦 **项目管理** | 小说创建/管理/状态流转 | 支持草稿→连载→完结全生命周期 |
 | 📚 **设定集 (Lorebook)** | 角色/世界观/伏笔管理 | 保证 AI 生成内容的一致性 |
 | ✍️ **智能生成** | 大纲生成/章节续写/改写/扩写 | 基于 RAG 的知识增强生成 |
+| 🧩 **模型与系统配置** | 平台渠道 / 模型 / 系统配置 | 管理端维护厂商 `base_url` 与 `api_key`（AES 加密存储），用户端可接入自定义渠道 |
 | 🕷️ **数据采集** | 网络小说/素材自动抓取 | 集成 Crawl4AI，构建个人素材库 |
 | 📤 **自动发布** | 定时发布/多平台适配 | 支持番茄小说等平台（策略可扩展） |
 | 📊 **数据分析** | 写作统计/角色出场分析 | 数据驱动的创作洞察 |
@@ -41,9 +42,10 @@
 
 ---
 
-## 🔗 原型预览地址
+## 🔗 在线预览地址
 
-当前可访问的线上原型预览入口（MuseFlow 前端）。后端 API 网关与 user-service、crawl4ai-service 等微服务尚未接入，后续随服务就绪陆续开放：
+MuseFlow 已基于 Kubernetes + Traefik Ingress 部署上线，前端、API 网关与各后端微服务
+（user-service、config-service、crawl4ai-service）均已连通，可直接访问：
 
 > https://museflow.jfeng.asia
 
@@ -52,22 +54,32 @@
 仓库为 **Monorepo**，所有代码同处一个 Git 仓库。微服务之间通过 **gRPC** 通信，对外统一由 **API Gateway** 暴露 HTTP 接口。
 
 ```
-                ┌──────────────────────────┐
-   浏览器/客户端 │        API Gateway        │  (Gin, :5001)
-   ─────HTTP────▶  /api/v1/* + Swagger       │
-                │  JWT 鉴权 / CORS / Cookie  │
-                └───────────┬──────────────┘
-                            │ gRPC
-                ┌───────────▼──────────────┐
-                │       User Service        │  (gRPC, :5002)
-                │  注册 / 登录 / 双令牌认证    │
-                │  用户数据访问 (GORM)        │
-                └──────┬───────────┬────────┘
-                       │           │
-                  ┌────▼───┐  ┌────▼────┐
-                  │Postgres│  │ Redis   │
-                  │user_svc│  │ 白/黑名单│
-                  └────────┘  └─────────┘
+ 浏览器 / 客户端 ── HTTP ─────────▶
+                     ┌────────────▼─────────────┐
+                     │       API 网关           │  (Gin, :5001)
+                     │  /api/v1/* + Swagger     │
+                     │ JWT 鉴权 / CORS / Cookie │
+                     └────────────┬─────────────┘
+                                  │ gRPC
+    ┌─────────────────────────────┴─────────────────────────────┐
+                 │                                │
+    ┌────────────▼─────────────┐     ┌────────────▼─────────────┐
+    │        用户服务          │     │        配置服务          │
+    │  注册 / 登录 / 2FA       │     │  渠道 / 模型 / 系统配置  │
+    │  双令牌认证 (GORM)       │     │  密钥加密 (AES-GCM)      │
+    └────┬────────────┬────────┘     └───────┬──────────────────┘
+     ┌───▼────┐
+                 ┌────▼─────┐
+     │Postgres│
+     │user_svc│
+     └────────┘
+                 │ Redis    │
+                 │白/黑名单 │
+                 └──────────┘
+                                        ┌────▼─────┐
+                                        │ Postgres │
+                                        │config_svc│
+                                        └──────────┘
 ```
 
 ### 已实现的后端模块
@@ -82,7 +94,10 @@
 | `proto/user` | 共享 gRPC 契约（user.proto 及生成代码） | protobuf | — |
 | `proto/crawl` | 抓取/抽取共享 gRPC 契约（crawl.proto 及生成代码） | protobuf | — |
 | `services/crawl4ai-service` | 数据采集服务（Python，HTTP + gRPC 双接口） | Crawl4AI / FastAPI / gRPC | 5003 |
+| `services/config-service` | 模型与系统配置服务（gRPC Server） | gRPC / GORM / PostgreSQL / AES-256-GCM | 5004 |
+| `proto/model` | 模型目录与系统配置共享 gRPC 契约（model.proto 及生成代码） | protobuf | — |
 | `services/user-service/database/user_svc.sql` | 用户库表结构（序列、触发器、schema 命名空间） | PostgreSQL DDL | — |
+| `services/config-service/database/config_svc.sql` | 配置库表结构（渠道 / 模型 / 系统配置） | PostgreSQL DDL | — |
 
 ### 双令牌认证（概要）
 
@@ -99,6 +114,7 @@
 ```
 MuseFlow/
 ├── proto/                       # 共享 gRPC API 契约（含生成代码）
+│   ├── model/                   # model.proto 及生成代码（模型目录 / 渠道 / 系统配置）
 │   └── user/                    # user.proto 及生成代码（user.pb.go / user_grpc.pb.go）
 ├── pkg/                         # 跨服务共享的 Go 基础库（独立 go.mod）
 │   ├── envloader/               # 分层 .env 加载（系统 > 服务 .env > 根 .env > 默认值）
@@ -134,13 +150,25 @@ MuseFlow/
 │   │       ├── handler/          # HTTP 处理器（dto ↔ proto 转换）
 │   │       ├── client/           # user-service gRPC 客户端
 │   │       └── dto/              # HTTP 层 DTO（请求/响应结构，供 Swagger 生成）
+│   ├── config-service/          # 模型与系统配置服务（Go，gRPC :5004）
+│   │   ├── cmd/server/main.go    # gRPC 服务入口：装配 config/repo/service/handler
+│   │   ├── .env.example          # 服务配置模板（已提交；.env 已被 gitignore）
+│   │   ├── database/config_svc.sql  # 配置库 DDL（config_svc schema）
+│   │   └── internal/
+│   │       ├── config/           # 配置加载（CONFIG_ / DB_ / MODEL_SECRET_KEY / LOG_）
+│   │       ├── handler/          # gRPC 处理器（proto ↔ 业务层转换）
+│   │       ├── pkg/              # 内部公共包（secret 加密 / upstream 上游探测）
+│   │       │   ├── secret/       #   AES-256-GCM 凭证加密
+│   │       │   └── upstream/     #   厂商 /models 模型目录探测
+│   │       ├── model/            # GORM 实体（config_svc.*）
+│   │       ├── repository/       # 数据访问（GORM）
+│   │       └── service/          # 业务逻辑层（渠道 / 模型 / 系统配置 / 用户模型）
 │   └── crawl4ai-service/        # 数据采集服务（Python，HTTP + gRPC :5003）
 │       ├── src/                  # 业务模块（crawler / extractor / api / grpc_server）
 │       ├── pyproject.toml        # uv 依赖管理（基础 + [http] / [grpc] 分组）
 │       ├── docker/               # 多阶段 Dockerfile + compose
 │       └── README.md             # 服务 README（中文）+ README.en.md（英文）
 ├── deploy/                      # 部署相关（K8s / Redis 配置等）
-├── services/crawl4ai-service/    # 数据采集服务（Python，HTTP + gRPC 双接口）
 ├── docs/                        # 设计文档（含双令牌认证系统设计文档）
 ├── web/                         # 前端（Vue 3 + TypeScript + Vite）
 ├── scripts/                     # 代码生成等脚本
@@ -174,9 +202,13 @@ make init        # 生成 go.work 并安装 protoc-gen-go / swag 等工具
 ```bash
 # 导入用户库表结构（含 schema、序列、触发器）
 psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f services/user-service/database/user_svc.sql
+
+# 导入模型与系统配置库表结构（含 schema、序列、触发器）
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f services/config-service/database/config_svc.sql
 ```
 
-> 服务端**不执行 AutoMigrate**，schema 由 `services/user-service/database/user_svc.sql` 统一管理（字段变更见 `services/user-service/database/migrations/`）。
+> 服务端**不执行 AutoMigrate**，各服务的 schema 由自身 `database/` 目录下的 DDL 管理
+> （字段变更见对应服务的 `database/migrations/`）。
 
 ### 3. 配置环境变量（分层管理）
 
@@ -200,9 +232,10 @@ services/
 
 | 前缀 | 服务 | 关键变量 |
 | :--- | :--- | :--- |
-| `GATEWAY_` | api-gateway | `GATEWAY_PORT`、`GATEWAY_USER_SERVICE_URL`、`GATEWAY_ALLOW_ORIGINS`、`GATEWAY_COOKIE_*` |
+| `GATEWAY_` | api-gateway | `GATEWAY_PORT`、`GATEWAY_USER_SERVICE_URL`、`GATEWAY_MODEL_SERVICE_URL`、`GATEWAY_ALLOW_ORIGINS`、`GATEWAY_COOKIE_*` |
 | `USER_` | user-service | `USER_PORT`、`USER_ACCESS_TTL_SECONDS` 等 |
-| （无前缀） | 公共 | `DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`（所有服务共用的数据库连接）；`REDIS_ADDR`、`REDIS_PASSWORD`、`REDIS_DB`（所有服务共用的 Redis 连接）；`JWT_SECRET`（gateway 与 user-service 共用的 JWT 签名密钥） |
+| `CONFIG_` | config-service | `CONFIG_PORT`（与 `GATEWAY_MODEL_SERVICE_URL` 对应） |
+| （无前缀） | 公共 | `DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`（所有服务共用的数据库连接）；`REDIS_ADDR`、`REDIS_PASSWORD`、`REDIS_DB`（所有服务共用的 Redis 连接）；`JWT_SECRET`（gateway 与 user-service 共用的 JWT 签名密钥）；`MODEL_SECRET_KEY`（模型凭证 AES-256-GCM 主密钥，32 字节） |
 | `LOG_` | 所有服务 | `LOG_LEVEL`、`LOG_FORMAT`、`LOG_CONSOLE`（日志输出到 stdout，由容器运行时 / k8s 收集） |
 
 `services/*/.env` 已被 `.gitignore` 忽略（含真实密钥，不入库）。各服务目录提供自己的
@@ -212,7 +245,11 @@ services/
 cp services/user-service/.env.example services/user-service/.env
 cp services/api-gateway/.env.example services/api-gateway/.env
 cp services/crawl4ai-service/.env.example services/crawl4ai-service/.env
+cp services/config-service/.env.example services/config-service/.env
 ```
+
+`MODEL_SECRET_KEY` 只能通过系统环境变量或部署密钥文件（见 [`deploy/k8s/`](deploy/k8s/)）注入，
+切勿提交真实密钥；一旦轮换，历史 `api_key` 密文将全部无法解密。
 
 如需覆盖某项，可设置系统环境变量（优先级最高），例如：
 ```bash
@@ -230,6 +267,9 @@ make run-user
 
 # 终端 B：API 网关
 make run-gateway
+
+# 终端 C：模型与系统配置服务
+cd services/config-service && go run ./cmd/server
 ```
 
 启动后控制台会打印访问地址与 Swagger 地址：
@@ -237,6 +277,7 @@ make run-gateway
 - API 网关：http://localhost:5001
 - Swagger 文档：http://localhost:5001/swagger/index.html
 - 用户服务（gRPC）：localhost:5002
+- 配置服务（gRPC）：localhost:5004
 
 ### 5. 常用命令
 
@@ -268,6 +309,9 @@ make docker      # 构建 Docker 镜像（上下文为仓库根目录）
 >
 > `dev.bat` 位于仓库根目录，每个服务开一个独立窗口，关闭窗口即停止该服务；
 > `scripts\*.bat` 为等价的细粒度入口，仍可继续使用。
+
+> `config-service` 暂未纳入 `dev.bat`，需单独启动：`cd services/config-service && air`
+> （或 `go run ./cmd/server`）。
 >
 > Air 需先安装：`go install github.com/air-verse/air@latest`（脚本会自动把 `%USERPROFILE%\go\bin` 加入 PATH）。
 > 批处理中的中文提示在部分老版 CMD 编码下可能显示乱码，不影响功能。
@@ -282,6 +326,7 @@ make docker      # 构建 Docker 镜像（上下文为仓库根目录）
 - **[user-service](docs/cn/api/user-service.md)** — 用户与认证核心（gRPC `:5002`）：账号、双令牌、邮箱验证码、2FA、RBAC、审计、OAuth。
 - **[api-gateway](docs/cn/api/api-gateway.md)** — 统一 HTTP 入口（`:5001`）：完整路由表、认证/错误映射、CORS 与 Cookie 策略。
 - **[crawl4ai-service](docs/cn/api/crawl4ai-service.md)** — 数据采集（`:5003`）：`Health` / `Crawl` / `Extract`（HTTP + gRPC）。
+- **[config-service](docs/cn/api/config-service.md)** — 模型与系统配置（gRPC `:5004`）：平台/用户渠道、模型目录、可用模型合并视图、系统配置、上游探测。
 
 各服务均提供 Swagger（网关在 `/swagger/index.html`，crawl4ai-service 在 `/docs`）。
 
@@ -291,12 +336,13 @@ make docker      # 构建 Docker 镜像（上下文为仓库根目录）
 
 ## 📦 容器化
 
-`services/api-gateway/Dockerfile` 与 `services/user-service/Dockerfile` 均为多阶段构建，
-使用 `golang:1.23-alpine` 编译、`alpine:3.20` 运行，并以非 root 用户启动。
+`services/api-gateway/Dockerfile`、`services/user-service/Dockerfile` 与 `services/config-service/Dockerfile`
+均为多阶段构建，使用 `golang:1.26-alpine` 编译、`alpine:3.20` 运行，并以非 root 用户启动。
 
 ```bash
 docker build -f services/user-service/Dockerfile -t museflow/user-service .
 docker build -f services/api-gateway/Dockerfile  -t museflow/api-gateway  .
+docker build -f services/config-service/Dockerfile -t museflow/config-service .
 ```
 
 构建上下文需为**仓库根目录**（服务依赖同仓库的 `proto` 模块）。
