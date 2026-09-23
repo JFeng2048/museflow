@@ -37,6 +37,8 @@ bin/
 tmp/
 tmp-worker/
 
+# 本地运行日志与探针截图目录（服务运行 / 部署验证时产生）
+.logs/
 # env 文件：.env 含本地密钥，忽略不提交；.env.example 作为模板提交
 .env
 .env.local
