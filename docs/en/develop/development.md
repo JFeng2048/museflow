@@ -20,17 +20,29 @@ go install github.com/air-verse/air@latest   # hot reload (optional)
 # user-service (gRPC :5002)
 cd services/user-service && go run ./cmd/server
 
+# config-service (gRPC :5004)
+cd services/config-service && go run ./cmd/server
+
 # api-gateway (HTTP :5001)
 cd services/api-gateway && go run ./cmd/server
 ```
 
 Copy `.env.example` to `.env` and fill in config. user-service MFA config: see the [2FA Design](2fa.md) configuration section.
 
+Extra requirements for config-service:
+
+- Tables: `psql -f services/config-service/database/config_svc.sql` (a `DROP` + `CREATE` script, for empty databases only).
+- Key: `MODEL_SECRET_KEY` must be 32 bytes (generate with `openssl rand -hex 16`); the service fails to start without it.
+- Gateway: `GATEWAY_MODEL_SERVICE_URL=localhost:5004`.
+
+Table structure, the key scheme and the frontend wiring for models and system settings are in the model & system configuration design doc (Chinese, `docs/cn/develop/模型与系统配置设计文档.md`).
+
 ## Build & Verify
 
 ```bash
 # Build
 cd services/user-service && go build ./cmd/server
+cd services/config-service && go build ./cmd/server
 cd services/api-gateway && go build ./cmd/server
 
 # Static check
