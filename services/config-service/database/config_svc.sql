@@ -27,8 +27,11 @@
 --       v1:<nonce_b64>:<ciphertext_b64>
 --   密钥取自共享环境变量 MODEL_SECRET_KEY（无前缀，与 JWT_SECRET / DB_* 同级），
 --   由 config-service 在写入前加密、读取时解密。
---   绝不明文落库，绝不下发前端：对外只回 api_key_hint（末 4 位）与
---   api_key_updated_at；LLM 调用一律在服务端完成，前端永远拿不到 base_url + key。
+--   由 config-service 在写入前加密。读取侧唯一的解密路径是上游模型目录探测
+--   （services/config-service/internal/service/remote.go），其余场景一律不解密。
+--   绝不明文落库：对外只回 api_key_hint（末 4 位）与 api_key_updated_at；
+--   base_url 对管理端可见（排查连通性要用），api_key 明文任何接口都不返回；
+--   LLM 调用一律在服务端完成。
 --
 -- 【警告】本文件与 user_svc.sql 同为「DROP + CREATE」全量脚本，用于空库初始化。
 --   在已有数据的库上重复执行会清空 config_svc 全部表；增量变更请改走
