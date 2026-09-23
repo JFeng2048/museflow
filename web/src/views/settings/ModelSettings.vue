@@ -24,7 +24,7 @@ import ModelFormModal from '@/components/model/ModelFormModal.vue'
 import RemoteModelModal from '@/components/model/RemoteModelModal.vue'
 import CapabilityIcons from '@/components/model/CapabilityIcons.vue'
 import KeySlot from '@/components/model/KeySlot.vue'
-import type { UserModel, UserProvider } from '@/types/model'
+import type { AvailableModel, UserModel, UserProvider } from '@/types/model'
 import { MODEL_TYPES, modelTypeMeta } from '@/types/model'
 
 /**
@@ -58,8 +58,10 @@ function typeLabel(type: string): string {
   return t(`model.type.${modelTypeMeta(type).value}`)
 }
 
-function creditLabel(cost: number): string {
-  return cost ? t('settings.model.cost', { n: cost }) : t('settings.model.free')
+function creditLabel(model: AvailableModel): string {
+  if (model.creditCost) return t('settings.model.cost', { n: model.creditCost })
+  // 自定义模型的费用由用户直接付给上游厂商，平台模型计 0 积分才是平台侧免费。
+  return t(model.source === 'platform' ? 'settings.model.freePlatform' : 'settings.model.freeCustom')
 }
 
 /**
@@ -194,7 +196,7 @@ function providerName(id: number): string {
             </span>
           </div>
           <div class="row-trail">
-            <span class="row-cost">{{ creditLabel(m.creditCost) }}</span>
+            <span class="row-cost">{{ creditLabel(m) }}</span>
             <capability-icons :capabilities="m.capabilities" />
           </div>
         </div>

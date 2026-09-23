@@ -4,7 +4,8 @@ export default {
   profile: '个人资料',
   model: {
     title: '模型配置',
-    free: '免费（自定义）',
+    freePlatform: '免费',
+    freeCustom: '免费（自定义）',
     available: '可用模型',
     availableHint: '平台渠道与你的自定义渠道合并展示，只读。平台模型计平台积分，自定义模型不扣费。',
     availableEmpty: '还没有可用模型',

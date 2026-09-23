@@ -4,7 +4,8 @@ export default {
   profile: 'Profile',
   model: {
     title: 'Models',
-    free: 'Free (custom)',
+    freePlatform: 'Free',
+    freeCustom: 'Free (custom)',
     available: 'Available models',
     availableHint: 'Platform and your custom providers combined, read-only. Platform models bill platform credits; custom ones do not.',
     availableEmpty: 'No available models yet',
