@@ -14,12 +14,19 @@ import {
   useMessage,
   type DataTableColumns,
 } from 'naive-ui'
-import { CreateOutline, PencilOutline, RefreshOutline, TrashOutline } from '@vicons/ionicons5'
+import {
+  CloudDownloadOutline,
+  CreateOutline,
+  PencilOutline,
+  RefreshOutline,
+  TrashOutline,
+} from '@vicons/ionicons5'
 import { useModelStore } from '@/stores/model'
 import type { AIModel, ModelProvider } from '@/types/model'
 import { MODEL_TYPES, modelTypeMeta } from '@/types/model'
 import ProviderFormModal from '@/components/model/ProviderFormModal.vue'
 import ModelFormModal from '@/components/model/ModelFormModal.vue'
+import RemoteModelModal from '@/components/model/RemoteModelModal.vue'
 import CapabilityIcons from '@/components/model/CapabilityIcons.vue'
 import KeySlot from '@/components/model/KeySlot.vue'
 
@@ -81,6 +88,11 @@ function removeProvider(row: ModelProvider) {
 }
 
 const providerOptions = computed(() => store.providers.map((p) => ({ label: p.name, value: p.id })))
+
+/** 目录弹窗的渠道下拉：带上渠道编码，用来派生平台模型编码。 */
+const catalogProviders = computed(() =>
+  store.providers.map((p) => ({ label: p.name, value: p.id, code: p.code })),
+)
 
 /** 模型类型筛选候选直接从类型元信息派生，新增类型不用改这里。 */
 const modelTypeFilterOptions = computed(() => [
@@ -166,6 +178,7 @@ const providerColumns: DataTableColumns<ModelProvider> = [
 
 const showModel = ref(false)
 const editingModel = ref<AIModel | null>(null)
+const showCatalog = ref(false)
 
 function openAddModel() {
   if (!store.providers.length) {
@@ -382,6 +395,10 @@ const modelColumns: DataTableColumns<AIModel> = [
               <template #unchecked>{{ t('common.all') }}</template>
             </n-switch>
           </div>
+          <n-button :disabled="!store.providers.length" @click="showCatalog = true">
+            <template #icon><n-icon :component="CloudDownloadOutline" /></template>
+            {{ t('model.remote.importFrom') }}
+          </n-button>
           <n-button type="primary" @click="openAddModel">
             <template #icon><n-icon :component="CreateOutline" /></template>
             {{ t('model.addModel') }}
@@ -425,6 +442,14 @@ const modelColumns: DataTableColumns<AIModel> = [
       :providers="providerOptions"
       @update:show="showModel = $event"
       @submit="submitModel"
+    />
+    <!-- 目录弹窗：已登记清单只覆盖当前页，翻页后的重复项由后端唯一约束兜底 -->
+    <remote-model-modal
+      :show="showCatalog"
+      scope="platform"
+      :providers="catalogProviders"
+      :existing-api-models="store.models.map((m) => m.apiModel)"
+      @update:show="showCatalog = $event"
     />
   </div>
 </template>

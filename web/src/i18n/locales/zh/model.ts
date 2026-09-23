@@ -57,6 +57,27 @@ export default {
   savedModel: '模型已保存',
   createdModel: '模型已创建',
 
+  // ——上游模型目录——
+  remote: {
+    title: '上游模型目录',
+    hint: '按渠道里保存的接口地址与密钥拉取上游模型清单，密钥只存在于服务端，浏览器不接触。勾选后逐条登记，上下文窗口与能力可在模型表单里补齐。',
+    provider: '渠道',
+    registerAs: '登记为',
+    importFrom: '从上游导入',
+    fetch: '拉取目录',
+    noProviders: '还没有可用渠道，请先添加一个',
+    empty: '这个渠道没有返回任何模型',
+    columnId: '模型标识',
+    columnOwner: '归属方',
+    columnObject: '对象类型',
+    registeredAlready: '已登记',
+    selected: '已选 {n} 个',
+    selectFirst: '请先勾选要登记的模型',
+    register: '登记所选',
+    registered: '已登记 {n} 个模型',
+    partial: '登记结束：成功 {ok} 个，失败 {failed} 个',
+  },
+
   // ——密钥槽位——
   keyConfigured: '已配置密钥',
   keyNotConfigured: '尚未配置密钥',

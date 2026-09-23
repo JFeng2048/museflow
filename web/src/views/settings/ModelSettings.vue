@@ -12,10 +12,16 @@ import {
   NTag,
   useMessage,
 } from 'naive-ui'
-import { CreateOutline, PencilOutline, TrashOutline } from '@vicons/ionicons5'
+import {
+  CloudDownloadOutline,
+  CreateOutline,
+  PencilOutline,
+  TrashOutline,
+} from '@vicons/ionicons5'
 import { useModelStore } from '@/stores/model'
 import ProviderFormModal from '@/components/model/ProviderFormModal.vue'
 import ModelFormModal from '@/components/model/ModelFormModal.vue'
+import RemoteModelModal from '@/components/model/RemoteModelModal.vue'
 import CapabilityIcons from '@/components/model/CapabilityIcons.vue'
 import KeySlot from '@/components/model/KeySlot.vue'
 import type { UserModel, UserProvider } from '@/types/model'
@@ -113,6 +119,7 @@ async function toggleUserProvider(row: UserProvider, value: boolean) {
 
 const showModel = ref(false)
 const editingModel = ref<UserModel | null>(null)
+const showCatalog = ref(false)
 const userProviderOptions = computed(() =>
   store.userProviders.map((p) => ({ label: p.name, value: p.id })),
 )
@@ -270,10 +277,16 @@ function providerName(id: number): string {
           <h3>{{ t('settings.model.myModels') }}</h3>
           <p class="block-hint">{{ t('settings.model.myModelsHint') }}</p>
         </div>
-        <n-button size="small" @click="openAddModel">
-          <template #icon><n-icon :component="CreateOutline" /></template>
-          {{ t('settings.model.addModel') }}
-        </n-button>
+        <div class="block-actions">
+          <n-button size="small" :disabled="!store.userProviders.length" @click="showCatalog = true">
+            <template #icon><n-icon :component="CloudDownloadOutline" /></template>
+            {{ t('model.remote.importFrom') }}
+          </n-button>
+          <n-button size="small" @click="openAddModel">
+            <template #icon><n-icon :component="CreateOutline" /></template>
+            {{ t('settings.model.addModel') }}
+          </n-button>
+        </div>
       </div>
       <n-empty v-if="!store.userModels.length" :description="t('settings.model.myModelsEmpty')" />
       <div v-else class="settings-list">
@@ -338,5 +351,12 @@ function providerName(id: number): string {
     :providers="userProviderOptions"
     @update:show="showModel = $event"
     @submit="submitModel"
+  />
+  <remote-model-modal
+    :show="showCatalog"
+    scope="user"
+    :providers="userProviderOptions"
+    :existing-api-models="store.userModels.map((m) => m.apiModel)"
+    @update:show="showCatalog = $event"
   />
 </template>

@@ -44,6 +44,22 @@ export type ModelType = 'chat' | 'embedding' | 'rerank' | 'vision' | 'image' | '
 /** 可用模型来源：platform=平台模型，custom=用户自定义模型。 */
 export type ModelSource = 'platform' | 'custom'
 
+/**
+ * 上游模型目录条目：调用渠道的 /models 得到的「还没登记」的模型。
+ *
+ * 与 AIModel 的区别是它只有厂商给的最小信息（标识 + 归属方），
+ * 上下文窗口、能力、定价都不在上游目录里，登记后仍要在表单里补齐。
+ */
+export interface RemoteModel {
+  /** 上游模型标识，勾选后直接作为 api_model。 */
+  id: string
+  /** 上游对象类型，通常是 model；个别厂商用 embedding 等区分用途。 */
+  object: string
+  /** 归属方，如 openai / anthropic。 */
+  ownedBy: string
+  createdAt: string
+}
+
 export interface ProtocolMeta {
   value: ModelProtocol
   label: string

@@ -57,6 +57,27 @@ export default {
   savedModel: 'Model saved',
   createdModel: 'Model created',
 
+  // Upstream model catalog
+  remote: {
+    title: 'Upstream model catalog',
+    hint: 'Reads the model list from this channel using its saved base URL and key. The key stays on the server. Selected models are registered one by one; fill in context window and capabilities in the model form afterwards.',
+    provider: 'Channel',
+    registerAs: 'Register as',
+    importFrom: 'Import from upstream',
+    fetch: 'Fetch catalog',
+    noProviders: 'No channel yet. Add one first.',
+    empty: 'This channel returned no models',
+    columnId: 'Model ID',
+    columnOwner: 'Owned by',
+    columnObject: 'Object type',
+    registeredAlready: 'Registered',
+    selected: '{n} selected',
+    selectFirst: 'Select the models to register first',
+    register: 'Register selected',
+    registered: 'Registered {n} models',
+    partial: 'Finished: {ok} registered, {failed} failed',
+  },
+
   // Key slot
   keyConfigured: 'Key configured',
   keyNotConfigured: 'No key yet',

@@ -81,6 +81,52 @@
   color: var(--c-amber-deep);
 }
 
+/* ---------- 上游模型目录弹窗 ---------- */
+.remote-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+/* 表单标签在上方，按钮要对齐输入框而不是对齐标签文字 */
+.remote-fetch {
+  margin-top: 28px;
+}
+.remote-hint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--c-ink-muted);
+}
+.remote-id-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+/* 上游标识可能很长，行内截断，完整内容走下方派生编码与 tooltip 兜底 */
+.remote-id-main {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remote-id-sub {
+  font-family: var(--font-mono, monospace);
+}
+/* 已登记的行压暗且不可勾选：目录是「还没登记」的候选，重复登记只会撞唯一键 */
+.n-data-table tr.is-registered {
+  opacity: 0.55;
+}
+.remote-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.remote-count {
+  font-size: 12px;
+  color: var(--c-ink-muted);
+}
+
 /* ---------- 用户端设置页 ---------- */
 /* 三个配置块是整幅分隔带，不是悬浮卡片；卡片只留给列表行 */
 .settings-block + .settings-block {
@@ -91,6 +137,13 @@
   margin: 2px 0 0;
   font-size: 12px;
   color: var(--c-ink-muted);
+}
+/* 配置块头部右侧的多个动作：等距排列，窄屏允许整体换行 */
+.block-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .row-titles {
   display: flex;
@@ -202,6 +255,13 @@
 }
 
 @media (max-width: 640px) {
+  /* 目录弹窗的工具条在窄屏整行换行，按钮回到文字基线上 */
+  .remote-bar {
+    flex-wrap: wrap;
+  }
+  .remote-fetch {
+    margin-top: 0;
+  }
   .form-pair {
     grid-template-columns: 1fr;
   }

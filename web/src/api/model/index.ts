@@ -10,6 +10,7 @@ import type {
   UserProvider,
   UserModel,
   AvailableModel,
+  RemoteModel,
   SystemSetting,
 } from '@/types/model'
 import type {
@@ -20,6 +21,8 @@ import type {
   ModelPageDto,
   AvailableModelDto,
   ProviderInfoDto,
+  RemoteModelInfoDto,
+  RemoteModelListDto,
   SettingInfoDto,
   UserModelInfoDto,
   UserProviderInfoDto,
@@ -559,6 +562,40 @@ export function updateUserModel(id: number, payload: UserModelPayload): Promise<
 /** 删除我的自定义模型。 */
 export function deleteUserModel(id: number): Promise<void> {
   return request.delete<ModelDeleteDto>(`/user/models/${id}`).then(() => undefined)
+}
+
+// ---------------- 上游模型目录 ----------------
+
+export interface FetchRemoteModelsParams {
+  /** 已保存渠道的 ID；api_key 由服务端解密，浏览器不接触密钥明文。 */
+  providerId: number
+}
+
+function mapRemoteModel(dto: RemoteModelInfoDto): RemoteModel {
+  return {
+    id: dto.id,
+    object: dto.object || '',
+    ownedBy: dto.owned_by || '',
+    createdAt: dto.created_at || '',
+  }
+}
+
+/** 拉取平台渠道的模型目录：调上游 /models，返回可勾选登记的清单。 */
+export function fetchAdminRemoteModels(params: FetchRemoteModelsParams): Promise<RemoteModel[]> {
+  return request
+    .post<RemoteModelListDto>('/admin/model-providers/remote-models', {
+      provider_id: params.providerId,
+    })
+    .then((data) => (data?.items ?? []).map(mapRemoteModel))
+}
+
+/** 拉取我的自定义渠道的模型目录；归属校验由后端按登录态完成。 */
+export function fetchUserRemoteModels(params: FetchRemoteModelsParams): Promise<RemoteModel[]> {
+  return request
+    .post<RemoteModelListDto>('/user/model-providers/remote-models', {
+      provider_id: params.providerId,
+    })
+    .then((data) => (data?.items ?? []).map(mapRemoteModel))
 }
 
 // ---------------- 可用模型与公开配置（用户端）----------------

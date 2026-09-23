@@ -7,6 +7,7 @@ import type {
   UserProvider,
   UserModel,
   AvailableModel,
+  RemoteModel,
   SystemSetting,
 } from '@/types/model'
 import {
@@ -28,12 +29,16 @@ import {
   createUserModel,
   updateUserModel,
   deleteUserModel,
+  fetchAdminRemoteModels,
+  fetchUserRemoteModels,
   listAvailableModels,
   listPublicSettings,
   listSettings,
   upsertSetting,
   deleteSetting,
 } from '@/api/model'
+
+import type { CreateModelPayload, UserModelPayload } from '@/api/model'
 
 /**
  * 模型目录与系统配置 store。
@@ -74,6 +79,12 @@ export const useModelStore = defineStore('model', () => {
   const availableType = ref<ModelType | ''>('')
   const publicSettings = ref<SystemSetting[]>([])
   const loadingUser = ref(false)
+
+  // ---------- 上游模型目录 ----------
+  // 与列表数据分开存：目录是「还没登记」的候选，勾选后才落库，
+  // 混进 models / userModels 会让页面出现实际不存在的条目。
+  const remoteModels = ref<RemoteModel[]>([])
+  const loadingRemote = ref(false)
 
   // ---------- 系统配置（管理端）----------
   const settings = ref<SystemSetting[]>([])
@@ -129,6 +140,69 @@ export const useModelStore = defineStore('model', () => {
   /** 公开系统配置：只读，登录后由设置页拉取。 */
   async function fetchPublicSettings() {
     publicSettings.value = await listPublicSettings()
+  }
+
+  // ---------- 上游模型目录 ----------
+
+  /** 拉取平台渠道的模型目录；失败时清空候选，避免看到上一轮的残留。 */
+  async function fetchAdminCatalog(providerId: number) {
+    loadingRemote.value = true
+    try {
+      remoteModels.value = await fetchAdminRemoteModels({ providerId })
+    } catch {
+      remoteModels.value = []
+      throw new Error('catalog')
+    } finally {
+      loadingRemote.value = false
+    }
+  }
+
+  /** 拉取我的自定义渠道的模型目录。 */
+  async function fetchUserCatalog(providerId: number) {
+    loadingRemote.value = true
+    try {
+      remoteModels.value = await fetchUserRemoteModels({ providerId })
+    } catch {
+      remoteModels.value = []
+      throw new Error('catalog')
+    } finally {
+      loadingRemote.value = false
+    }
+  }
+
+  /**
+   * 批量登记上游目录里勾选的模型。
+   *
+   * 逐条创建而不是调批量接口：单条失败（撞 code 唯一键、渠道被删）不影响其他条目，
+   * 失败清单交回弹窗让用户改完重试。列表只在全部结束后刷新一次，
+   * 否则勾 12 个模型就要跟着发 12 次列表请求，页面会一直闪。
+   */
+  async function registerCatalogModels(
+    scope: 'platform' | 'user',
+    items: (CreateModelPayload | UserModelPayload)[],
+  ) {
+    const failed: string[] = []
+    for (const item of items) {
+      try {
+        if (scope === 'platform') {
+          await createModel(item as CreateModelPayload)
+        } else {
+          await createUserModel(item as UserModelPayload)
+        }
+      } catch {
+        failed.push(item.apiModel)
+      }
+    }
+    // 刷新放在循环外：登记成功数大于 0 时列表才需要动，全失败时保持原样。
+    if (failed.length < items.length) {
+      if (scope === 'platform') {
+        await fetchModels()
+        await fetchAvailable()
+      } else {
+        await fetchUserData()
+      }
+    }
+    return { ok: items.length - failed.length, failed }
   }
 
   // ---------- 系统配置写操作 ----------
@@ -300,6 +374,11 @@ export const useModelStore = defineStore('model', () => {
     addUserModel,
     editUserModel,
     removeUserModel,
+    remoteModels,
+    loadingRemote,
+    fetchAdminCatalog,
+    fetchUserCatalog,
+    registerCatalogModels,
     platformModels,
     customModels,
     providerName,

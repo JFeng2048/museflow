@@ -113,6 +113,20 @@ export interface SettingInfoDto {
   updated_at?: string
 }
 
+/** 上游模型目录条目（线格式）。 */
+export interface RemoteModelInfoDto {
+  id: string
+  object?: string
+  owned_by?: string
+  created_at?: string
+}
+
+/** 上游模型目录结果（线格式）。 */
+export interface RemoteModelListDto {
+  items?: RemoteModelInfoDto[]
+  total?: number
+}
+
 /** 分页信封（渠道 / 模型 / 用户渠道 / 用户模型共用）。 */
 export interface ModelPageDto<T> {
   items?: T[]
